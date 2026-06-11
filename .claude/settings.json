@@ -1,0 +1,46 @@
+{
+  "$comment": "Config de Claude Code para la suite Cyberseg Agents. El hook scope_guard es la barrera dura de alcance.",
+  "$comment_modelos": "Sin CLAUDE_CODE_SUBAGENT_MODEL a propósito: cada agente usa su propio 'model' (tier ajustado para no quemar cupo de Pro). fable solo en explotación pesada; el resto sonnet/haiku.",
+  "permissions": {
+    "defaultMode": "default",
+    "ask": [
+      "Bash(nmap:*)",
+      "Bash(nuclei:*)",
+      "Bash(sqlmap:*)",
+      "Bash(metasploit:*)",
+      "Bash(msfconsole:*)",
+      "Bash(hydra:*)",
+      "Bash(curl:*)",
+      "Bash(ffuf:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf /*)",
+      "Read(./contracts/scope.json)",
+      "Write(./contracts/scope.json)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/scope_guard.py"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python tools/gen_arch_diagram.py --hook"
+          }
+        ]
+      }
+    ]
+  }
+}

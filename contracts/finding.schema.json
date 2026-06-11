@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Finding",
+  "description": "Una vulnerabilidad candidata o confirmada. Ciclo: vuln-triage la crea como candidate; los agentes de explotación la confirman; reporting la consume.",
+  "type": "object",
+  "required": ["finding_id", "target_id", "title", "status", "severity"],
+  "properties": {
+    "finding_id": { "type": "string" },
+    "target_id": { "type": "string", "description": "FK a target.target_id" },
+    "title": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["candidate", "confirmed", "exploited", "false_positive", "out_of_scope"]
+    },
+    "severity": { "type": "string", "enum": ["info", "low", "medium", "high", "critical"] },
+    "cvss": { "type": "number", "minimum": 0, "maximum": 10 },
+    "cvss_vector": { "type": "string", "description": "Vector CVSS 3.1, p.ej. CVSS:3.1/AV:N/..." },
+    "epss": { "type": "number", "minimum": 0, "maximum": 1, "description": "Probabilidad EPSS (del RAG)" },
+    "exploit_public": { "type": "boolean", "description": "Existe exploit/PoC público (del RAG)" },
+    "exploit_sources": { "type": "array", "items": { "type": "string" }, "description": "p.ej. ExploitDB, Metasploit, Nuclei" },
+    "msf_modules": { "type": "array", "description": "Módulos Metasploit (del RAG): module/type/rank", "items": { "type": "object" } },
+    "nuclei_templates": { "type": "array", "items": { "type": "string" }, "description": "Rutas de plantillas Nuclei (del RAG)" },
+    "ssvc": { "type": "object", "description": "Decisión SSVC de CISA (del RAG)" },
+    "cwe": { "type": "string", "description": "p.ej. CWE-89" },
+    "cve": { "type": "array", "items": { "type": "string" } },
+    "attack_technique": { "type": "string", "description": "ID MITRE ATT&CK, p.ej. T1190" },
+    "owasp": { "type": "string", "description": "p.ej. A03:2021-Injection" },
+    "evidence": { "type": "string", "description": "Salida/PoC que prueba el hallazgo" },
+    "reproduction": { "type": "string", "description": "Pasos exactos de reproducción" },
+    "impact": { "type": "string" },
+    "remediation": { "type": "string" },
+    "discovered_by": { "type": "string" },
+    "confirmed_by": { "type": "string" },
+    "source_refs": {
+      "type": "array",
+      "description": "Fuentes que respaldan (CVE/KEV/advisory). Sin fuente no se explota.",
+      "items": { "type": "string" }
+    }
+  }
+}

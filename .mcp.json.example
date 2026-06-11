@@ -1,0 +1,14 @@
+{
+  "$comment": "Config MCP OPCIONAL para la capa híbrida de enriquecimiento (eip-mcp self-hosted). DESACTIVADO por defecto a propósito (opsec). Para activarlo: renombra a .mcp.json. IMPORTANTE: solo en el plano de control / E1 (con red). NUNCA lo cargues en agentes de la zona E2 aislada.",
+  "mcpServers": {
+    "eip": {
+      "$comment": "Exploit Intelligence Platform — self-hosted y en sandbox. Vetar la versión (pin) y NO exponer a red pública. Ver rag/README.md sección 'Seguridad del MCP'.",
+      "command": "eip-mcp",
+      "args": ["--transport", "stdio"],
+      "env": {
+        "EIP_API_URL": "http://127.0.0.1:8000",
+        "EIP_API_KEY": ""
+      }
+    }
+  }
+}

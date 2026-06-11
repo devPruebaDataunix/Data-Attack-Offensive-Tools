@@ -1,0 +1,30 @@
+{
+  "engagement_id": "ACME-2026-001",
+  "client": "ACME Corp",
+  "authorization": {
+    "type": "pentest_contract",
+    "reference": "SOW-2026-0042",
+    "signed_by": "ciso@acme.example",
+    "valid_from": "2026-06-01",
+    "valid_until": "2026-06-30",
+    "rules_of_engagement_url": "internal://roe/ACME-2026-001.pdf"
+  },
+  "in_scope": {
+    "domains": ["acme.example", "*.acme.example"],
+    "ips": ["203.0.113.10", "203.0.113.11"],
+    "cidrs": ["198.51.100.0/24"],
+    "urls": ["https://app.acme.example"]
+  },
+  "out_of_scope": {
+    "domains": ["corp.acme.example", "vpn.acme.example"],
+    "ips": ["203.0.113.1"],
+    "notes": "No tocar infraestructura de correo ni terceros (AWS account compartida)."
+  },
+  "constraints": {
+    "no_dos": true,
+    "no_social_engineering": true,
+    "no_data_exfiltration_real": true,
+    "testing_window": "00:00-06:00 UTC",
+    "max_scan_rate": "moderate"
+  }
+}

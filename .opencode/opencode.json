@@ -1,0 +1,22 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "$comment": "Config opencode para Cyberseg Agents. El orquestador es el agente primary; los 10 especialistas (en agent/*.md, generados por tools/sync_opencode.py) son subagents.",
+  "agent": {
+    "orchestrator": {
+      "mode": "primary",
+      "model": "anthropic/claude-fable-5",
+      "description": "Orquestador del engagement. Coordina los 10 especialistas (hub-and-spoke) y aplica el alcance. Ver AGENTS.md.",
+      "temperature": 0.2,
+      "permission": {
+        "read": "allow",
+        "edit": "allow",
+        "bash": "ask",
+        "webfetch": "allow",
+        "websearch": "allow"
+      }
+    }
+  },
+  "permission": {
+    "bash": "ask"
+  }
+}

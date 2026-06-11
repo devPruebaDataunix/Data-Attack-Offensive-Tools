@@ -1,0 +1,6 @@
+# Forzar saltos de línea LF en scripts y código (evita que CRLF de Windows rompa la Kali)
+*.sh    text eol=lf
+*.py    text eol=lf
+*.json  text eol=lf
+*.md    text eol=lf
+* text=auto eol=lf

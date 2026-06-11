@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Target",
+  "description": "Un activo descubierto durante recon. Escrito por osint-recon / active-recon.",
+  "type": "object",
+  "required": ["target_id", "asset", "discovered_by", "in_scope"],
+  "properties": {
+    "target_id": { "type": "string" },
+    "asset": { "type": "string", "description": "host, dominio, IP o URL" },
+    "asset_type": { "type": "string", "enum": ["domain", "subdomain", "ip", "url", "service"] },
+    "in_scope": { "type": "boolean", "description": "Verificado contra scope.json" },
+    "discovered_by": { "type": "string", "enum": ["osint-recon", "active-recon", "lateral-discovery"] },
+    "open_ports": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "port": { "type": "integer" },
+          "protocol": { "type": "string", "enum": ["tcp", "udp"] },
+          "service": { "type": "string" },
+          "version": { "type": "string" },
+          "banner": { "type": "string" }
+        }
+      }
+    },
+    "technologies": { "type": "array", "items": { "type": "string" } },
+    "notes": { "type": "string" }
+  }
+}

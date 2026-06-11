@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Engagement (blackboard / estado compartido)",
+  "description": "Estado central que todos los agentes leen y escriben. Fuente única de verdad del engagement.",
+  "type": "object",
+  "required": ["engagement_id", "scope_ref", "phase", "targets", "findings"],
+  "properties": {
+    "engagement_id": { "type": "string" },
+    "scope_ref": { "type": "string", "description": "Ruta a scope.json usado" },
+    "phase": {
+      "type": "string",
+      "enum": ["init", "recon", "triage", "exploitation", "post-exploitation", "reporting", "closed"]
+    },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "targets": { "type": "array", "items": { "$ref": "target.schema.json" } },
+    "findings": { "type": "array", "items": { "$ref": "finding.schema.json" } },
+    "lessons": {
+      "type": "array",
+      "description": "Aprendizaje basado en errores. Escrito por knowledge-postmortem.",
+      "items": {
+        "type": "object",
+        "required": ["lesson_id", "context", "what_happened", "outcome", "takeaway"],
+        "properties": {
+          "lesson_id": { "type": "string" },
+          "context": { "type": "string", "description": "Tipo de target/tecnología" },
+          "what_happened": { "type": "string", "description": "Qué se intentó" },
+          "outcome": { "type": "string", "enum": ["success", "failure", "partial", "blocked"] },
+          "takeaway": { "type": "string", "description": "Lección reutilizable" },
+          "times_observed": { "type": "integer", "minimum": 1, "maximum": 50 },
+          "attack_ref": { "type": "string", "description": "ID de técnica MITRE ATT&CK p.ej. T1190" }
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "description": "Trazabilidad inmutable: cada comando y su salida hash.",
+      "items": {
+        "type": "object",
+        "required": ["ts", "agent", "action", "target"],
+        "properties": {
+          "ts": { "type": "string", "format": "date-time" },
+          "agent": { "type": "string" },
+          "action": { "type": "string" },
+          "target": { "type": "string" },
+          "output_hash": { "type": "string" },
+          "artifact_path": { "type": "string" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,29 @@
+# ─── Secretos — NUNCA al repositorio ───────────────────────────
+bot/.env
+*.env
+!*.example.env
+*.token
+*.key
+*.pem
+
+# ─── Alcance y estado de engagement (datos de cliente) ─────────
+contracts/scope.json
+contracts/engagement.json
+
+# ─── Generado en runtime ───────────────────────────────────────
+rag/vulns.db
+rag/vulns.db-*
+report/INFORME-*.md
+report/findings-summary.csv
+
+# ─── Python / venv ─────────────────────────────────────────────
+**/__pycache__/
+*.pyc
+.venv/
+bot/.venv/
+
+# ─── Editor / OS / logs ────────────────────────────────────────
+.vscode/
+.DS_Store
+*.log
+deploy/*.log
