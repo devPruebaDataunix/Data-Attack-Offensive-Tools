@@ -97,8 +97,15 @@ def clip(s, n=3900):
     return s if len(s) <= n else s[:n] + "\n… (recortado)"
 
 
+# Red de seguridad: Telegram rechaza mensajes > 4096 caracteres (sea cual sea el emisor).
+def _tg(s):
+    s = s or ""
+    return s if len(s) <= 4096 else s[:4080] + "\n… (recortado)"
+
+
 async def say(bot, chat_id, text, reply_markup=None, md=True):
     """Envía con Markdown; si el parser falla, reintenta en texto plano."""
+    text = _tg(text)
     try:
         return await bot.send_message(chat_id, text, parse_mode="Markdown" if md else None,
                                       reply_markup=reply_markup, disable_web_page_preview=True)
@@ -108,6 +115,7 @@ async def say(bot, chat_id, text, reply_markup=None, md=True):
 
 
 async def edit(msg, text, md=False):
+    text = _tg(text)
     try:
         await msg.edit_text(text, parse_mode="Markdown" if md else None,
                             disable_web_page_preview=True)
