@@ -1,15 +1,39 @@
-# Bot de Telegram — control remoto del entorno
+# Bot de Telegram — control remoto inteligente del entorno
 
-Mando a distancia + dashboard de intel del framework de agentes, sobre la VM E2.
+Mando a distancia + dashboard de intel del framework de agentes, sobre la VM E2. Habla en
+**lenguaje natural**; el bot interpreta, te pide confirmación, **resume en vivo** lo que hace y
+solo te escala **lo que es alerta real**.
+
+## Motor
+Sobre el **Claude Agent SDK** (`claude-agent-sdk`) — `bot/intel/runner.py`. Da streaming (hitos
+en tiempo real), `can_use_tool` (aprobación por acción) y hooks. Si el SDK no está instalado, el
+bot cae a `claude -p` (modo degradado, sin streaming) automáticamente.
+
+## Lo que lo hace inteligente
+1. **Lenguaje humano → acción.** Escribe _"haz recon pasivo de app.cliente.com"_ o _"prioriza
+   los CVE de ese Apache y dime cuáles tienen exploit"_. El texto va al Orquestador, que delega
+   en los subagentes. (`bot/intel/runner.py`)
+2. **Pregunta el scope si falta.** Si no hay `contracts/scope.json`, o la orden menciona un
+   objetivo fuera del alcance actual, el bot **pregunta** en vez de fallar o adivinar. Tu
+   respuesta se incorpora como contexto. (`bot/intel/scope.py`)
+3. **Resúmenes en vivo por hito.** Mientras trabaja te empuja qué subagente arranca, qué fase y
+   el resultado — no logs crudos. (streaming del SDK)
+4. **Alerta real vs ruido.** Clasifica cada finding del blackboard: `confirmed`/`exploited` →
+   🔴 **EVIDENCIA REAL** con resumen claro para humano; candidato con respaldo fuerte
+   (exploit/MSF/KEV) → 🟠 vigilar; hit de escáner sin respaldo o falso positivo → 🔇 se cuenta y
+   se calla. Solo lo real dispara alerta. (`bot/intel/classify.py`)
+5. **Aprobación por acción.** Cuando un agente va a lanzar un comando que toca el target
+   (nmap, nuclei, sqlmap, netexec, msf, ffuf…), el bot te manda **✅ Autorizar / ⛔ Denegar** y
+   espera tu OK (timeout → denegado). El gate determinista `scope_guard.py` sigue aplicando
+   debajo.
 
 ## Seguridad (diseño)
 - **Allowlist dura de user-id** (`ALLOWED_USER_ID`): cualquier otro queda rechazado y logueado.
 - **Secretos fuera del repo**: token y user-id en `bot/.env` (ignorado por git, permisos 600).
-- **Intel local y segura**: `/triage`, `/cve`, `/status`, `/health`, `/findings`, `/report` no
-  generan tráfico ofensivo — leen el RAG/estado local.
-- **Órdenes al Orquestador con confirmación** (botón inline) y permisos por defecto: las acciones
-  que tocan el target **se supervisan en terminal/GUI** (donde la aprobación por acción funciona),
-  no se auto-ejecutan a ciegas desde el chat.
+- **Intel local y segura**: `/triage`, `/cve`, `/status`, `/health`, `/findings`, `/report`,
+  `/scope` no generan tráfico ofensivo — leen el RAG/estado local.
+- **Doble gate sobre el target**: aprobación humana por acción (Telegram) **+** hook de scope
+  determinista. Nada que toque el objetivo se auto-ejecuta a ciegas.
 - **Audit log** en `bot/bot.log`.
 
 > Rota el token en BotFather (`/revoke`) si alguna vez se expone.
@@ -17,24 +41,25 @@ Mando a distancia + dashboard de intel del framework de agentes, sobre la VM E2.
 ## Comandos
 | Comando | Qué hace |
 | :--- | :--- |
-| `/status` `/health` | salud del sistema + versiones del toolchain (corre `deploy/verify.sh`) |
+| `/status` `/health` | salud del sistema + versiones del toolchain (`deploy/verify.sh`) |
 | `/agents` | lista los agentes cargados |
 | `/triage <producto> [versión]` | CVEs priorizados (KEV/exploit/MSF/CVSS) desde el RAG |
 | `/cve <CVE-id>` | detalle de un CVE |
 | `/refresh` | actualiza el RAG en segundo plano |
-| `/findings` | resumen de hallazgos del engagement |
+| `/findings` | hallazgos **clasificados** (🔴 real / 🟠 vigilar / 🔇 ruido) |
 | `/report` | envía el último informe |
 | `/scope` | muestra el alcance actual |
-| _texto libre_ | orden al Orquestador (pide confirmación) |
+| _texto libre_ | orden en lenguaje natural al Orquestador (pregunta scope si falta → confirma → ejecuta con streaming) |
 
 ## Ejecutar
 ```bash
 cd bot
-./.venv/bin/python bot.py          # el auto-deploy crea el venv y el .env
+./.venv/bin/python bot.py          # el auto-deploy crea el venv, instala deps y el .env
 # o como servicio systemd (ver DEPLOY.md)
 ```
 
-## Ampliación (Agent SDK)
-Para **aprobación por acción desde Telegram** (botones Approve/Deny en cada comando que toca el
-target), migra el puente de `claude -p` (subprocess) al **Claude Agent SDK** de Python con un
-callback `can_use_tool` que reenvíe la decisión al chat. Estructura ya preparada en `on_button`.
+## Notas operativas
+- **Una orden a la vez** por chat (las órdenes nuevas esperan a que termine la actual).
+- Para añadir objetivos a `scope.json` de forma persistente, pídeselo explícitamente al
+  Orquestador (lo escribe él, y el hook lo recoge en la siguiente acción).
+- `ORCH_MODEL` en `.env` fuerza el modelo del Orquestador del bot (por defecto, el del proyecto).

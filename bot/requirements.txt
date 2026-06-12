@@ -1,1 +1,2 @@
 python-telegram-bot>=21.6,<23
+claude-agent-sdk>=0.2,<1
