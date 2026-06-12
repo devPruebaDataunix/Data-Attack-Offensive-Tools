@@ -1,7 +1,7 @@
 ---
 description: Especialista en NetExec (nxc, sucesor de CrackMapExec) + Impacket + recolección BloodHound para Active Directory e infraestructura Windows — SMB, LDAP, WinRM, MSSQL, RDP. Úsalo en pentest interno/AD sobre hosts en scope.
 mode: subagent
-model: anthropic/claude-fable-5
+model: anthropic/claude-sonnet-4-6
 temperature: 0.1
 permission:
   read: allow

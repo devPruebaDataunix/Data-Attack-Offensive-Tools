@@ -4,7 +4,7 @@
   "agent": {
     "orchestrator": {
       "mode": "primary",
-      "model": "anthropic/claude-fable-5",
+      "model": "anthropic/claude-opus-4-8",
       "description": "Orquestador del engagement. Coordina los 10 especialistas (hub-and-spoke) y aplica el alcance. Ver AGENTS.md.",
       "temperature": 0.2,
       "permission": {

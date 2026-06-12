@@ -3,7 +3,7 @@
 
 # 🗺️ Mapa de Arquitectura — Cyberseg Agents
 
-> **Generado:** 2026-06-11 17:41:46 UTC · **Refleja el estado real** del proyecto en ese momento.
+> **Generado:** 2026-06-12 07:57:03 UTC · **Refleja el estado real** del proyecto en ese momento.
 > Regenerar a mano: `python tools/gen_arch_diagram.py`
 
 ## Qué es esto (para reconstruir contexto si se pierde)
@@ -21,27 +21,27 @@ flowchart TB
     BB[("🗒️ Blackboard<br/>contracts/engagement.json")]
     RAGDB[("📚 RAG KEV+EPSS<br/>rag/")]
     subgraph E1["🟦 Zona E1 · Recon (perfil de red abierto, sin datos de cliente)"]
-        active_recon["active-recon<br/><i>sonnet</i>"]
-        osint_recon["osint-recon<br/><i>haiku</i>"]
-        recon_suite["recon-suite<br/><i>sonnet</i>"]
+        active_recon["active-recon<br/><i>claude-sonnet-4-6</i>"]
+        osint_recon["osint-recon<br/><i>claude-haiku-4-5</i>"]
+        recon_suite["recon-suite<br/><i>claude-sonnet-4-6</i>"]
     end
     subgraph E2["🟥 Zona E2 · Explotación (VLAN del engagement, por cliente, kill-switch)"]
-        nuclei["nuclei<br/><i>sonnet</i>"]
-        vuln_triage["vuln-triage<br/><i>sonnet</i>"]
-        c2_exfil["c2-exfil<br/><i>fable</i>"]
-        lateral_discovery["lateral-discovery<br/><i>sonnet</i>"]
-        metasploit["metasploit<br/><i>fable</i>"]
-        netexec["netexec<br/><i>fable</i>"]
-        network_exploit["network-exploit<br/><i>fable</i>"]
-        post_exploit["post-exploit<br/><i>fable</i>"]
-        sliver["sliver<br/><i>fable</i>"]
-        sqlmap["sqlmap<br/><i>sonnet</i>"]
-        web_exploit["web-exploit<br/><i>fable</i>"]
-        web_fuzzing["web-fuzzing<br/><i>sonnet</i>"]
+        nuclei["nuclei<br/><i>claude-sonnet-4-6</i>"]
+        vuln_triage["vuln-triage<br/><i>claude-sonnet-4-6</i>"]
+        c2_exfil["c2-exfil<br/><i>claude-sonnet-4-6</i>"]
+        lateral_discovery["lateral-discovery<br/><i>claude-sonnet-4-6</i>"]
+        metasploit["metasploit<br/><i>claude-sonnet-4-6</i>"]
+        netexec["netexec<br/><i>claude-sonnet-4-6</i>"]
+        network_exploit["network-exploit<br/><i>claude-opus-4-8</i>"]
+        post_exploit["post-exploit<br/><i>claude-opus-4-8</i>"]
+        sliver["sliver<br/><i>claude-sonnet-4-6</i>"]
+        sqlmap["sqlmap<br/><i>claude-sonnet-4-6</i>"]
+        web_exploit["web-exploit<br/><i>claude-opus-4-8</i>"]
+        web_fuzzing["web-fuzzing<br/><i>claude-sonnet-4-6</i>"]
     end
     subgraph E3["🟩 Zona E3 · Cierre (datos de cliente, sin egress, modelo ZDR)"]
-        knowledge_postmortem["knowledge-postmortem<br/><i>sonnet</i>"]
-        reporting["reporting<br/><i>sonnet</i>"]
+        knowledge_postmortem["knowledge-postmortem<br/><i>claude-sonnet-4-6</i>"]
+        reporting["reporting<br/><i>claude-opus-4-8</i>"]
     end
     ORQ ==>|delega / recoge| E1
     ORQ ==>|delega / recoge| E2
@@ -67,23 +67,23 @@ flowchart TB
 
 | Agente | Zona | Modelo | Permiso | Memoria | Tools | Función |
 | :--- | :---: | :--- | :--- | :--- | :--- | :--- |
-| **active-recon** | E1 | sonnet | default | — | Read, Write, Edit, Grep, Glob, Bash | Recon ACTIVO / enumeración. Úsalo tras osint-recon para escanear puer… |
-| **osint-recon** | E1 | haiku | default | — | Read, Write, Edit, Grep, Glob, WebSearc… | Recon PASIVO. Úsalo al inicio de un engagement para mapear la superfi… |
-| **recon-suite** | E1 | sonnet | default | — | Read, Write, Edit, Grep, Glob, Bash | Especialista en el toolkit de recon moderno — subfinder, amass, dnsx,… |
-| **nuclei** | E2 | sonnet | default | — | Read, Write, Edit, Grep, Glob, Bash | Especialista en Nuclei (ProjectDiscovery), escaneo de vulnerabilidade… |
-| **vuln-triage** | E2 | sonnet | default | — | Read, Write, Edit, Grep, Glob, Bash, We… | Análisis y priorización de vulnerabilidades. Úsalo tras active-recon … |
-| **c2-exfil** | E2 | fable | default | — | Read, Write, Edit, Grep, Glob, Bash | Simulación CONTROLADA de C2, exfiltración e impacto para demostrar el… |
-| **lateral-discovery** | E2 | sonnet | default | — | Read, Write, Edit, Grep, Glob, Bash | Descubrimiento INTERNO y movimiento lateral desde un punto de apoyo c… |
-| **metasploit** | E2 | fable | default | — | Read, Write, Edit, Grep, Glob, Bash | Operador SENIOR de Metasploit Framework. Úsalo cuando un finding trae… |
-| **netexec** | E2 | fable | default | — | Read, Write, Edit, Grep, Glob, Bash | Especialista en NetExec (nxc, sucesor de CrackMapExec) + Impacket + r… |
-| **network-exploit** | E2 | fable | default | — | Read, Write, Edit, Grep, Glob, Bash | Explotación de servicios de red e infraestructura (no-HTTP). Úsalo pa… |
-| **post-exploit** | E2 | fable | default | — | Read, Write, Edit, Grep, Glob, Bash | Post-explotación en un host ya comprometido EN SCOPE. Úsalo para esca… |
-| **sliver** | E2 | fable | default | — | Read, Write, Edit, Grep, Glob, Bash | Operador de Sliver C2 (open source) para post-explotación y simulació… |
-| **sqlmap** | E2 | sonnet | default | — | Read, Write, Edit, Grep, Glob, Bash | Especialista senior en sqlmap, automatización de inyección SQL. Úsalo… |
-| **web-exploit** | E2 | fable | default | — | Read, Write, Edit, Grep, Glob, Bash, We… | Explotación de aplicaciones web (capa 7 HTTP/S). Úsalo para verificar… |
-| **web-fuzzing** | E2 | sonnet | default | — | Read, Write, Edit, Grep, Glob, Bash | Especialista en descubrimiento de contenido y fuzzing web — ffuf y fe… |
-| **knowledge-postmortem** | E3 | sonnet | default | project | Read, Write, Edit, Grep, Glob | Aprendizaje basado en errores. Úsalo tras cada intento o al cierre de… |
-| **reporting** | E3 | sonnet | default | — | Read, Write, Edit, Grep, Glob | Redacción del informe del engagement. Úsalo al cierre para convertir … |
+| **active-recon** | E1 | claude-sonnet-4-6 | default | — | Read, Write, Edit, Grep, Glob, Bash | Recon ACTIVO / enumeración. Úsalo tras osint-recon para escanear puer… |
+| **osint-recon** | E1 | claude-haiku-4-5 | default | — | Read, Write, Edit, Grep, Glob, WebSearc… | Recon PASIVO. Úsalo al inicio de un engagement para mapear la superfi… |
+| **recon-suite** | E1 | claude-sonnet-4-6 | default | — | Read, Write, Edit, Grep, Glob, Bash | Especialista en el toolkit de recon moderno — subfinder, amass, dnsx,… |
+| **nuclei** | E2 | claude-sonnet-4-6 | default | — | Read, Write, Edit, Grep, Glob, Bash | Especialista en Nuclei (ProjectDiscovery), escaneo de vulnerabilidade… |
+| **vuln-triage** | E2 | claude-sonnet-4-6 | default | — | Read, Write, Edit, Grep, Glob, Bash, We… | Análisis y priorización de vulnerabilidades. Úsalo tras active-recon … |
+| **c2-exfil** | E2 | claude-sonnet-4-6 | default | — | Read, Write, Edit, Grep, Glob, Bash | Simulación CONTROLADA de C2, exfiltración e impacto para demostrar el… |
+| **lateral-discovery** | E2 | claude-sonnet-4-6 | default | — | Read, Write, Edit, Grep, Glob, Bash | Descubrimiento INTERNO y movimiento lateral desde un punto de apoyo c… |
+| **metasploit** | E2 | claude-sonnet-4-6 | default | — | Read, Write, Edit, Grep, Glob, Bash | Operador SENIOR de Metasploit Framework. Úsalo cuando un finding trae… |
+| **netexec** | E2 | claude-sonnet-4-6 | default | — | Read, Write, Edit, Grep, Glob, Bash | Especialista en NetExec (nxc, sucesor de CrackMapExec) + Impacket + r… |
+| **network-exploit** | E2 | claude-opus-4-8 | default | — | Read, Write, Edit, Grep, Glob, Bash | Explotación de servicios de red e infraestructura (no-HTTP). Úsalo pa… |
+| **post-exploit** | E2 | claude-opus-4-8 | default | — | Read, Write, Edit, Grep, Glob, Bash | Post-explotación en un host ya comprometido EN SCOPE. Úsalo para esca… |
+| **sliver** | E2 | claude-sonnet-4-6 | default | — | Read, Write, Edit, Grep, Glob, Bash | Operador de Sliver C2 (open source) para post-explotación y simulació… |
+| **sqlmap** | E2 | claude-sonnet-4-6 | default | — | Read, Write, Edit, Grep, Glob, Bash | Especialista senior en sqlmap, automatización de inyección SQL. Úsalo… |
+| **web-exploit** | E2 | claude-opus-4-8 | default | — | Read, Write, Edit, Grep, Glob, Bash, We… | Explotación de aplicaciones web (capa 7 HTTP/S). Úsalo para verificar… |
+| **web-fuzzing** | E2 | claude-sonnet-4-6 | default | — | Read, Write, Edit, Grep, Glob, Bash | Especialista en descubrimiento de contenido y fuzzing web — ffuf y fe… |
+| **knowledge-postmortem** | E3 | claude-sonnet-4-6 | default | project | Read, Write, Edit, Grep, Glob | Aprendizaje basado en errores. Úsalo tras cada intento o al cierre de… |
+| **reporting** | E3 | claude-opus-4-8 | default | — | Read, Write, Edit, Grep, Glob | Redacción del informe del engagement. Úsalo al cierre para convertir … |
 
 ## Componentes de soporte (estado real)
 

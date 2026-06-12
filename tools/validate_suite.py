@@ -30,7 +30,15 @@ def check(cond, ok_msg, fail_msg, warn=False):
 
 KNOWN_TOOLS = {"Read", "Write", "Edit", "MultiEdit", "NotebookEdit", "Glob", "Grep",
                "Bash", "WebSearch", "WebFetch", "Task", "Agent"}
-KNOWN_MODELS = {"fable", "opus", "sonnet", "haiku", "inherit"}
+KNOWN_MODELS = {
+    # IDs completos (formato actual de .claude/agents)
+    "claude-fable-5", "claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-4-5",
+    # alias y especiales
+    "fable", "opus", "sonnet", "haiku", "inherit",
+}
+KNOWN_EFFORT = {"low", "medium", "high", "xhigh", "max"}
+# effort NO está soportado en Haiku 4.5 ni Sonnet 4.5 (la API devuelve 400).
+EFFORT_UNSUPPORTED = {"haiku", "claude-haiku-4-5"}
 
 
 def parse_fm(text):
@@ -69,6 +77,12 @@ def validate_agents():
         if "model" in fm:
             check(fm["model"] in KNOWN_MODELS, f"{rel}: model '{fm.get('model')}' OK",
                   f"{rel}: model desconocido '{fm.get('model')}'", warn=True)
+        if "effort" in fm:
+            check(fm["effort"] in KNOWN_EFFORT, f"{rel}: effort '{fm['effort']}' OK",
+                  f"{rel}: effort inválido '{fm['effort']}' (usa {sorted(KNOWN_EFFORT)})")
+            check(fm.get("model") not in EFFORT_UNSUPPORTED,
+                  f"{rel}: effort compatible con el modelo",
+                  f"{rel}: effort no soportado en '{fm.get('model')}' (Haiku/Sonnet-4.5 dan 400)")
         tools = [t.strip() for t in fm.get("tools", "").split(",") if t.strip()]
         unknown = [t for t in tools if t not in KNOWN_TOOLS]
         check(not unknown, f"{rel}: tools OK", f"{rel}: tools desconocidas {unknown}", warn=True)

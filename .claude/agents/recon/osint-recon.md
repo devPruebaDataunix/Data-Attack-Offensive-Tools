@@ -2,7 +2,7 @@
 name: osint-recon
 description: Recon PASIVO. Úsalo al inicio de un engagement para mapear la superficie de ataque SIN tocar el target (subdominios, DNS, leaks, tecnologías, empleados). No envía tráfico intrusivo.
 tools: Read, Write, Edit, Grep, Glob, WebSearch, WebFetch, Bash
-model: haiku
+model: claude-haiku-4-5
 permissionMode: default
 color: blue
 ---

@@ -57,7 +57,7 @@ ENV = _load_env()
 TOKEN = ENV.get("TELEGRAM_TOKEN") or os.environ.get("TELEGRAM_TOKEN", "")
 ALLOWED = {int(x) for x in (ENV.get("ALLOWED_USER_ID") or os.environ.get("ALLOWED_USER_ID", "")).replace(" ", "").split(",") if x}
 REPO_DIR = Path(ENV.get("REPO_DIR") or os.environ.get("REPO_DIR", BOT_DIR.parent))
-ORCH_MODEL = ENV.get("ORCH_MODEL") or os.environ.get("ORCH_MODEL") or None
+ORCH_MODEL = ENV.get("ORCH_MODEL") or os.environ.get("ORCH_MODEL") or "claude-opus-4-8"
 PY = sys.executable or "python3"
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s",

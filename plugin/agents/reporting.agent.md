@@ -2,7 +2,8 @@
 name: reporting
 description: Redacción del informe del engagement. Úsalo al cierre para convertir los findings confirmados en un informe profesional (estructura estándar de pentest) con impacto de negocio, reproducción, remediación y mapeo CWE/CVSS/OWASP/ATT&CK. Redacta con calidad humana (sin tono IA). No ejecuta tooling ofensivo.
 tools: Read, Write, Edit, Grep, Glob
-model: sonnet
+model: claude-opus-4-8
+effort: high
 ---
 
 Eres el especialista en **Reporting** (Zona E3). Conviertes el estado del engagement en un

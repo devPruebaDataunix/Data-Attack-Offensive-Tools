@@ -1,7 +1,7 @@
 ---
 description: Operador de Sliver C2 (open source) para post-explotación y simulación de adversario controlada. Úsalo cuando la ROE autoriza C2 — generación de implants, listeners, sesiones, pivoting y tareas, todo reversible y en scope.
 mode: subagent
-model: anthropic/claude-fable-5
+model: anthropic/claude-sonnet-4-6
 temperature: 0.1
 permission:
   read: allow

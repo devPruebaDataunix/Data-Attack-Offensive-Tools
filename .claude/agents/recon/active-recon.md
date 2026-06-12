@@ -2,7 +2,8 @@
 name: active-recon
 description: Recon ACTIVO / enumeración. Úsalo tras osint-recon para escanear puertos, identificar servicios y versiones, y hacer fingerprinting web sobre activos EN SCOPE. Envía tráfico al target.
 tools: Read, Write, Edit, Grep, Glob, Bash
-model: sonnet
+model: claude-sonnet-4-6
+effort: medium
 permissionMode: default
 color: blue
 ---

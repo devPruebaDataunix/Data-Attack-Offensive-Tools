@@ -1,7 +1,7 @@
 ---
 description: Simulación CONTROLADA de C2, exfiltración e impacto para demostrar el riesgo de negocio sin causar daño real. Úsalo en la fase final de explotación cuando la ROE autoriza demostrar impacto. Exfiltración siempre simulada (canary), nunca datos reales.
 mode: subagent
-model: anthropic/claude-fable-5
+model: anthropic/claude-sonnet-4-6
 temperature: 0.1
 permission:
   read: allow

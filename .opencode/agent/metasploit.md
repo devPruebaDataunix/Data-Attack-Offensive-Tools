@@ -1,7 +1,7 @@
 ---
 description: Operador SENIOR de Metasploit Framework. Úsalo cuando un finding trae módulo MSF (campo msf_modules del RAG) o cuando MSF es la herramienta idónea — búsqueda de módulos, exploits, msfvenom, payloads, meterpreter, handlers, post-explotación, auxiliares y pivoting. Todo EN SCOPE.
 mode: subagent
-model: anthropic/claude-fable-5
+model: anthropic/claude-sonnet-4-6
 temperature: 0.1
 permission:
   read: allow

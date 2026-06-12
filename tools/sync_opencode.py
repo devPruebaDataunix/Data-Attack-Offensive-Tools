@@ -19,6 +19,12 @@ SRC = os.path.join(ROOT, ".claude", "agents")
 DST = os.path.join(ROOT, ".opencode", "agent")
 
 MODEL_MAP = {
+    # IDs completos (formato actual de .claude/agents) -> prefijo de provider opencode
+    "claude-fable-5": "anthropic/claude-fable-5",
+    "claude-opus-4-8": "anthropic/claude-opus-4-8",
+    "claude-sonnet-4-6": "anthropic/claude-sonnet-4-6",
+    "claude-haiku-4-5": "anthropic/claude-haiku-4-5-20251001",
+    # alias (compatibilidad hacia atrás)
     "fable": "anthropic/claude-fable-5",
     "opus": "anthropic/claude-opus-4-8",
     "sonnet": "anthropic/claude-sonnet-4-6",
@@ -40,7 +46,7 @@ def parse_frontmatter(text):
 
 
 def to_opencode(fm, body):
-    model = MODEL_MAP.get(fm.get("model", "fable"), "anthropic/claude-fable-5")
+    model = MODEL_MAP.get(fm.get("model", "claude-opus-4-8"), "anthropic/claude-opus-4-8")
     tools = [t.strip() for t in fm.get("tools", "").split(",") if t.strip()]
     has = lambda name: name in tools
     # Permisos opencode: por defecto deny; ask para bash (acciones que tocan target).

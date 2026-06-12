@@ -1,7 +1,7 @@
 ---
 description: Redacción del informe del engagement. Úsalo al cierre para convertir los findings confirmados en un informe profesional (estructura estándar de pentest) con impacto de negocio, reproducción, remediación y mapeo CWE/CVSS/OWASP/ATT&CK. Redacta con calidad humana (sin tono IA). No ejecuta tooling ofensivo.
 mode: subagent
-model: anthropic/claude-sonnet-4-6
+model: anthropic/claude-opus-4-8
 temperature: 0.1
 permission:
   read: allow
