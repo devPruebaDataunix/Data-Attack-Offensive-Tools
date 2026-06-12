@@ -222,12 +222,14 @@ class AgentRunner:
     async def _run_fallback(self, task: str) -> str:
         await self.emit("ℹ️ Agent SDK no disponible: ejecución sin streaming (degradada).")
         await self._scan_findings(seed=True)
-        claude = shutil.which("claude") or "claude"
+        claude = os.environ.get("CLAUDE_CLI_PATH") or shutil.which("claude") or "claude"
         prompt = ("Actúa como Orquestador siguiendo AGENTS.md. Lee contracts/scope.json. "
                   f"Tarea: {task}")
+        args = [claude, "-p", prompt, "--permission-mode", "default", "--output-format", "text"]
+        if self.model:
+            args += ["--model", self.model]
         p = await asyncio.create_subprocess_exec(
-            claude, "-p", prompt, "--permission-mode", "default", "--output-format", "text",
-            cwd=str(self.repo),
+            *args, cwd=str(self.repo),
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
         )
         out, _ = await p.communicate()
