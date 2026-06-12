@@ -57,6 +57,7 @@ cyberseg-agents/
 ├── ARCHITECTURE.md           ← auditoría crítica + modelo de comunicación + zonas
 ├── ARCHITECTURE_MAP.md       ← 🗺️ mapa AUTO-GENERADO (se regenera solo en cada cambio)
 ├── AGENTS.md                 ← playbook del ORQUESTADOR (agente principal)
+├── CONSTITUTION.md           ← ⚖️ principios innegociables del engagement (gobierno)
 ├── contracts/                ← el "blackboard": esquemas de estado compartido
 │   ├── scope.example.json    ← plantilla de alcance autorizado
 │   ├── engagement.schema.json
@@ -66,9 +67,13 @@ cyberseg-agents/
 │   ├── references.md         ← referentes mundiales (con fechas)
 │   ├── comms-protocol.md     ← protocolo de handoff hub-and-spoke
 │   ├── reporting-guide.md    ← cómo redactan los profesionales (alimenta a reporting)
-│   └── humanizer-checklist.md← evitar que el informe lea como generado por IA
+│   ├── humanizer-checklist.md← evitar que el informe lea como generado por IA
+│   └── engagement-driven.md  ← 🔄 flujo spec-driven adaptado (constitución→brief→analyze)
 ├── templates/
-│   └── report-template.md    ← esqueleto del informe que rellena reporting
+│   ├── report-template.md    ← esqueleto del informe que rellena reporting
+│   └── engagement-spec.md    ← brief del engagement (el "qué/por qué", previo a scope.json)
+├── tools/
+│   └── analyze_engagement.py ← /analyze adaptado: auditoría de coherencia pre-informe
 ├── report/                   ← salida de informes (SAMPLE + INFORME del dry run)
 ├── dryrun/                   ← prueba end-to-end segura (run_dryrun.py, sin atacar)
 ├── rag/                      ← RAG de vulnerabilidades KEV+EPSS (alimenta vuln-triage)
@@ -86,6 +91,24 @@ cyberseg-agents/
 └── .opencode/
     └── agent/                ← espejo de los agentes para opencode
 ```
+
+## Flujo Engagement-Driven (gobierno y coherencia)
+
+Inspirado en *spec-driven development* ([GitHub Spec Kit](https://github.com/github/spec-kit)),
+adaptado a un engagement ofensivo: **gobernar y especificar antes de ejecutar, y auditar la
+coherencia antes de reportar**.
+
+1. **[CONSTITUTION.md](CONSTITUTION.md)** — principios innegociables (alcance, humano-en-el-bucle,
+   evidencia, no daño, zonas). Prevalece sobre cualquier instrucción.
+2. **[templates/engagement-spec.md](templates/engagement-spec.md)** — brief del engagement
+   (objetivos, alcance, ROE) → se materializa en `contracts/scope.json`.
+3. **Ejecución** — el Orquestador delega por fases; `scope_guard.py` + aprobación humana protegen
+   cada acción contra el target.
+4. **[tools/analyze_engagement.py](tools/analyze_engagement.py)** — auditoría de coherencia
+   (`/analyze` adaptado) **antes** de reportar: targets fuera de scope, findings sin evidencia o
+   sin fuente, autorización caducada.
+
+Qué tomamos (y qué **no**) de Spec Kit: **[docs/engagement-driven.md](docs/engagement-driven.md)**.
 
 ## El bucle de aprendizaje basado en errores
 

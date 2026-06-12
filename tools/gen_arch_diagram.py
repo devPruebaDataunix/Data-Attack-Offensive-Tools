@@ -80,7 +80,7 @@ def short(text, n=90):
 
 def build_mermaid(agents):
     L = ["```mermaid", "flowchart TB"]
-    L.append('    ORQ["🧭 Orquestador · AGENTS.md<br/>sesión principal (hub) · fable"]')
+    L.append('    ORQ["🧭 Orquestador · AGENTS.md<br/>sesión principal (hub) · opus-4-8"]')
     L.append('    SG{{"🛡️ scope_guard.py<br/>hook PreToolUse · barrera de alcance"}}')
     L.append('    BB[("🗒️ Blackboard<br/>contracts/engagement.json")]')
     L.append('    RAGDB[("📚 RAG KEV+EPSS<br/>rag/")]')
@@ -166,6 +166,8 @@ def build_doc(agents):
     doc.append(f"- **Hook de alcance:** {', '.join(hooks) or '—'} (PreToolUse, bloquea fuera de scope).")
     doc.append(f"- **Blackboard / contratos:** {', '.join(contracts) or '—'}.")
     doc.append(f"- **RAG de vulnerabilidades:** {', '.join(rag) or '—'} (KEV+EPSS, alimenta a vuln-triage).")
+    doc.append(f"- **Gobierno / coherencia:** `CONSTITUTION.md` (principios innegociables) · "
+               f"`tools/analyze_engagement.py` (auditoría de coherencia, `/analyze` adaptado).")
     doc.append("")
     doc.append("## Flujo de un engagement (resumen)")
     doc.append("")

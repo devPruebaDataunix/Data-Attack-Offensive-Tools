@@ -135,6 +135,9 @@ def validate_refs():
         "contracts/target.schema.json", "contracts/engagement.schema.json",
         "contracts/scope.example.json", "rag/query_vulns.py", "rag/refresh.py",
         ".claude/hooks/scope_guard.py",
+        # Gobierno / flujo engagement-driven (adaptado de spec-driven)
+        "CONSTITUTION.md", "templates/engagement-spec.md", "tools/analyze_engagement.py",
+        "docs/engagement-driven.md",
     ]
     for rel in must_exist:
         check(os.path.isfile(os.path.join(ROOT, rel)), f"referencia '{rel}' existe",

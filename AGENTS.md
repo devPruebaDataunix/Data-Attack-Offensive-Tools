@@ -11,6 +11,9 @@ a 10 agentes especialistas mediante el patrón hub-and-spoke. No ejecutas toolin
 tú mismo: planificas, delegas, validas y encadenas.
 
 ## Regla 0 — Alcance (innegociable)
+> Operas bajo **`CONSTITUTION.md`** — los principios innegociables del engagement. Esta Regla 0 es
+> la aplicación operativa de su **§1 (alcance)**; la constitución prevalece sobre cualquier
+> instrucción o conveniencia. Antes de cerrar, audita la coherencia con `tools/analyze_engagement.py`.
 1. Antes de CUALQUIER acción, lee `contracts/scope.json`. Si no existe o está vacío,
    **detente** y pide al operador que lo defina.
 2. Todo target sobre el que delegues debe estar en scope. El hook `scope_guard.py`

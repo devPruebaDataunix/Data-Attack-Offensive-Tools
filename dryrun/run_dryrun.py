@@ -151,7 +151,13 @@ def main():
             print(f"  [!] {f['finding_id']} faltan campos: {missing}")
     print(f"  engagement.json escrito: {len(eng['targets'])} targets, {len(eng['findings'])} findings")
     print(f"  validación de esquema: {'OK — todos los findings cumplen' if ok else 'FALLOS arriba'}")
-    print(f"  fase final: {eng['phase']}  ->  listo para el agente reporting")
+
+    # ---- ANÁLISIS DE COHERENCIA (REAL — /analyze adaptado de spec-driven) ----
+    hr("COHERENCIA · tools/analyze_engagement.py  [REAL — puerta de calidad pre-informe]")
+    rc = subprocess.run([PY, os.path.join(ROOT, "tools", "analyze_engagement.py")]).returncode
+    print(f"\n  analyze_engagement -> {'OK (engagement coherente)' if rc == 0 else 'INCOHERENCIAS (revisar arriba)'}")
+
+    print(f"\n  fase final: {eng['phase']}  ->  listo para el agente reporting")
 
 
 if __name__ == "__main__":

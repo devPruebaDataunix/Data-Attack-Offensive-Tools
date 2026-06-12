@@ -3,7 +3,7 @@
 
 # 🗺️ Mapa de Arquitectura — Cyberseg Agents
 
-> **Generado:** 2026-06-12 07:57:03 UTC · **Refleja el estado real** del proyecto en ese momento.
+> **Generado:** 2026-06-12 09:07:03 UTC · **Refleja el estado real** del proyecto en ese momento.
 > Regenerar a mano: `python tools/gen_arch_diagram.py`
 
 ## Qué es esto (para reconstruir contexto si se pierde)
@@ -16,7 +16,7 @@ Suite de agentes para **pentesting / bug bounty autorizado**. Un **Orquestador**
 
 ```mermaid
 flowchart TB
-    ORQ["🧭 Orquestador · AGENTS.md<br/>sesión principal (hub) · fable"]
+    ORQ["🧭 Orquestador · AGENTS.md<br/>sesión principal (hub) · opus-4-8"]
     SG{{"🛡️ scope_guard.py<br/>hook PreToolUse · barrera de alcance"}}
     BB[("🗒️ Blackboard<br/>contracts/engagement.json")]
     RAGDB[("📚 RAG KEV+EPSS<br/>rag/")]
@@ -89,8 +89,9 @@ flowchart TB
 
 - **Orquestador (hub):** `AGENTS.md` — sesión principal, no es un subagente.
 - **Hook de alcance:** scope_guard.py (PreToolUse, bloquea fuera de scope).
-- **Blackboard / contratos:** engagement.schema.json, examples, finding.schema.json, scope.example.json, scope.json, target.schema.json.
+- **Blackboard / contratos:** engagement.json, engagement.schema.json, examples, finding.schema.json, scope.example.json, scope.json, target.schema.json.
 - **RAG de vulnerabilidades:** db.py, enrich_cve5.py, enrich_epss.py, enrich_exploits.py, enrich_msf.py, enrich_nuclei.py, ingest_kev.py, query_vulns.py, refresh.py (KEV+EPSS, alimenta a vuln-triage).
+- **Gobierno / coherencia:** `CONSTITUTION.md` (principios innegociables) · `tools/analyze_engagement.py` (auditoría de coherencia, `/analyze` adaptado).
 
 ## Flujo de un engagement (resumen)
 

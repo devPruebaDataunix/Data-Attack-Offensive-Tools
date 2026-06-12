@@ -48,6 +48,11 @@ if python3 tools/validate_suite.py >/dev/null 2>&1; then
   printf "  $(c 2)[OK]$(r)  %-22s 0 fallos\n" "validate_suite.py"; OKN=$((OKN+1))
 else printf "  $(c 1)[--]$(r)  %-22s con fallos\n" "validate_suite.py"; FAIL=$((FAIL+1)); fi
 
+for _a in CONSTITUTION.md templates/engagement-spec.md tools/analyze_engagement.py; do
+  if [ -f "$_a" ]; then printf "  $(c 2)[OK]$(r)  %-22s presente\n" "$(basename "$_a")"; OKN=$((OKN+1))
+  else printf "  $(c 1)[--]$(r)  %-22s FALTA\n" "$(basename "$_a")"; FAIL=$((FAIL+1)); fi
+done
+
 if command -v claude >/dev/null 2>&1 && claude plugin validate ./plugin >/dev/null 2>&1; then
   printf "  $(c 2)[OK]$(r)  %-22s validación pasada\n" "plugin (claude)"; OKN=$((OKN+1))
 else printf "  $(c 3)[??]$(r)  %-22s revisar\n" "plugin (claude)"; fi
