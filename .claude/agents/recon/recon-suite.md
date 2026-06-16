@@ -2,8 +2,7 @@
 name: recon-suite
 description: Especialista en el toolkit de recon moderno — subfinder, amass, dnsx, naabu, httpx, katana, gau y nmap. Úsalo para descubrir activos, subdominios, DNS, puertos/servicios y superficie web. Pasivo o activo según el scope.
 tools: Read, Write, Edit, Grep, Glob, Bash
-model: claude-sonnet-4-6
-effort: low
+model: claude-haiku-4-5
 permissionMode: default
 color: blue
 ---

@@ -68,6 +68,8 @@ class AgentRunner:
         model: Optional[str] = None,
         approval_timeout: int = 300,
         status_min_gap: float = 3.0,
+        effort: Optional[str] = "medium",
+        max_usd: Optional[float] = None,
     ):
         self.repo = Path(repo)
         self.emit = emit              # mensaje nuevo: hito importante
@@ -77,6 +79,8 @@ class AgentRunner:
         self.model = model
         self.approval_timeout = approval_timeout
         self.status_min_gap = status_min_gap
+        self.effort = effort          # effort del Orquestador (coste). None = sin override.
+        self.max_usd = max_usd        # techo de coste por run en USD. None = sin techo.
 
         self._subagents: dict[str, str] = {}   # tool_use_id (Task) -> subagent_type
         self._seen: dict[str, str] = {}        # finding_id -> último status visto
@@ -134,7 +138,26 @@ class AgentRunner:
         )
         if cli:
             opts["cli_path"] = cli
-        return ClaudeAgentOptions(**opts)
+        # v1.4.0 — palancas de coste del Orquestador. `effort` y `max_budget_usd` son campos
+        # NATIVOS del SDK (verificado en la doc oficial), pero se aplican de forma DEFENSIVA: si
+        # la versión instalada no los acepta, se degradan (effort -> flag CLI `--effort`; el techo
+        # USD se omite) sin romper la sesión. Se configuran por env (ORCH_EFFORT / ORCH_MAX_USD).
+        if self.effort:
+            opts["effort"] = self.effort
+        if self.max_usd:
+            opts["max_budget_usd"] = self.max_usd
+        try:
+            return ClaudeAgentOptions(**opts)
+        except TypeError:
+            eff = opts.pop("effort", None)
+            opts.pop("max_budget_usd", None)
+            if eff:
+                opts["extra_args"] = {**(opts.get("extra_args") or {}), "--effort": str(eff)}
+            try:
+                return ClaudeAgentOptions(**opts)
+            except TypeError:
+                opts.pop("extra_args", None)
+                return ClaudeAgentOptions(**opts)
 
     # ---- ejecución ------------------------------------------------------------
     async def run(self, task: str) -> str:
@@ -228,8 +251,13 @@ class AgentRunner:
         args = [claude, "-p", prompt, "--permission-mode", "default", "--output-format", "text"]
         if self.model:
             args += ["--model", self.model]
+        # effort por variable de entorno (segura: si el CLI no la reconoce, la ignora — al
+        # contrario que un flag, que daría error). Replica la palanca de coste del modo SDK.
+        env = dict(os.environ)
+        if self.effort:
+            env.setdefault("CLAUDE_CODE_EFFORT_LEVEL", self.effort)
         p = await asyncio.create_subprocess_exec(
-            *args, cwd=str(self.repo),
+            *args, cwd=str(self.repo), env=env,
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
         )
         out, _ = await p.communicate()

@@ -4,6 +4,28 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [1.4.0] - 2026-06-17
+### Changed
+- **Optimización de coste — tier de modelos por agente.** Reparto recalibrado de **5/12/1** a
+  **4 opus-4-8 · 8 sonnet · 6 haiku**: opus-4-8 queda solo donde el razonamiento profundo cambia el
+  resultado (`web-exploit`, `post-exploit`, `ai-security`, `reporting`). `network-exploit` baja a
+  sonnet; `recon-suite`, `active-recon`, `web-fuzzing`, `nuclei` y `knowledge-postmortem` pasan a
+  haiku (recon/escaneo/parseo mecánico). El `effort` se omite en los agentes haiku (la API da 400).
+- **Orquestador con control de coste.** El runner del bot fija ahora el `effort` (def. `medium`) y
+  un techo de coste por orden opcional del Orquestador (opus-4-8), configurables por entorno
+  (`ORCH_EFFORT`, `ORCH_MAX_USD`). Aplicación **defensiva**: degrada sin romper la sesión si la
+  versión instalada del SDK no expone los campos. El modelo sigue saliendo de `ORCH_MODEL`.
+### Added
+- **Perfil opencode-lab ampliado**: `tools/routing.json` enruta ahora **5** agentes mecánicos
+  (`osint-recon`, `recon-suite`, `active-recon`, `web-fuzzing`, `nuclei`) a modelos locales (Ollama)
+  para practicar/desarrollar contra laboratorios a coste cero. Solo afecta al runtime opencode; el
+  bot real (engagements) sigue 100% Anthropic. 100% reversible (vaciar `routes`).
+- `docs/cost-optimization.md`: el modelo de coste (el Orquestador es el término dominante), el tier
+  por agente, cómo **re-medir** el coste real (el bot lo imprime por engagement) y las palancas.
+### Notes
+- Sin cambios en la seguridad: el gate de alcance, los guardarraíles C11–C13 y la aprobación humana
+  por acción quedan intactos. Re-sincronizados el espejo opencode, el plugin y el mapa de arquitectura.
+
 ## [1.3.0] - 2026-06-16
 ### Fixed
 - **`scope_guard` ya no confunde ficheros/código con dominios.** `cat contracts/scope.json`,
@@ -67,6 +89,7 @@ se versiona con [SemVer](https://semver.org/lang/es/).
 - Controles base: gate de alcance determinista (`scope_guard.py`), validación de esquema del
   blackboard, escritura atómica, zonas de aislamiento E1/E2/E3 y reporting humanizado.
 
+[1.4.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.4.0
 [1.3.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.3.0
 [1.2.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.2.0
 [1.1.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.1.0

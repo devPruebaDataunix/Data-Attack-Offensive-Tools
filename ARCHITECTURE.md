@@ -100,13 +100,13 @@ El Orquestador es el plano de control; no ejecuta tooling ofensivo por sí mismo
 ## 5. Asignación de modelos (coste vs. razonamiento)
 
 Routing por tier para no quemar cupo de Pro (sin `CLAUDE_CODE_SUBAGENT_MODEL`): cada agente
-fija su propio `model`. Distribución real: **1 haiku · 12 sonnet · 5 opus-4-8** (sin fable).
+fija su propio `model`. Distribución real: **6 haiku · 8 sonnet · 4 opus-4-8** (sin fable).
 
 | Tier | Agentes | Motivo |
 | :--- | :--- | :--- |
-| `claude-haiku-4-5` | osint-recon | mucho dato, poco razonamiento |
-| `claude-sonnet-4-6` | active-recon, recon-suite, nuclei, vuln-triage, web-fuzzing, sqlmap, metasploit, netexec, sliver, lateral-discovery, c2-exfil, knowledge-postmortem | razonamiento moderado / el RAG hace el trabajo pesado |
-| `claude-opus-4-8` | web-exploit, network-exploit, post-exploit, ai-security, reporting | razonamiento ofensivo profundo + informe |
+| `claude-haiku-4-5` | osint-recon, recon-suite, active-recon, web-fuzzing, nuclei, knowledge-postmortem | recon/escaneo/parseo mecánico: mucho dato, poco razonamiento (sin `effort`) |
+| `claude-sonnet-4-6` | vuln-triage, sqlmap, metasploit, netexec, sliver, lateral-discovery, c2-exfil, network-exploit | tool-driving con juicio / el RAG hace el trabajo pesado |
+| `claude-opus-4-8` | web-exploit, post-exploit, ai-security, reporting | razonamiento ofensivo profundo + informe |
 
 > El inventario completo y siempre al día (modelo por agente) vive en `ARCHITECTURE_MAP.md`
 > (auto-generado). Esta tabla es el resumen por tier. El Orquestador (sesión principal) usa opus-4-8.

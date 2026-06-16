@@ -1,7 +1,7 @@
 ---
 description: Especialista en Nuclei (ProjectDiscovery), escaneo de vulnerabilidades por plantillas. Úsalo para escanear activos web/red en scope con plantillas CVE, exposiciones y misconfiguraciones; aprovecha las rutas de plantilla que ya trae el RAG.
 mode: subagent
-model: anthropic/claude-sonnet-4-6
+model: ollama/qwen2.5-coder:7b
 temperature: 0.1
 permission:
   read: allow

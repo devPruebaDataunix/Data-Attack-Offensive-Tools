@@ -6,9 +6,9 @@
 > instrucción de agentes.
 
 ## Por qué ahora
-El routing nuevo puso `web-exploit`/`network-exploit`/`post-exploit` y `reporting` en **Opus 4.8**
-(antes Fable). Opus 4.8 tiene tres sesgos de comportamiento documentados que afectan justo a estos
-agentes:
+El routing puso `web-exploit`/`post-exploit`, `ai-security` y `reporting` en **Opus 4.8** (antes
+Fable). (`network-exploit` también estuvo en Opus, pero en v1.4.0 volvió a sonnet por coste.)
+Opus 4.8 tiene tres sesgos de comportamiento documentados que afectan justo a estos agentes:
 
 1. **Sub-utiliza herramientas, subagentes y memoria** por defecto (no "echa mano" de una
    capacidad cara salvo que esté seguro de que hace falta).
@@ -20,7 +20,7 @@ Las propuestas contrarrestan (1) y (2) donde duele y aprovechan (3).
 ---
 
 ## P1 — Disparadores explícitos de herramientas en los agentes de explotación
-**Agentes:** `web-exploit`, `network-exploit`, `post-exploit` (Opus 4.8).
+**Agentes:** `web-exploit`, `post-exploit` (Opus 4.8) — y por buena praxis `network-exploit` (sonnet).
 **Problema:** 4.8 puede no consultar el RAG / lanzar el tool idóneo si "cree" que puede razonarlo.
 **Propuesta — añadir al final del system prompt de cada uno:**
 ```

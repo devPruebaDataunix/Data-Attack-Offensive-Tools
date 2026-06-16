@@ -19,7 +19,7 @@ verificado; queda **un solo paso manual** (tu login, que no puedo hacer por ti).
 | **MCP Servers** | vacío en el plugin (eip no auto-arranca); eip opt-in en `.mcp.json.example` | ✔ |
 | **Instructions** | `AGENTS.md` (VS Code lo reconoce) | ✔ |
 | **Registro** | `chat.pluginLocations` → `plugin/` | `.vscode/settings.json` |
-| **Modelos** | 1 haiku · 12 sonnet · 5 opus-4-8 (sin fable; sin override que quemaba cupo) | tuneado para Pro |
+| **Modelos** | 6 haiku · 8 sonnet · 4 opus-4-8 (sin fable; tier de coste v1.4.0) | tuneado para Pro |
 | **RAG** | store poblado: KEV + CVSS/SSVC (CVE 5.0) + EPSS + **ExploitDB + módulos Metasploit + plantillas Nuclei** | `python rag/refresh.py --epss-all` |
 | **Alcance** | `contracts/scope.json` armado (placeholder de **laboratorio**) | gate fail-closed |
 | **QA** | `python tools/validate_suite.py` | **106 checks OK, 0 fallos** |

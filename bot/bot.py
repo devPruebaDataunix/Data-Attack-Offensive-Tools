@@ -16,7 +16,9 @@ Config (bot/.env, ignorado por git):
     TELEGRAM_TOKEN=...
     ALLOWED_USER_ID=123,456
     REPO_DIR=/ruta/al/repo
-    ORCH_MODEL=          # opcional: fuerza un modelo para el Orquestador (def.: el del proyecto)
+    ORCH_MODEL=          # opcional: modelo del Orquestador (def.: claude-opus-4-8)
+    ORCH_EFFORT=         # opcional: effort del Orquestador low|medium|high|xhigh|max (def.: medium)
+    ORCH_MAX_USD=        # opcional: techo de coste por orden en USD; corta al alcanzarlo (def.: sin techo)
 """
 import asyncio
 import json
@@ -59,6 +61,12 @@ TOKEN = ENV.get("TELEGRAM_TOKEN") or os.environ.get("TELEGRAM_TOKEN", "")
 ALLOWED = {int(x) for x in (ENV.get("ALLOWED_USER_ID") or os.environ.get("ALLOWED_USER_ID", "")).replace(" ", "").split(",") if x}
 REPO_DIR = Path(ENV.get("REPO_DIR") or os.environ.get("REPO_DIR", BOT_DIR.parent))
 ORCH_MODEL = ENV.get("ORCH_MODEL") or os.environ.get("ORCH_MODEL") or "claude-opus-4-8"
+ORCH_EFFORT = ENV.get("ORCH_EFFORT") or os.environ.get("ORCH_EFFORT") or "medium"
+_max_usd_raw = (ENV.get("ORCH_MAX_USD") or os.environ.get("ORCH_MAX_USD") or "").strip()
+try:
+    ORCH_MAX_USD = float(_max_usd_raw) if _max_usd_raw else None
+except ValueError:
+    ORCH_MAX_USD = None
 PY = sys.executable or "python3"
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s",
@@ -364,7 +372,8 @@ async def _execute(ctx, chat_id, task):
     async def on_verdict(v, f):
         await _alert(ctx, chat_id, v)
 
-    runner = AgentRunner(REPO_DIR, emit, status_upd, approve, on_verdict, model=ORCH_MODEL)
+    runner = AgentRunner(REPO_DIR, emit, status_upd, approve, on_verdict, model=ORCH_MODEL,
+                         effort=ORCH_EFFORT, max_usd=ORCH_MAX_USD)
     try:
         final = await runner.run(task)
     except Exception as e:  # noqa: BLE001

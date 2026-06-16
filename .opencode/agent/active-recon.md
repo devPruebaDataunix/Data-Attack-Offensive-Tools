@@ -1,7 +1,7 @@
 ---
 description: Recon ACTIVO / enumeración. Úsalo tras osint-recon para escanear puertos, identificar servicios y versiones, y hacer fingerprinting web sobre activos EN SCOPE. Envía tráfico al target.
 mode: subagent
-model: anthropic/claude-sonnet-4-6
+model: ollama/qwen2.5-coder:7b
 temperature: 0.1
 permission:
   read: allow

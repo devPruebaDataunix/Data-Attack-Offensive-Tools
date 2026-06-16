@@ -1,6 +1,6 @@
 {
   "$comment": "Config de Claude Code para la suite Cyberseg Agents. El hook scope_guard es la barrera dura de alcance.",
-  "$comment_modelos": "Sin CLAUDE_CODE_SUBAGENT_MODEL a propósito: cada agente usa su propio 'model' (tier ajustado para no quemar cupo de Pro). opus-4-8 en explotación pesada + informe; el resto sonnet/haiku (sin fable).",
+  "$comment_modelos": "Sin CLAUDE_CODE_SUBAGENT_MODEL a propósito: cada agente usa su propio 'model' (tier de coste, v1.4.0: 4 opus-4-8 / 8 sonnet / 6 haiku, sin fable). opus-4-8 SOLO en web-exploit, post-exploit, ai-security y reporting (donde rompe la box / calidad del informe); sonnet en tool-drivers con juicio; haiku en recon/parseo mecánico (sin 'effort': Haiku da 400). El Orquestador (bot, ORCH_MODEL) corre opus-4-8 a effort 'medium' (ORCH_EFFORT) con techo USD opcional (ORCH_MAX_USD).",
   "permissions": {
     "defaultMode": "default",
     "ask": [

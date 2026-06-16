@@ -183,8 +183,8 @@ fijados; el orquestador decide a quién llamar en cada fase.
 | Agente | Modelo | Función |
 | :--- | :--- | :--- |
 | **osint-recon** | haiku-4-5 | Recon pasivo: mapea la superficie sin tocar al objetivo. |
-| **active-recon** | sonnet-4-6 | Recon activo: enumeración y escaneo de puertos/servicios. |
-| **recon-suite** | sonnet-4-6 | Toolkit moderno: subfinder, amass, dnsx, httpx. |
+| **active-recon** | haiku-4-5 | Recon activo: enumeración y escaneo de puertos/servicios. |
+| **recon-suite** | haiku-4-5 | Toolkit moderno: subfinder, amass, dnsx, httpx. |
 
 </details>
 
@@ -194,11 +194,11 @@ fijados; el orquestador decide a quién llamar en cada fase.
 | Agente | Modelo | Función |
 | :--- | :--- | :--- |
 | **vuln-triage** | sonnet-4-6 | Prioriza vulnerabilidades consultando el RAG (KEV/exploit/EPSS/CVSS). |
-| **nuclei** | sonnet-4-6 | Escaneo de vulnerabilidades con plantillas de ProjectDiscovery. |
+| **nuclei** | haiku-4-5 | Escaneo de vulnerabilidades con plantillas de ProjectDiscovery. |
 | **web-exploit** | opus-4-8 | Explotación de aplicaciones web (capa 7 HTTP/S). |
-| **web-fuzzing** | sonnet-4-6 | Descubrimiento de contenido y fuzzing con ffuf/feroxbuster. |
+| **web-fuzzing** | haiku-4-5 | Descubrimiento de contenido y fuzzing con ffuf/feroxbuster. |
 | **sqlmap** | sonnet-4-6 | Inyección SQL automatizada, operador senior de sqlmap. |
-| **network-exploit** | opus-4-8 | Explotación de servicios de red e infraestructura no-HTTP. |
+| **network-exploit** | sonnet-4-6 | Explotación de servicios de red e infraestructura no-HTTP. |
 | **post-exploit** | opus-4-8 | Post-explotación sobre un host ya comprometido en scope. |
 | **lateral-discovery** | sonnet-4-6 | Descubrimiento interno y movimiento lateral desde un punto de apoyo. |
 | **metasploit** | sonnet-4-6 | Operador senior de Metasploit Framework. |
@@ -215,7 +215,7 @@ fijados; el orquestador decide a quién llamar en cada fase.
 | Agente | Modelo | Función |
 | :--- | :--- | :--- |
 | **reporting** | opus-4-8 | Redacta el informe: CVSS 3.1 + vector, MITRE ATT&CK, cadena de ataque. |
-| **knowledge-postmortem** | sonnet-4-6 | Aprende de cada intento; escribe lecciones en memoria persistente. |
+| **knowledge-postmortem** | haiku-4-5 | Aprende de cada intento; escribe lecciones en memoria persistente. |
 
 </details>
 

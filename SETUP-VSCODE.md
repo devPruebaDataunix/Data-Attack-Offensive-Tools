@@ -44,9 +44,9 @@ subagentes a `fable` y quemaba cupo). Ahora manda el `model` de cada agente:
 
 | Modelo | Agentes | Por qué |
 | :--- | :--- | :--- |
-| `claude-haiku-4-5` | osint-recon | mucho dato, poco razonamiento |
-| `claude-sonnet-4-6` | active-recon, recon-suite, nuclei, vuln-triage, web-fuzzing, sqlmap, metasploit, netexec, sliver, lateral-discovery, c2-exfil, knowledge-postmortem | razonamiento moderado / el RAG hace el trabajo pesado |
-| `claude-opus-4-8` | web-exploit, network-exploit, post-exploit, ai-security, reporting | razonamiento ofensivo pesado + informe |
+| `claude-haiku-4-5` | osint-recon, recon-suite, active-recon, web-fuzzing, nuclei, knowledge-postmortem | recon/escaneo/parseo mecánico: mucho dato, poco razonamiento (sin `effort`) |
+| `claude-sonnet-4-6` | vuln-triage, sqlmap, metasploit, netexec, sliver, lateral-discovery, c2-exfil, network-exploit | tool-driving con juicio / el RAG hace el trabajo pesado |
+| `claude-opus-4-8` | web-exploit, post-exploit, ai-security, reporting | razonamiento ofensivo pesado + informe |
 
 **Orquestador** (sesión principal): elígelo al abrir la sesión. `sonnet` para engagements
 rutinarios; `opus-4-8` para los complejos.

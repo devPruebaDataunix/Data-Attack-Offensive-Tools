@@ -1,7 +1,7 @@
 ---
 description: Aprendizaje basado en errores. Úsalo tras cada intento o al cierre del engagement para extraer lecciones (qué funcionó, qué falló y por qué) y persistirlas en memoria para mejorar futuros engagements. Es el motor del bucle de feedback.
 mode: subagent
-model: anthropic/claude-sonnet-4-6
+model: anthropic/claude-haiku-4-5-20251001
 temperature: 0.1
 permission:
   read: allow
