@@ -3,14 +3,14 @@
 
 # 🗺️ Mapa de Arquitectura — Cyberseg Agents
 
-> **Generado:** 2026-06-12 09:07:03 UTC · **Refleja el estado real** del proyecto en ese momento.
+> **Generado:** 2026-06-16 08:21:38 UTC · **Refleja el estado real** del proyecto en ese momento.
 > Regenerar a mano: `python tools/gen_arch_diagram.py`
 
 ## Qué es esto (para reconstruir contexto si se pierde)
 
 Suite de agentes para **pentesting / bug bounty autorizado**. Un **Orquestador** (sesión principal, `AGENTS.md`) coordina a los agentes especialistas mediante **hub-and-spoke**: él es el único que delega y recoge resultados; los agentes **no se hablan entre sí**, se comunican a través del **blackboard** (`contracts/engagement.json`). Un **hook de alcance** (`scope_guard.py`) bloquea de forma determinista cualquier comando contra un target fuera de `contracts/scope.json`. El agente `vuln-triage` consulta el **RAG de vulnerabilidades** (`rag/`, KEV+EPSS) para priorizar por explotación real.
 
-**Estado actual:** 17 agentes especialistas (E1=3, E2=12, E3=2) + Orquestador + hook de alcance.
+**Estado actual:** 18 agentes especialistas (E1=3, E2=13, E3=2) + Orquestador + hook de alcance.
 
 ## Diagrama
 
@@ -28,6 +28,7 @@ flowchart TB
     subgraph E2["🟥 Zona E2 · Explotación (VLAN del engagement, por cliente, kill-switch)"]
         nuclei["nuclei<br/><i>claude-sonnet-4-6</i>"]
         vuln_triage["vuln-triage<br/><i>claude-sonnet-4-6</i>"]
+        ai_security["ai-security<br/><i>claude-opus-4-8</i>"]
         c2_exfil["c2-exfil<br/><i>claude-sonnet-4-6</i>"]
         lateral_discovery["lateral-discovery<br/><i>claude-sonnet-4-6</i>"]
         metasploit["metasploit<br/><i>claude-sonnet-4-6</i>"]
@@ -72,6 +73,7 @@ flowchart TB
 | **recon-suite** | E1 | claude-sonnet-4-6 | default | — | Read, Write, Edit, Grep, Glob, Bash | Especialista en el toolkit de recon moderno — subfinder, amass, dnsx,… |
 | **nuclei** | E2 | claude-sonnet-4-6 | default | — | Read, Write, Edit, Grep, Glob, Bash | Especialista en Nuclei (ProjectDiscovery), escaneo de vulnerabilidade… |
 | **vuln-triage** | E2 | claude-sonnet-4-6 | default | — | Read, Write, Edit, Grep, Glob, Bash, We… | Análisis y priorización de vulnerabilidades. Úsalo tras active-recon … |
+| **ai-security** | E2 | claude-opus-4-8 | default | — | Read, Write, Edit, Grep, Glob, Bash, We… | Red teaming de aplicaciones con IA/LLM. Úsalo cuando el target en sco… |
 | **c2-exfil** | E2 | claude-sonnet-4-6 | default | — | Read, Write, Edit, Grep, Glob, Bash | Simulación CONTROLADA de C2, exfiltración e impacto para demostrar el… |
 | **lateral-discovery** | E2 | claude-sonnet-4-6 | default | — | Read, Write, Edit, Grep, Glob, Bash | Descubrimiento INTERNO y movimiento lateral desde un punto de apoyo c… |
 | **metasploit** | E2 | claude-sonnet-4-6 | default | — | Read, Write, Edit, Grep, Glob, Bash | Operador SENIOR de Metasploit Framework. Úsalo cuando un finding trae… |

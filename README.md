@@ -6,7 +6,7 @@
 > verdad del alcance y un *hook* lo aplica de forma determinista antes de cada acción.
 > Operar fuera de scope es ilegal. No lo hagas.
 
-Suite de **17 agentes especialistas (de fase + de herramienta) + orquestador + guardián de
+Suite de **18 agentes especialistas (de fase + de herramienta) + orquestador + guardián de
 alcance (hook) + RAG de vulnerabilidades + bot de Telegram**, para asistir todas las fases de
 un engagement ofensivo. Construida sobre el sistema nativo de **subagentes de Claude Code** y
 replicada para **opencode**.

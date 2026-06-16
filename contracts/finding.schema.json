@@ -35,6 +35,16 @@
       "type": "array",
       "description": "Fuentes que respaldan (CVE/KEV/advisory). Sin fuente no se explota.",
       "items": { "type": "string" }
+    },
+    "next_step": {
+      "type": "object",
+      "description": "Encadenamiento sugerido (attack chaining ligero): el siguiente eslabón si este finding se confirma — p.ej. SQLi confirmada -> shell OOB; AD recon -> DCSync. El Orquestador lo usa para enrutar. El grafo de ataque es el propio engagement.json.",
+      "properties": {
+        "suggested_agent": { "type": "string", "description": "Vector/agente al que enrutar (p.ej. metasploit, post-exploit, ai-security)" },
+        "technique": { "type": "string", "description": "Técnica del siguiente paso (ATT&CK o descripción breve)" },
+        "depends_on": { "type": "string", "description": "Condición de activación, p.ej. 'status == confirmed'" },
+        "rationale": { "type": "string", "description": "Por qué este eslabón sigue al anterior" }
+      }
     }
   }
 }
