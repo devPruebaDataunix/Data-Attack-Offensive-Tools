@@ -13,13 +13,13 @@ verificado; queda **un solo paso manual** (tu login, que no puedo hacer por ti).
 | Pieza | Estado | Verificación |
 | :--- | :--- | :--- |
 | **Plugin** (`plugin/`) | manifest en `plugin.json` (VS Code) **y** `.claude-plugin/plugin.json` (Claude) | `claude plugin validate ./plugin` → **✔ passed** |
-| **Agents** | 17 especialistas: 10 de fase + 7 de herramienta (metasploit, recon-suite, nuclei, web-fuzzing, sqlmap, netexec, sliver) | auto-descubiertos |
+| **Agents** | 18 especialistas: 11 de fase + 7 de herramienta (metasploit, recon-suite, nuclei, web-fuzzing, sqlmap, netexec, sliver) | auto-descubiertos |
 | **Skills** | `rag-vuln-triage`, `pentest-report` (`SKILL.md`, Open Standard) | name+description ✔ |
 | **Hooks** | gate de alcance `PreToolUse` (envoltorio `{"hooks":{…}}`) | ✔ |
 | **MCP Servers** | vacío en el plugin (eip no auto-arranca); eip opt-in en `.mcp.json.example` | ✔ |
 | **Instructions** | `AGENTS.md` (VS Code lo reconoce) | ✔ |
 | **Registro** | `chat.pluginLocations` → `plugin/` | `.vscode/settings.json` |
-| **Modelos** | 1 haiku · 5 sonnet · 4 fable (sin override que quemaba cupo) | tuneado para Pro |
+| **Modelos** | 1 haiku · 12 sonnet · 5 opus-4-8 (sin fable; sin override que quemaba cupo) | tuneado para Pro |
 | **RAG** | store poblado: KEV + CVSS/SSVC (CVE 5.0) + EPSS + **ExploitDB + módulos Metasploit + plantillas Nuclei** | `python rag/refresh.py --epss-all` |
 | **Alcance** | `contracts/scope.json` armado (placeholder de **laboratorio**) | gate fail-closed |
 | **QA** | `python tools/validate_suite.py` | **106 checks OK, 0 fallos** |
@@ -29,7 +29,7 @@ A VS Code solo puedo hacerle clic, no escribir; y tu login es tuyo:
 1. Ventana **cyberseg-agents** → `Ctrl+Shift+P` → **Reload Window** (carga el plugin).
 2. Ventana de **Agents** → **Session Type → Claude** (no Copilot CLI).
 3. Login con **Pro** si lo pide.
-4. `/agents` → deben salir los 10. Prueba:
+4. `/agents` → deben salir los 18. Prueba:
    `Actúa como Orquestador. Lee contracts/scope.json y usa vuln-triage para "Apache HTTP Server 2.4.49".`
 
 ## ⚠️ Antes de cada engagement real

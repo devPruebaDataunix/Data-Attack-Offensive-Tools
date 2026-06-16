@@ -1,6 +1,6 @@
 # Arquitectura — Cyberseg Agents
 
-## 1. Auditoría crítica del diseño original (los 11 agentes)
+## 1. Auditoría crítica del diseño original (los 11 agentes de entonces; hoy 18)
 
 Antes de construir se auditó si los 11 agentes podían "realizar su función y comunicarse
 entre ellos sin fisuras". Conclusión: la **taxonomía era correcta**, pero la **plomería
@@ -22,7 +22,7 @@ se implementa con dos mecanismos, no con mensajería directa:
 
 ### Fallo 2 — El Orquestador no puede ser un subagente
 Como los subagentes no pueden lanzar otros subagentes, el Orquestador **es el agente
-principal** (la sesión main), descrito en `AGENTS.md`. No es uno de los 10 de la carpeta
+principal** (la sesión main), descrito en `AGENTS.md`. No es uno de los 18 de la carpeta
 `agents/`.
 
 ### Fallo 3 — El Scope Guard como agente es saltable
@@ -99,13 +99,14 @@ El Orquestador es el plano de control; no ejecuta tooling ofensivo por sí mismo
 
 ## 5. Asignación de modelos (coste vs. razonamiento)
 
-| Agente | Modelo | Motivo |
+Routing por tier para no quemar cupo de Pro (sin `CLAUDE_CODE_SUBAGENT_MODEL`): cada agente
+fija su propio `model`. Distribución real: **1 haiku · 12 sonnet · 5 opus-4-8** (sin fable).
+
+| Tier | Agentes | Motivo |
 | :--- | :--- | :--- |
-| osint-recon | haiku | mucho dato, poco razonamiento |
-| active-recon | sonnet | parseo + decisión moderada |
-| vuln-triage | fable | correlación CVE compleja |
-| web-exploit / network-exploit / post-exploit / c2-exfil / metasploit | fable | razonamiento ofensivo profundo |
-| lateral-discovery | sonnet | mapeo + decisión |
-| reporting | sonnet | redacción estructurada |
-| knowledge-postmortem | fable | extracción de lecciones + memoria |
-| Orquestador (main) | fable / opus | planificación global |
+| `claude-haiku-4-5` | osint-recon | mucho dato, poco razonamiento |
+| `claude-sonnet-4-6` | active-recon, recon-suite, nuclei, vuln-triage, web-fuzzing, sqlmap, metasploit, netexec, sliver, lateral-discovery, c2-exfil, knowledge-postmortem | razonamiento moderado / el RAG hace el trabajo pesado |
+| `claude-opus-4-8` | web-exploit, network-exploit, post-exploit, ai-security, reporting | razonamiento ofensivo profundo + informe |
+
+> El inventario completo y siempre al día (modelo por agente) vive en `ARCHITECTURE_MAP.md`
+> (auto-generado). Esta tabla es el resumen por tier. El Orquestador (sesión principal) usa opus-4-8.

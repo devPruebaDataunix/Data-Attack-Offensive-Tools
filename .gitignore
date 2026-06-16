@@ -9,6 +9,7 @@ bot/.env
 # ─── Alcance y estado de engagement (datos de cliente) ─────────
 contracts/scope.json
 contracts/engagement.json
+contracts/*.tmp
 
 # ─── Generado en runtime ───────────────────────────────────────
 rag/vulns.db

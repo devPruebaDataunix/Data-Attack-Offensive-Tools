@@ -17,7 +17,7 @@
 2. **Inicia sesión** (suscripción Pro): abre un terminal integrado en VS Code y ejecuta
    `claude`. Sigue el login por navegador (OAuth). Solo la primera vez.
 3. **Confirma que los agentes cargan**: en la sesión de Claude Code escribe `/agents`.
-   Deben aparecer los 10 especialistas (recon, analysis, exploitation, closing).
+   Deben aparecer los 18 especialistas (recon, analysis, exploitation, closing).
 4. **Define el alcance autorizado** antes de cualquier acción:
    ```
    copy contracts\scope.example.json contracts\scope.json
@@ -44,12 +44,12 @@ subagentes a `fable` y quemaba cupo). Ahora manda el `model` de cada agente:
 
 | Modelo | Agentes | Por qué |
 | :--- | :--- | :--- |
-| `haiku` | osint-recon | mucho dato, poco razonamiento |
-| `sonnet` | active-recon, vuln-triage, lateral-discovery, reporting, knowledge-postmortem | razonamiento moderado / el RAG hace el trabajo pesado |
-| `fable` | web-exploit, network-exploit, post-exploit, c2-exfil | razonamiento ofensivo pesado — solo aquí |
+| `claude-haiku-4-5` | osint-recon | mucho dato, poco razonamiento |
+| `claude-sonnet-4-6` | active-recon, recon-suite, nuclei, vuln-triage, web-fuzzing, sqlmap, metasploit, netexec, sliver, lateral-discovery, c2-exfil, knowledge-postmortem | razonamiento moderado / el RAG hace el trabajo pesado |
+| `claude-opus-4-8` | web-exploit, network-exploit, post-exploit, ai-security, reporting | razonamiento ofensivo pesado + informe |
 
 **Orquestador** (sesión principal): elígelo al abrir la sesión. `sonnet` para engagements
-rutinarios; `opus`/`fable` para los complejos.
+rutinarios; `opus-4-8` para los complejos.
 
 > Modelos locales/gratis descartados para *esta* máquina (Ryzen 7 5825U, 15 GB RAM, GPU
 > integrada): un 3B por CPU sería lento y no sirve para triage/explotación/informe. Si en el

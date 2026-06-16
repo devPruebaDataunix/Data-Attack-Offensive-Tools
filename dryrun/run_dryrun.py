@@ -19,6 +19,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PY = sys.executable
 NOW = datetime.now(timezone.utc).isoformat()
 
+sys.path.insert(0, os.path.join(ROOT, "tools"))
+from blackboard import atomic_write_json, validate_engagement  # noqa: E402
+
 
 def hr(t):
     print("\n" + "=" * 70 + f"\n  {t}\n" + "=" * 70)
@@ -140,17 +143,13 @@ def main():
     eng["phase"] = "reporting"
     eng["updated_at"] = NOW
     out = os.path.join(ROOT, "contracts", "engagement.json")
-    json.dump(eng, open(out, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
-    # Validación de campos requeridos
-    fsch = json.load(open(os.path.join(ROOT, "contracts", "finding.schema.json"), encoding="utf-8"))
-    ok = True
-    for f in eng["findings"]:
-        missing = [k for k in fsch["required"] if k not in f]
-        if missing:
-            ok = False
-            print(f"  [!] {f['finding_id']} faltan campos: {missing}")
+    atomic_write_json(out, eng)  # escritura atómica (tmp + os.replace)
+    # Validación de esquema: targets + findings + lessons + evidence (tools/blackboard.py)
+    violations = validate_engagement(eng)
+    for v in violations:
+        print(f"  [!] {v}")
     print(f"  engagement.json escrito: {len(eng['targets'])} targets, {len(eng['findings'])} findings")
-    print(f"  validación de esquema: {'OK — todos los findings cumplen' if ok else 'FALLOS arriba'}")
+    print(f"  validación de esquema: {'OK — blackboard cumple los esquemas' if not violations else 'FALLOS arriba'}")
 
     # ---- ANÁLISIS DE COHERENCIA (REAL — /analyze adaptado de spec-driven) ----
     hr("COHERENCIA · tools/analyze_engagement.py  [REAL — puerta de calidad pre-informe]")

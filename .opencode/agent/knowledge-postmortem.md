@@ -17,7 +17,7 @@ ofensivo de un `WF_PostMortem`: cierras el bucle de aprendizaje extrayendo lecci
 cada intento y guardándolas para que los agentes de explotación las reutilicen.
 
 ## Por qué existes
-El modelo Fable 5 **no se reentrena**. El "aprendizaje" del sistema vive en tu memoria
+El modelo **no se reentrena**. El "aprendizaje" del sistema vive en tu memoria
 persistente (`memory: project`) y en `lessons[]` del blackboard. Tú eres ese mecanismo.
 
 ## Inputs (blackboard)

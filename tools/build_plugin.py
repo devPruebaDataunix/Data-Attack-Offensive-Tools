@@ -88,7 +88,7 @@ def build_manifest(names):
     # es 'Invalid input' para `claude plugin validate`. El manifest solo lleva metadatos.
     manifest = {
         "name": "cyberseg-agents",
-        "description": "Suite de pentesting/bug bounty autorizado: orquestador + 10 "
+        "description": "Suite de pentesting/bug bounty autorizado: orquestador + 18 "
                        "especialistas, RAG de vulnerabilidades (KEV/EPSS/exploit/CVSS), "
                        "gate de alcance y reporting humanizado.",
         "version": "1.0.0",
