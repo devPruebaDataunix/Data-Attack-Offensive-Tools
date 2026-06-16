@@ -22,10 +22,12 @@ bot cae a `claude -p` (modo degradado, sin streaming) automáticamente.
    🔴 **EVIDENCIA REAL** con resumen claro para humano; candidato con respaldo fuerte
    (exploit/MSF/KEV) → 🟠 vigilar; hit de escáner sin respaldo o falso positivo → 🔇 se cuenta y
    se calla. Solo lo real dispara alerta. (`bot/intel/classify.py`)
-5. **Aprobación por acción.** Cuando un agente va a lanzar un comando que toca el target
-   (nmap, nuclei, sqlmap, netexec, msf, ffuf…), el bot te manda **✅ Autorizar / ⛔ Denegar** y
-   espera tu OK (timeout → denegado). El gate determinista `scope_guard.py` sigue aplicando
-   debajo.
+5. **Aprobación por acción, por nivel de riesgo.** Cada comando se clasifica en un tier
+   (`bot/intel/risk.py`): el **recon pasivo** (subfinder/amass/whois…) se auto-aprueba sin
+   fricción; el escaneo/explotación (nmap, nuclei, sqlmap…) te manda **✅ Autorizar / ⛔ Denegar**;
+   lo **destructivo** (netexec, secretsdump, mimikatz…) siempre pregunta; y el **C2/implantes**
+   (sliver…) exige **doble confirmación**. Timeout → denegado. El gate determinista
+   `scope_guard.py` sigue aplicando debajo.
 
 ## Seguridad (diseño)
 - **Allowlist dura de user-id** (`ALLOWED_USER_ID`): cualquier otro queda rechazado y logueado.

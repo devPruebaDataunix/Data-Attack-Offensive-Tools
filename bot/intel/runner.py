@@ -17,13 +17,14 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-import re
 import shutil
 import time
 from pathlib import Path
 from typing import Awaitable, Callable, Optional
 
 from . import classify as C
+from . import risk as R
+from .risk import OFFENSIVE  # noqa: F401 - re-exportado para compatibilidad de tests
 
 try:
     from claude_agent_sdk import (
@@ -40,15 +41,8 @@ try:
 except Exception:  # pragma: no cover - SDK ausente en algunos entornos
     SDK_OK = False
 
-# Comandos/herramientas que tocan al objetivo -> requieren confirmación humana por acción.
-OFFENSIVE = re.compile(
-    r"\b(nmap|masscan|rustscan|naabu|nuclei|sqlmap|msfconsole|msfvenom|msfcli|"
-    r"netexec|nxc|crackmapexec|cme|secretsdump|psexec|wmiexec|smbexec|atexec|"
-    r"evil-winrm|ffuf|feroxbuster|gobuster|dirb|wfuzz|hydra|medusa|patator|"
-    r"wpscan|nikto|responder|ntlmrelayx|sliver|metasploit|amass|httpx|katana|"
-    r"enum4linux|ldapsearch|kerbrute|certipy|bloodhound|getuserspns|getnpusers)\b",
-    re.I,
-)
+# La clasificación de riesgo por tiers (safe/normal/sensitive/destructive/critical) y la
+# política de aprobación viven en risk.py; OFFENSIVE se re-exporta arriba (compat de tests).
 
 EmitFn = Callable[[str], Awaitable[None]]
 StatusFn = Callable[[str], Awaitable[None]]
@@ -90,21 +84,27 @@ class AgentRunner:
         self._last_status = 0.0
         self._final = ""
 
-    # ---- gate de permiso por acción ------------------------------------------
+    # ---- gate de permiso por acción (por tier de riesgo) ----------------------
     async def _gate(self, tool_name, tool_input, ctx):
-        cmd = tool_input.get("command", "") if tool_name == "Bash" else ""
-        if tool_name == "Bash" and OFFENSIVE.search(cmd):
+        # Solo gateamos comandos de shell; el resto de tools las decide el modo de permiso.
+        if tool_name != "Bash":
+            return PermissionResultAllow()
+        cmd = tool_input.get("command", "")
+        tier, policy = R.classify_command(cmd)
+        if policy == "auto":                      # safe / benigno -> sin fricción
+            return PermissionResultAllow()
+        needed = 2 if policy == "dual" else 1     # critical (C2/implantes) = doble confirmación
+        for i in range(needed):
+            extra = "" if needed == 1 else f"  ·  confirmación {i + 1}/{needed}"
+            summary = f"[{tier.upper()}] {_trim(cmd, 300)}{extra}"
             try:
-                ok = await asyncio.wait_for(
-                    self.approve(_trim(cmd, 320)), timeout=self.approval_timeout
-                )
+                ok = await asyncio.wait_for(self.approve(summary), timeout=self.approval_timeout)
             except asyncio.TimeoutError:
                 return PermissionResultDeny(
                     message="Sin respuesta del operador: acción denegada por timeout."
                 )
-            if ok:
-                return PermissionResultAllow()
-            return PermissionResultDeny(message="El operador denegó esta acción por Telegram.")
+            if not ok:
+                return PermissionResultDeny(message="El operador denegó esta acción por Telegram.")
         return PermissionResultAllow()
 
     def _options(self):

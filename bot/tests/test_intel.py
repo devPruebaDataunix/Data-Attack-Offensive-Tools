@@ -181,6 +181,101 @@ def test_gate_offensive_requires_approval():
     assert res_allow.behavior == "allow"
 
 
+# ── risk: tiers de riesgo y política de aprobación ──────────────────────────────
+from intel import risk as R  # noqa: E402
+
+
+def test_risk_tier_classification():
+    cases = {
+        "whois acme.example": "safe",
+        "subfinder -d acme.example": "safe",
+        "nmap -sV 10.0.0.1": "normal",
+        "httpx -l hosts.txt": "normal",
+        "nuclei -u http://x": "normal",
+        "sqlmap -u http://x --batch": "sensitive",
+        "hydra -l a -P w ssh://x": "sensitive",
+        "nxc smb 10.0.0.0/24": "destructive",
+        "secretsdump.py dom/u:p@10.0.0.1": "destructive",
+        "evil-winrm -i 10.0.0.1 -u a -p b": "destructive",
+        "sliver-server": "critical",
+        "msfvenom -p windows/meterpreter/reverse_tcp": "critical",
+        "ls -la": "benign",
+        "python rag/query_vulns.py --query apache": "benign",
+    }
+    for cmd, tier in cases.items():
+        got, _ = R.classify_command(cmd)
+        assert got == tier, f"{cmd!r} -> {got} (esperado {tier})"
+
+
+def test_risk_policy_mapping():
+    assert R.classify_command("subfinder -d x")[1] == "auto"     # recon pasivo
+    assert R.classify_command("nmap x")[1] == "ask"
+    assert R.classify_command("secretsdump.py x")[1] == "ask"
+    assert R.classify_command("sliver-server")[1] == "dual"      # C2 -> doble confirmación
+    assert R.classify_command("ls")[1] == "auto"
+
+
+def test_risk_takes_max_tier():
+    # un comando que encadena recon + C2 debe tomar el nivel MÁXIMO
+    assert R.classify_command("subfinder -d x && sliver-server")[0] == "critical"
+
+
+def test_gate_safe_recon_auto_no_approval():
+    if not SDK_OK:
+        print("    (omitido: Claude Agent SDK no instalado)")
+        return
+    from intel.runner import AgentRunner
+
+    async def _run():
+        calls = []
+
+        async def approve(s):
+            calls.append(s)
+            return True
+
+        r = AgentRunner(BOT, emit=None, status=None, approve=approve, on_verdict=None)
+        res = await r._gate("Bash", {"command": "subfinder -d acme.example"}, None)
+        return calls, res
+
+    calls, res = asyncio.run(_run())
+    assert res.behavior == "allow"
+    assert calls == [], "el recon pasivo NO debe pedir aprobación"
+
+
+def test_gate_critical_requires_dual_approval():
+    if not SDK_OK:
+        print("    (omitido: Claude Agent SDK no instalado)")
+        return
+    from intel.runner import AgentRunner
+
+    async def _run():
+        ok_calls = []
+
+        async def approve_yes(s):
+            ok_calls.append(s)
+            return True
+
+        r = AgentRunner(BOT, emit=None, status=None, approve=approve_yes,
+                        on_verdict=None, approval_timeout=5)
+        allowed = await r._gate("Bash", {"command": "sliver-server"}, None)
+
+        no_calls = []
+
+        async def approve_second_no(s):   # 1ª confirmación OK, 2ª denegada
+            no_calls.append(s)
+            return len(no_calls) == 1
+
+        r2 = AgentRunner(BOT, emit=None, status=None, approve=approve_second_no,
+                         on_verdict=None, approval_timeout=5)
+        denied = await r2._gate("Bash", {"command": "sliver-server"}, None)
+        return ok_calls, allowed, no_calls, denied
+
+    ok_calls, allowed, no_calls, denied = asyncio.run(_run())
+    assert len(ok_calls) == 2, "critical debe pedir DOBLE confirmación"
+    assert allowed.behavior == "allow"
+    assert len(no_calls) == 2 and denied.behavior == "deny", "denegar la 2ª confirmación bloquea"
+
+
 # ── runner standalone ───────────────────────────────────────────────────────────
 def _all_tests():
     return [(n, f) for n, f in sorted(globals().items())
