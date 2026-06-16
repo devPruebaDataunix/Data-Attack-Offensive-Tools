@@ -18,5 +18,19 @@
   },
   "permission": {
     "bash": "ask"
+  },
+  "$comment_provider": "Ollama LOCAL para el piloto de routing (ver tools/routing.json). Keyless: habla OpenAI-compatible contra el daemon local. Inerte hasta que un agente referencie 'ollama/...'; el Orquestador y los agentes no enrutados siguen en anthropic/*. Requiere 'ollama serve' + 'ollama pull <modelo>'. Si las tool-calls fallan, sube num_ctx en Ollama (~16k-32k).",
+  "provider": {
+    "ollama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Ollama (local)",
+      "options": {
+        "baseURL": "http://localhost:11434/v1"
+      },
+      "models": {
+        "llama3.1:8b": { "name": "Llama 3.1 8B (local)" },
+        "qwen2.5-coder:7b": { "name": "Qwen2.5 Coder 7B (local)" }
+      }
+    }
   }
 }

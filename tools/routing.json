@@ -1,0 +1,7 @@
+{
+  "$comment": "Routing multi-provider — SOLO afecta al espejo opencode (.opencode/agent/*.md, que es GENERADO por tools/sync_opencode.py). NO toca .claude/agents (su frontmatter 'model' sigue siendo Anthropic, que es lo que usan Claude Code y el bot), ni el Orquestador, ni nada del runtime Anthropic. Cada clave de 'routes' es el 'name' de un agente; el valor es un modelo opencode en formato 'provider/model'. Un agente AUSENTE de 'routes' conserva el comportamiento por defecto (MODEL_MAP sobre su 'model' Anthropic). PILOTO: solo recon barato/pasivo enrutado a Ollama LOCAL (coste cero, sin sacar datos de cliente del equipo; los modelos locales no tienen thinking adaptativo/effort/prompt-caching, por eso solo recon/parseo y nunca explotación o reporting). REVERTIR = vaciar 'routes' ({}) y volver a correr 'python tools/sync_opencode.py'. Los tags de modelo (p.ej. llama3.1:8b) deben coincidir con lo que el operador haya hecho 'ollama pull'; cambiar aquí es el único sitio.",
+  "routes": {
+    "osint-recon": "ollama/llama3.1:8b",
+    "recon-suite": "ollama/qwen2.5-coder:7b"
+  }
+}
