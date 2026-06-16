@@ -42,6 +42,14 @@ trap 'err "Fallo en la línea $LINENO. Revisa el log: $LOG"' ERR
 
 SUDO=""; [ "$(id -u)" -ne 0 ] && SUDO="sudo"
 have(){ command -v "$1" >/dev/null 2>&1; }
+# Reintenta apt ante el lock del auto-update de primer arranque o mirrors intermitentes.
+apt_retry(){
+  local n=0
+  until $SUDO apt-get "$@"; do
+    n=$((n+1)); [ "$n" -ge 6 ] && { err "apt falló tras 6 intentos: apt-get $*"; return 1; }
+    warn "apt ocupado/falló (intento $n/6); reintento en 15s…"; sleep 15
+  done
+}
 
 # =============================================================================
 # 0) PREFLIGHT — corroboración del sistema antes de tocar nada
@@ -75,17 +83,26 @@ preflight(){
 # =============================================================================
 install_base(){
   step "1/6  Dependencias base"
-  $SUDO apt-get update -y
-  $SUDO apt-get install -y --no-install-recommends \
+  # El keyring de Kali caduca y deja los repos sin firmar -> 'paquete no localizable'. Refréscalo.
+  $SUDO apt-get install -y --reinstall kali-archive-keyring >/dev/null 2>&1 || true
+  apt_retry update -y
+  apt_retry install -y --no-install-recommends \
     git curl wget jq ca-certificates gnupg build-essential \
     python3 python3-pip python3-venv pipx python-is-python3 \
     golang-go dnsutils
   pipx ensurepath >/dev/null 2>&1 || true
-  # Node.js (≥18) para Claude Code — NodeSource si la versión de apt es vieja
-  if ! have node || [ "$(node -v 2>/dev/null | tr -dc '0-9.' | cut -d. -f1)" -lt 18 ]; then
-    info "Instalando Node.js LTS (NodeSource)…"
-    curl -fsSL https://deb.nodesource.com/setup_lts.x | $SUDO -E bash -
-    $SUDO apt-get install -y nodejs
+  # Node.js (≥18) para Claude Code. Prefiere el de Kali; NodeSource solo si hace falta
+  # (instalar nodejs de NodeSource sobre el libnode de Kali suele dar 'dpkg: error processing').
+  node_major(){ node -v 2>/dev/null | tr -dc '0-9.' | cut -d. -f1; }
+  if ! have node || [ "$(node_major)" -lt 18 ]; then
+    info "Node <18 o ausente; intento con el nodejs de Kali…"
+    apt_retry install -y nodejs npm || true
+  fi
+  if ! have node || [ "$(node_major)" -lt 18 ]; then
+    info "El nodejs de Kali no sirve; instalando Node LTS (NodeSource)…"
+    curl -fsSL https://deb.nodesource.com/setup_lts.x | $SUDO -E bash - \
+      || warn "NodeSource setup falló (revisa conectividad)."
+    apt_retry install -y nodejs || warn "Instalación de Node falló; instálalo a mano (ver DEPLOY.md)."
   fi
   ok "Base lista — node $(node -v 2>/dev/null), python3 $(python3 -V 2>&1 | awk '{print $2}'), go $(go version 2>/dev/null | awk '{print $3}')"
 }
@@ -184,9 +201,11 @@ main(){
   preflight
   install_base
   install_claude
-  [ "$DO_TOOLS" -eq 1 ] && install_tools || warn "Toolchain omitido (--skip-tools)."
-  [ "$DO_RAG"   -eq 1 ] && setup_rag      || warn "RAG omitido (--no-rag)."
-  [ "$DO_BOT"   -eq 1 ] && setup_bot      || warn "Bot omitido (--no-bot)."
+  # if/then/else (no 'A && B || C'): así un fallo dentro de la función NO se enmascara
+  # como "omitido" y aborta con la línea real (set -e activo dentro de la función).
+  if [ "$DO_TOOLS" -eq 1 ]; then install_tools; else warn "Toolchain omitido (--skip-tools)."; fi
+  if [ "$DO_RAG"   -eq 1 ]; then setup_rag;      else warn "RAG omitido (--no-rag)."; fi
+  if [ "$DO_BOT"   -eq 1 ]; then setup_bot;      else warn "Bot omitido (--no-bot)."; fi
   run_verify
   step "✔ Despliegue completado"
   ok "Arranca el bot:  cd bot && ./.venv/bin/python bot.py"

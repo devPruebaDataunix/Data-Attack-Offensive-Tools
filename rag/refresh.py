@@ -25,7 +25,9 @@ def run(module, argv):
         runpy.run_path(os.path.join(HERE, module), run_name="__main__")
     except SystemExit as e:
         if e.code not in (0, None):
-            raise
+            print(f"[!] {module} terminó con código {e.code} (continuo con el resto).")
+    except Exception as e:  # noqa: BLE001 - una fuente caída (red/parseo) no aborta todo el refresco
+        print(f"[!] {module} falló: {e} (continuo con el resto).")
     finally:
         sys.path = old
 
