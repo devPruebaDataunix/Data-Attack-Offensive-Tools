@@ -10,6 +10,7 @@ bot/.env
 contracts/scope.json
 contracts/engagement.json
 contracts/*.tmp
+contracts/.action_count
 
 # ─── Generado en runtime ───────────────────────────────────────
 rag/vulns.db

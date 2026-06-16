@@ -17,6 +17,7 @@
   <a href="https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/network/members"><img src="https://img.shields.io/github/forks/devPruebaDataunix/Data-Attack-Offensive-Tools?style=for-the-badge&logo=github&color=00D4FF&labelColor=0D1117" alt="Forks"></a>
   <a href="https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/issues"><img src="https://img.shields.io/github/issues/devPruebaDataunix/Data-Attack-Offensive-Tools?style=for-the-badge&logo=github&color=FF6B35&labelColor=0D1117" alt="Issues"></a>
   <a href="https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/commits"><img src="https://img.shields.io/github/last-commit/devPruebaDataunix/Data-Attack-Offensive-Tools?style=for-the-badge&logo=git&logoColor=white&color=3FB950&labelColor=0D1117" alt="Último commit"></a>
+  <a href="https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases"><img src="https://img.shields.io/github/v/release/devPruebaDataunix/Data-Attack-Offensive-Tools?style=for-the-badge&logo=github&color=8957E5&labelColor=0D1117&label=versi%C3%B3n" alt="Última versión"></a>
 </p>
 
 <!-- BADGES — identidad y stack real -->
@@ -35,6 +36,7 @@
   <img src="https://img.shields.io/badge/Vulns-KEV%2BEPSS-00D4FF?style=flat-square&labelColor=0D1117" alt="RAG KEV+EPSS">
   <img src="https://img.shields.io/badge/Alcance-scope--guarded-3FB950?style=flat-square&labelColor=0D1117" alt="Scope guarded">
   <img src="https://img.shields.io/badge/Control-humano_en_el_bucle-3FB950?style=flat-square&labelColor=0D1117" alt="Humano en el bucle">
+  <img src="https://img.shields.io/badge/Guardarra%C3%ADles-OWASP_LLM_Top_10-3FB950?style=flat-square&labelColor=0D1117" alt="Guardarraíles OWASP LLM Top 10">
 </p>
 
 <!-- BADGES — legal -->
@@ -283,7 +285,8 @@ especificar antes de ejecutar, y auditar la coherencia antes de reportar.
 - **Secretos fuera del repo:** token y user-id en `bot/.env` (ignorado por git).
 - **Regla de evidencia:** sin fuente, no se explota; sin evidencia, no es un hallazgo.
 - **Gobierno por [CONSTITUTION.md](CONSTITUTION.md)** y auditoría de coherencia previa al informe.
-- **Capa de guardarraíles** documentada y mapeada a OWASP LLM Top 10 — ver [GUARDRAILS.md](GUARDRAILS.md).
+- **Capa de guardarraíles deterministas** (gate de alcance, validación del blackboard, anti-inyección, detector de secretos y kill-switch de consumo) mapeada a OWASP LLM Top 10 — ver [GUARDRAILS.md](GUARDRAILS.md).
+- **Historial de versiones** en [CHANGELOG.md](CHANGELOG.md) (SemVer) y en las [releases](https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases).
 
 ## Estructura del repositorio
 

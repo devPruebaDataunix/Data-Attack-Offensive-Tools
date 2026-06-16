@@ -91,7 +91,7 @@ def build_manifest(names):
         "description": "Suite de pentesting/bug bounty autorizado: orquestador + 18 "
                        "especialistas, RAG de vulnerabilidades (KEV/EPSS/exploit/CVSS), "
                        "gate de alcance y reporting humanizado.",
-        "version": "1.0.0",
+        "version": "1.2.0",
         "author": {"name": "Cyberseg"},
     }
     blob = json.dumps(manifest, indent=2, ensure_ascii=False)

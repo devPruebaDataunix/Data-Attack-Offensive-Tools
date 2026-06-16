@@ -47,6 +47,46 @@ def rag_triage(query, kev_only=True):
     return json.loads(p.stdout)["results"] if p.returncode == 0 else []
 
 
+def call_hook(script_rel, event):
+    """Lanza un hook REAL con un evento simulado por stdin y devuelve su stdout."""
+    p = subprocess.run([PY, script_rel], input=json.dumps(event),
+                       capture_output=True, text=True, cwd=ROOT)
+    return p.stdout.strip()
+
+
+def kill_switch_demo(cap=3):
+    """Ejercita budget_guard.py en un sandbox temporal; devuelve en qué acción corta (LLM10)."""
+    import importlib.util
+    import tempfile
+    import io
+    import contextlib
+    spec = importlib.util.spec_from_file_location(
+        "budget_guard", os.path.join(ROOT, ".claude", "hooks", "budget_guard.py"))
+    bg = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(bg)
+    d = tempfile.mkdtemp()
+    bg.COUNT_FILE = os.path.join(d, ".action_count")
+    bg.SCOPE = os.path.join(d, "scope.json")
+    bg.ENGAGEMENT = os.path.join(d, "engagement.json")
+    with open(bg.SCOPE, "w", encoding="utf-8") as f:
+        json.dump({"engagement_id": "DEMO", "constraints": {"max_actions": cap}}, f)
+    for i in range(1, cap + 3):
+        ev = json.dumps({"tool_name": "Bash", "tool_input": {"command": f"nmap step{i}"}})
+        old = sys.stdin
+        sys.stdin = io.StringIO(ev)
+        buf = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(buf):
+                bg.main()
+        except SystemExit:
+            pass
+        finally:
+            sys.stdin = old
+        if "KILL-SWITCH" in buf.getvalue():
+            return i
+    return None
+
+
 def main():
     scope = json.load(open(os.path.join(ROOT, "contracts", "scope.json"), encoding="utf-8"))
     eng = {"engagement_id": scope["engagement_id"], "scope_ref": "contracts/scope.json",
@@ -155,6 +195,25 @@ def main():
     hr("COHERENCIA · tools/analyze_engagement.py  [REAL — puerta de calidad pre-informe]")
     rc = subprocess.run([PY, os.path.join(ROOT, "tools", "analyze_engagement.py")]).returncode
     print(f"\n  analyze_engagement -> {'OK (engagement coherente)' if rc == 0 else 'INCOHERENCIAS (revisar arriba)'}")
+
+    # ---- GUARDARRAÍLES C11–C13 (REAL — hooks deterministas) ----
+    hr("GUARDARRAÍLES · LLM01/LLM02/LLM10  [REAL — anti-inyección + secretos + kill-switch]")
+    from redactor import scan as _scan, redact as _redact  # noqa: E402
+    # C12 secret_scan: el engagement.json recién escrito debe estar LIMPIO (sin claves del motor)
+    sec = call_hook(os.path.join(".claude", "hooks", "secret_scan.py"),
+                    {"tool_name": "Write", "tool_input": {"file_path": out}})
+    print(f"  [C12 secret_scan] engagement.json -> {'LIMPIO (sin secretos del operador)' if not sec else 'BLOQUEA'}")
+    # C12 redactor: detecta y tapa un secreto del operador sintético
+    demo = "fuga accidental: sk-ant-" + "A" * 32
+    print(f"  [C12 redactor]    detecta {_scan(demo, operator_only=True)} -> redacta a '{_redact(demo)}'")
+    # C11 anti-inyección: confirma que el bloque está presente en los agentes que ingieren target
+    inj = sum(1 for a in ("recon/osint-recon", "exploitation/ai-security")
+              if "Anti-inyeccion (LLM01)" in open(
+                  os.path.join(ROOT, ".claude", "agents", a + ".md"), encoding="utf-8").read())
+    print(f"  [C11 anti-inj]    bloque datos!=instrucciones presente en {inj}/2 agentes de muestra")
+    # C13 kill-switch: con techo bajo, corta a la (techo+1)-ésima acción
+    blocked_at = kill_switch_demo(cap=3)
+    print(f"  [C13 budget]      techo=3 -> kill-switch en la acción #{blocked_at}")
 
     print(f"\n  fase final: {eng['phase']}  ->  listo para el agente reporting")
 

@@ -23,26 +23,33 @@ flowchart TB
     BB[("🗒️ Blackboard<br/>engagement.json")]
     TARGET["🎯 Target en scope"]
 
-    UNTRUSTED -->|ingesta| AGENT
+    UNTRUSTED -->|ingesta| G_INJECT
+    G_INJECT -->|datos, no órdenes| AGENT
     ORQ -->|delega + valida handoff| AGENT
     AGENT -->|escribe findings/targets| G_SCHEMA
+    AGENT -->|escribe findings/targets| G_REDACT
+    AGENT -->|cada acción Bash| G_BUDGET
     AGENT -->|comando contra target| G_SCOPE
     AGENT -->|comando ofensivo| G_HITL
 
     subgraph GATES["Guardarraíles"]
+        G_INJECT{{"🧱 datos ≠ instrucciones<br/>anti-inyección · prompt (LLM01)"}}
         G_SCOPE{{"🛡️ scope_guard.py<br/>PreToolUse · determinista"}}
+        G_BUDGET{{"⏱️ budget_guard.py<br/>PreToolUse · determinista (LLM10)"}}
         G_HITL{{"🙋 tiers de riesgo + aprobación<br/>HITL (bot)"}}
         G_PERM{{"🔒 permissions ask/deny<br/>settings.json"}}
         G_TOOLS{{"🧰 allowlist de tools<br/>frontmatter por agente"}}
         G_SCHEMA{{"📐 validate_blackboard.py<br/>PostToolUse · determinista"}}
-        G_REDACT{{"✂️ redacción de secretos<br/>(planificado)"}}
+        G_REDACT{{"✂️ secret_scan.py<br/>PostToolUse · determinista (LLM02)"}}
     end
 
     G_SCOPE -->|en scope| TARGET
     G_SCOPE -.->|fuera de scope| BLOCK["⛔ bloqueado"]
+    G_BUDGET -.->|techo superado| BLOCK
     G_HITL -->|✅ autorizado| TARGET
     G_SCHEMA -->|válido| BB
     G_SCHEMA -.->|inválido| FIX["↩️ feedback al orquestador"]
+    G_REDACT -.->|secreto del operador| FIX
 ```
 
 ## Inventario de controles (estado real)
@@ -59,16 +66,20 @@ flowchart TB
 | C8 | **Regla de evidencia** — "sin fuente no se explota; sin evidencia no es un hallazgo" | Soft (LLM) | `CONSTITUTION.md`, agentes | LLM09 Misinformation |
 | C9 | **Auditoría de coherencia pre-informe** — targets fuera de scope, findings sin evidencia, autorización caducada | Determinista | `tools/analyze_engagement.py` | LLM05, LLM09 |
 | C10 | **Trazabilidad inmutable** — cada acción que toca un target va a `evidence[]` (ts/agente/acción/hash) | Determinista | esquema `engagement.json` | (defensa legal) |
+| C11 | **Separación datos/instrucciones** — los 9 agentes que ingieren contenido del target lo tratan como DATOS, nunca como instrucciones | Soft (prompt), uniforme | bloque "Anti-inyección" en osint-recon, recon-suite, active-recon, web-exploit, web-fuzzing, nuclei, sqlmap, vuln-triage, ai-security | **LLM01 Prompt Injection** |
+| C12 | **Detector de secretos del operador** — bloquea si una clave del motor/operador (privada, `sk-ant`, token del bot) aparece en el blackboard; `redact()` además sanea el informe | Determinista | `tools/redactor.py` + `.claude/hooks/secret_scan.py` (PostToolUse) | **LLM02 Sensitive Info Disclosure** |
+| C13 | **Kill-switch de consumo** — cuenta las acciones Bash por engagement y bloquea al superar el techo (`constraints.max_actions`, def. 1000) | Determinista | `.claude/hooks/budget_guard.py` (PreToolUse) | **LLM10 Unbounded Consumption** |
 
-## Brechas conocidas y plan
+## Brechas conocidas — ahora cubiertas
 
-Honestidad por delante: estos vectores **aún no** están cubiertos por un control determinista.
+Honestidad por delante: estos tres vectores estaban **sin control determinista**; desde jun 2026
+ya tienen uno (C11–C13). Queda un residual de *fase 2* anotado en la última columna.
 
-| Brecha | OWASP | Por qué nos afecta | Mitigación propuesta | Estado |
+| Brecha | OWASP | Por qué nos afecta | Mitigación implementada | Estado |
 | :--- | :--- | :--- | :--- | :--- |
-| **Prompt injection desde el target** | **LLM01** | Los agentes ingieren contenido no confiable (banners, HTML, y en `ai-security` el output del LLM objetivo). Un target malicioso puede intentar inyectar instrucciones. `scope_guard` mitiga que *toque* algo fuera de scope, pero no que filtre datos locales. | Separación datos/instrucciones en el prompt de los agentes que ingieren contenido + (fase 2) clasificador local tipo Prompt Guard | Pendiente |
-| **Fuga de secretos en evidencia/informe** | **LLM02** | La redacción de credenciales es hoy mediada por LLM (C8). E3-ZDR es organizativo, no forzado por código. | Redactor de secretos determinista (regex tipo gitleaks) antes de escribir `evidence[]`/informe (C6 ya da el punto de enganche) | Pendiente |
-| **Consumo no acotado / kill-switch** | **LLM10 Unbounded Consumption** | No hay límite de iteraciones/tokens/coste por engagement en código (relevante con cupo Pro). El kill-switch es conceptual. | `task_budget` (Opus 4.8) en el bot + contador de iteraciones en el blackboard | Pendiente |
+| **Prompt injection desde el target** | **LLM01** | Los agentes ingieren contenido no confiable (banners, HTML, y en `ai-security` el output del LLM objetivo). Un target malicioso puede intentar inyectar instrucciones. `scope_guard` mitiga que *toque* algo fuera de scope, pero no que filtre datos locales. | **C11**: bloque de separación datos/instrucciones en los 9 agentes que ingieren contenido | ✅ C11 (soft) · fase 2 = clasificador local tipo Prompt Guard |
+| **Fuga de secretos en evidencia/informe** | **LLM02** | La redacción de credenciales era mediada por LLM (C8). E3-ZDR es organizativo, no forzado por código. | **C12**: `redactor.py` + hook `secret_scan.py` que bloquea claves del operador en el blackboard y sanea el informe | ✅ C12 (determinista) |
+| **Consumo no acotado / kill-switch** | **LLM10 Unbounded Consumption** | No había límite de iteraciones/coste por engagement en código (relevante con cupo Pro). El kill-switch era conceptual. | **C13**: `budget_guard.py` cuenta acciones Bash por engagement y bloquea al superar el techo | ✅ C13 (determinista) · fase 2 = `task_budget` del bot |
 
 > **Criterio de diseño:** replicamos la *idea* de los frameworks del sector (NeMo Guardrails,
 > Guardrails AI, LLM Guard, Llama Guard / Prompt Guard) con controles **ligeros y stdlib**, en
@@ -80,8 +91,10 @@ Honestidad por delante: estos vectores **aún no** están cubiertos por un contr
 
 ```bash
 python tools/validate_suite.py     # comprueba que los hooks referenciados existen
-python dryrun/run_dryrun.py        # ejercita scope_guard + validación de esquema end-to-end
+python dryrun/run_dryrun.py        # ejercita scope_guard + budget_guard + validación de esquema + secret_scan
+python tools/redactor.py <fichero> # escanea un fichero en busca de secretos (sale 1 si hay)
 ```
 
-El `dryrun` lanza comandos in-scope y out-of-scope reales contra `scope_guard.py` y valida el
-`engagement.json` resultante contra los esquemas: si un control se rompe, salta ahí.
+El `dryrun` lanza comandos in-scope y out-of-scope reales contra `scope_guard.py`, comandos de
+sobra para disparar el `budget_guard.py`, y valida el `engagement.json` resultante contra los
+esquemas (incluida la pasada de `secret_scan.py`): si un control se rompe, salta ahí.
