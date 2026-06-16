@@ -78,6 +78,8 @@ Fases: reconocimiento → enumeración → explotación → post-explotación �
 ```
 {captura: evidencia/{id}.png}
 
+**Cadena de ataque.** {Si este hallazgo es eslabón de una cadena: el siguiente paso y su técnica (campo `next_step`), p.ej. "→ DCSync (T1003.006) vía netexec". Omitir si no encadena.}
+
 **Remediación.** {Acción concreta y verificable.}
 
 ---

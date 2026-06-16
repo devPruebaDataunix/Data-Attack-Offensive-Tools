@@ -43,6 +43,7 @@ Regla de oro de redacción: **traduce el hallazgo a impacto de negocio.**
 | **Severidad** | Crítico / Alto / Medio / Bajo / Info | RAG (tier KEV>exploit>EPSS>CVSS) |
 | **CVSS 3.1** | Score base **+ vector string** (defendible) | `finding.cvss` + `cvss_vector` (CVE 5.0) |
 | **CWE / OWASP / ATT&CK** | Clasificación | `finding.cwe/owasp/attack_technique` |
+| **Cadena de ataque** | Eslabón siguiente si encadena | `finding.next_step` (suggested_agent/technique) |
 | **Activos afectados** | Hosts/URLs | `finding.target_id` → `targets[]` |
 | **Descripción** | Qué es la debilidad, en claro | redacción |
 | **Impacto de negocio** | Qué podría lograr un atacante, concreto | redacción (traducir, no jerga) |
