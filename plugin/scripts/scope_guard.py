@@ -25,9 +25,37 @@ SCOPE_CANDIDATES = [
 # Hosts locales siempre permitidos (laboratorio del operador).
 LOCAL_OK = {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
 
+# TLDs / sufijos que SÍ son un host de red (allowlist). Un token tipo `a.b.c` solo se considera
+# target si su ÚLTIMA etiqueta está aquí. Así NO se confunden con dominios: ficheros
+# (scope.json, scan.txt), código (json.load, os.path) ni scripts (run.sh) — esa confusión era
+# justo la que bloqueaba en falso `cat contracts/scope.json` y tumbó el engagement. Se excluyen
+# a propósito TLDs que chocan con extensiones/código comunes (sh, md, id, so, is, rs, py, js,
+# zip...). Un dominio real con TLD exótico no listado no se gatea por nombre, pero queda el
+# bloqueo explícito por out_of_scope y la aprobación humana por acción como segunda capa.
+KNOWN_TLDS = {
+    # gTLD clásicos + comunes
+    "com", "net", "org", "edu", "gov", "mil", "int", "io", "co", "ai", "app", "dev", "xyz",
+    "info", "biz", "online", "site", "tech", "store", "cloud", "host", "space", "live", "news",
+    "blog", "shop", "work", "digital", "network", "systems", "tools", "email", "page", "pro",
+    # ccTLD comunes
+    "us", "uk", "es", "de", "fr", "it", "nl", "ru", "cn", "jp", "br", "ca", "au", "in", "mx",
+    "ar", "cl", "pl", "se", "no", "fi", "dk", "ch", "at", "be", "pt", "gr", "cz", "ro", "hu",
+    "ie", "nz", "za", "kr", "tw", "hk", "sg", "ae", "sa", "il", "tr", "ua", "my", "th", "vn",
+    "ph", "eu", "me", "tv", "cc", "gg",
+    # sufijos internos / laboratorios + TLD reservados de documentación (RFC 2606/6761)
+    "local", "internal", "lan", "intranet", "corp", "home", "htb", "thm", "vulnhub", "dockerlabs",
+    "lab", "example", "invalid",
+}
+
 DOMAIN_RE = re.compile(r"\b(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}\b", re.I)
 IP_RE = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
 URL_RE = re.compile(r"https?://([^/\s:]+)", re.I)
+
+
+def _is_target_domain(token):
+    """True solo si `token` (algo tipo a.b.c) es un host de red real: su última etiqueta es un
+    TLD/sufijo conocido. Filtra ficheros, rutas y código que el regex confunde con dominios."""
+    return token.rsplit(".", 1)[-1].lower() in KNOWN_TLDS
 
 
 def deny(reason: str):
@@ -95,13 +123,21 @@ def main():
         sys.exit(0)
 
     scope = load_scope()
+    # Dominios que el operador puso en el scope (in + out): SIEMPRE son candidatos aunque su TLD
+    # no esté en KNOWN_TLDS (p.ej. un `.test` interno), para no perder un out_of_scope explícito.
+    scoped = []
+    if scope:
+        scoped = (scope.get("in_scope", {}).get("domains", []) +
+                  scope.get("out_of_scope", {}).get("domains", []))
 
     # Recolecta candidatos a target del comando.
     hosts = set()
     for m in URL_RE.finditer(command):
         hosts.add(m.group(1))
     for m in DOMAIN_RE.finditer(command):
-        hosts.add(m.group(0))
+        tok = m.group(0)
+        if _is_target_domain(tok) or domain_in_list(tok, scoped):
+            hosts.add(tok)  # host de red real o dominio del scope; ficheros/código se ignoran
     ips = set(IP_RE.findall(command))
 
     targets = {h for h in hosts if h.lower() not in LOCAL_OK}

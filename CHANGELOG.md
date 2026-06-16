@@ -4,6 +4,30 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [1.3.0] - 2026-06-16
+### Fixed
+- **`scope_guard` ya no confunde ficheros/código con dominios.** `cat contracts/scope.json`,
+  `json.load(...)`, `scan.txt` o `run.sh` dejaban de ejecutarse porque el hook los tomaba por un
+  "dominio fuera de scope" — era lo que **tumbaba el engagement desde el bot**. Ahora usa una
+  allowlist de TLDs reales + un filtro consciente del scope (los dominios listados por el
+  operador siguen gateándose aunque su TLD sea exótico).
+- **El Orquestador ya puede leer `contracts/scope.json`** (su Regla 0): se quita el `deny` de
+  `Read` en `settings.json` y se mantiene el de `Write` (el alcance no se modifica).
+- **El bot limpia los códigos ANSI** antes de enviar a Telegram (se veía `[32m[OK]` crudo).
+### Added
+- `verify.sh --install` (instala lo que falte) y `--update` (actualiza el toolchain), con la
+  lógica compartida en `deploy/lib.sh`. Maneja el caso real del conflicto de Go
+  (`golang-go`/`gccgo-go` chocan → solo `golang-go`, o el binario oficial como fallback).
+- `tools/verify_opencode.py`: verifica la **réplica opencode** (opencode.json + 18 agentes +
+  cruce `routing.json` ↔ provider declarado) y checks de runtime (opencode/Ollama) en `verify.sh`.
+- Convención de **directorio de salida por engagement** (`engagements/<id>/`, gitignored) en
+  `AGENTS.md`: los artefactos crudos no se mezclan con el repo.
+### Changed
+- `GUARDRAILS.md`: aclarado que el set de guardarraíles corre a **nivel repo** y el plugin solo
+  empaqueta `scope_guard` (el único portable).
+- `docs/RUNBOOK-operador.md`: 18 agentes y 25/25 tests; regla de **test ciego** (el `scope.json`
+  no debe filtrar la identidad del objetivo).
+
 ## [1.2.0] - 2026-06-16
 ### Added
 - **Guardarraíles deterministas** mapeados al [OWASP LLM Top 10 (2025)](https://owasp.org/www-project-top-10-for-large-language-model-applications/) en [`GUARDRAILS.md`](GUARDRAILS.md):
@@ -43,6 +67,7 @@ se versiona con [SemVer](https://semver.org/lang/es/).
 - Controles base: gate de alcance determinista (`scope_guard.py`), validación de esquema del
   blackboard, escritura atómica, zonas de aislamiento E1/E2/E3 y reporting humanizado.
 
+[1.3.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.3.0
 [1.2.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.2.0
 [1.1.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.1.0
 [1.0.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.0.0

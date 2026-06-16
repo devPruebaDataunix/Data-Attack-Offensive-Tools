@@ -15,7 +15,6 @@
     ],
     "deny": [
       "Bash(rm -rf /*)",
-      "Read(./contracts/scope.json)",
       "Write(./contracts/scope.json)"
     ]
   },

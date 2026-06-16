@@ -1,13 +1,32 @@
 #!/usr/bin/env bash
 # =============================================================================
 #  verify.sh — Corroboración del entorno: herramientas, versiones, RAG, agentes.
-#  Sale con código !=0 si falta algo crítico. Se puede ejecutar solo:
-#    ./deploy/verify.sh
+#  Sale con código !=0 si falta algo crítico.
+#    ./deploy/verify.sh              # solo verifica
+#    ./deploy/verify.sh --install    # instala lo que falte y luego verifica
+#    ./deploy/verify.sh --update     # actualiza el toolchain a lo último y luego verifica
 # =============================================================================
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "$REPO_DIR"
 export PATH="$PATH:$(go env GOPATH 2>/dev/null)/bin:$HOME/.local/bin"
+
+# ── Flags: instalación / actualización (la lógica vive en deploy/lib.sh) ──────
+DO_INSTALL=0; DO_UPDATE=0
+for a in "$@"; do case "$a" in
+  --install) DO_INSTALL=1 ;;
+  --update)  DO_UPDATE=1 ;;
+  -h|--help) grep -E '^#( |$)' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  *) echo "Flag desconocido: $a (usa --install, --update o sin flags)"; exit 2 ;;
+esac; done
+if [ "$DO_INSTALL" -eq 1 ] || [ "$DO_UPDATE" -eq 1 ]; then
+  # shellcheck source=deploy/lib.sh
+  . "${SCRIPT_DIR}/lib.sh"
+  [ "$DO_UPDATE" -eq 1 ]  && update_all
+  [ "$DO_INSTALL" -eq 1 ] && install_missing
+  export PATH="$PATH:$(go env GOPATH 2>/dev/null)/bin:$HOME/.local/bin"
+fi
 c(){ tput setaf "$1" 2>/dev/null || true; }; r(){ tput sgr0 2>/dev/null || true; }
 FAIL=0; OKN=0
 chk(){ # chk <nombre> <comando-version>
@@ -56,6 +75,21 @@ done
 if command -v claude >/dev/null 2>&1 && claude plugin validate ./plugin >/dev/null 2>&1; then
   printf "  $(c 2)[OK]$(r)  %-22s validación pasada\n" "plugin (claude)"; OKN=$((OKN+1))
 else printf "  $(c 3)[??]$(r)  %-22s revisar\n" "plugin (claude)"; fi
+
+# Réplica opencode (estática) — el config debe quedar replicado sin errores.
+if python3 tools/verify_opencode.py >/dev/null 2>&1; then
+  printf "  $(c 2)[OK]$(r)  %-22s réplica coherente\n" "verify_opencode.py"; OKN=$((OKN+1))
+else printf "  $(c 1)[--]$(r)  %-22s con fallos (corre: python3 tools/verify_opencode.py)\n" "verify_opencode.py"; FAIL=$((FAIL+1)); fi
+
+# CLI opencode (runtime, opcional) y — si el routing usa Ollama — disponibilidad de Ollama.
+if command -v opencode >/dev/null 2>&1; then
+  printf "  $(c 2)[OK]$(r)  %-22s %s\n" "opencode" "$(opencode --version 2>&1 | head -1 | cut -c1-30)"; OKN=$((OKN+1))
+else printf "  $(c 3)[??]$(r)  %-22s no instalado (opcional; solo runtime opencode)\n" "opencode"; fi
+if grep -q '"ollama/' tools/routing.json 2>/dev/null; then
+  if command -v ollama >/dev/null 2>&1; then
+    printf "  $(c 2)[OK]$(r)  %-22s %s\n" "ollama (routing)" "$(ollama --version 2>&1 | head -1 | cut -c1-30)"; OKN=$((OKN+1))
+  else printf "  $(c 3)[??]$(r)  %-22s el routing enruta a ollama pero no está instalado\n" "ollama (routing)"; fi
+fi
 
 if [ -f rag/vulns.db ]; then
   n=$(python3 - <<'PY'

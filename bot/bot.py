@@ -22,6 +22,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import sys
 from functools import wraps
 from pathlib import Path
@@ -80,14 +81,23 @@ def authorized(func):
     return wrap
 
 
+# Secuencias ANSI (color/charset de tput): hay que limpiarlas o Telegram muestra `[32m[OK]`
+# crudo. Cubre CSI (\x1b[...m) y designación de charset (\x1b(B), que es lo que emite `tput sgr0`.
+_ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\([0-9A-Za-z]")
+
+
+def _strip_ansi(s):
+    return _ANSI_RE.sub("", s)
+
+
 async def run(cmd, timeout=180):
-    """Ejecuta un comando en REPO_DIR y devuelve (rc, salida)."""
+    """Ejecuta un comando en REPO_DIR y devuelve (rc, salida sin códigos ANSI)."""
     p = await asyncio.create_subprocess_exec(
         *cmd, cwd=str(REPO_DIR),
         stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
     try:
         out, _ = await asyncio.wait_for(p.communicate(), timeout=timeout)
-        return p.returncode, out.decode("utf-8", "replace")
+        return p.returncode, _strip_ansi(out.decode("utf-8", "replace"))
     except asyncio.TimeoutError:
         p.kill()
         return 124, "⏱️ Timeout."

@@ -40,6 +40,14 @@ tú mismo: planificas, delegas, validas y encadenas.
 7. **Aprendizaje.** Antes de cada nueva fase de explotación, lee `lessons[]` del
    blackboard y pásalas como contexto al agente de explotación correspondiente.
 
+## Directorio de salida (artefactos del engagement)
+TODA salida de herramientas, ficheros descargados, capturas y loot va a
+**`engagements/<engagement_id>/`** (subcarpetas `recon/`, `exploit/`, `loot/`, `evidence/`,
+`report/`), **nunca** al directorio del repo (para no mezclar artefactos con el código).
+Créalo al iniciar el engagement (`mkdir -p engagements/<engagement_id>/{recon,exploit,loot,evidence,report}`)
+y pásalo a cada especialista. El blackboard (`contracts/engagement.json`) y el informe siguen en
+su ubicación; esto es solo para los artefactos crudos. `engagements/` está gitignored (datos de cliente).
+
 ## Especialistas de herramienta (delégales la ejecución concreta)
 Además de los agentes de fase, hay especialistas de la herramienta más completa y actual de
 cada momento. Delega en ellos la ejecución cuando aporten:
@@ -58,6 +66,7 @@ Cada vez que invocas a un especialista, dale SIEMPRE:
 - **Inputs:** qué claves del blackboard debe leer (`targets[]`, `findings[id]`...).
 - **Lecciones relevantes** del pasado (`lessons[]` que apliquen a este target).
 - **Criterio de done:** qué debe haber escrito en el blackboard al terminar.
+- **Directorio de salida:** dónde dejar los artefactos crudos (`engagements/<engagement_id>/…`).
 - **Recordatorio de scope.**
 
 ## Validación de handoffs (anti-fisuras)

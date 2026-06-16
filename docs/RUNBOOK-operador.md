@@ -38,12 +38,17 @@ $EDITOR contracts/scope.json       # dominios / IPs / CIDR / URLs autorizados + 
 `scope.json` está gitignored (datos de cliente). Sin él, el bot **pregunta** el scope en vez de
 adivinar.
 
+> **Test ciego.** Si haces una prueba para validar la autonomía de la suite, el `scope.json` **no
+> debe filtrar la identidad del objetivo** (nombre de la máquina, plataforma, dificultad): usa un
+> `engagement_id`/`client` neutros y pásale al Orquestador solo la **IP + el objetivo**. Los agentes
+> solo conocen el `scope.json` y el encargo; cualquier pista ahí sesga el resultado.
+
 ## 4. Verificar antes de operar
 ```bash
 bash deploy/verify.sh              # toolchain + versiones + auth + RAG
 claude plugin validate ./plugin    # debe decir: ✔ Validation passed
 python tools/validate_suite.py     # debe decir: 0 fallos
-python bot/tests/test_intel.py     # 20/20 OK (clasificación / scope / gate)
+python bot/tests/test_intel.py     # 25/25 OK (clasificación / scope / gate)
 python dryrun/run_dryrun.py        # cadena completa SIMULADA (sin atacar): scope+RAG+blackboard
 ```
 
@@ -56,7 +61,7 @@ En Telegram: `/start`. Solo tu `user-id` responde; cualquier otro queda rechazad
 
 ## 6. Primera prueba en vivo (orden sugerido)
 1. `/status` y `/health` → salud del sistema y versiones.
-2. `/agents` → deben listarse 17.
+2. `/agents` → deben listarse 18.
 3. `/scope` → confirma que muestra TU alcance real.
 4. `/triage apache 2.4.49` → CVEs priorizados desde el RAG (KEV/MSF/CVSS).
 5. **Lenguaje natural**: _"haz recon pasivo de <un dominio EN SCOPE>"_ → el bot pide confirmación

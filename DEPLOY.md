@@ -32,8 +32,12 @@ Flags: `--update` (todo a lo último), `--skip-tools`, `--no-rag`, `--no-bot`.
 
 ## Verificación
 ```bash
-./deploy/verify.sh     # tabla OK/faltante + versiones; sale !=0 si falta algo crítico
+./deploy/verify.sh              # tabla OK/faltante + versiones; sale !=0 si falta algo crítico
+./deploy/verify.sh --install    # además instala lo que falte (toolchain, claude, PD tools, impacket, opencode)
+./deploy/verify.sh --update     # además actualiza todo a su última versión
 ```
+`verify.sh` comprueba también la **réplica opencode** (`tools/verify_opencode.py`: opencode.json
++ 18 agentes + cruce `routing.json`↔provider) y, si el routing enruta a Ollama, su disponibilidad.
 
 ## Login de Claude (manual, una vez)
 El login Pro es interactivo. Ejecuta `claude`, completa el OAuth, y ya queda la sesión en la VM

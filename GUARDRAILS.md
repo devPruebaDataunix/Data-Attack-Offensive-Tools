@@ -70,6 +70,16 @@ flowchart TB
 | C12 | **Detector de secretos del operador** — bloquea si una clave del motor/operador (privada, `sk-ant`, token del bot) aparece en el blackboard; `redact()` además sanea el informe | Determinista | `tools/redactor.py` + `.claude/hooks/secret_scan.py` (PostToolUse) | **LLM02 Sensitive Info Disclosure** |
 | C13 | **Kill-switch de consumo** — cuenta las acciones Bash por engagement y bloquea al superar el techo (`constraints.max_actions`, def. 1000) | Determinista | `.claude/hooks/budget_guard.py` (PreToolUse) | **LLM10 Unbounded Consumption** |
 
+## Dónde corren los controles (repo vs plugin)
+
+Los guardarraíles deterministas se activan a **nivel de repo** vía `.claude/settings.json`
+(hooks `scope_guard`, `budget_guard`, `validate_blackboard` y `secret_scan`) — es el despliegue
+real en la Kali, y cubre tanto la CLI `claude` como el bot (que dispara los mismos hooks del
+proyecto). El **plugin** de VS Code, en cambio, empaqueta **solo `scope_guard`** (C1): es el
+único portable. Los otros tres están acoplados a rutas del repo (`contracts/`, `tools/`) y no
+tendrían sentido fuera de él. **No es una incongruencia**: el plugin es un atajo de distribución;
+la postura de seguridad completa vive en el repo desplegado.
+
 ## Brechas conocidas — ahora cubiertas
 
 Honestidad por delante: estos tres vectores estaban **sin control determinista**; desde jun 2026

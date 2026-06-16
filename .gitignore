@@ -12,6 +12,9 @@ contracts/engagement.json
 contracts/*.tmp
 contracts/.action_count
 
+# ─── Artefactos crudos por engagement (scans, loot, evidencia) ─
+engagements/
+
 # ─── Generado en runtime ───────────────────────────────────────
 rag/vulns.db
 rag/vulns.db-*
