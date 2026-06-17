@@ -59,6 +59,29 @@ ensure_impacket(){
 ensure_claude(){ have claude || $SUDO npm install -g @anthropic-ai/claude-code; }
 ensure_opencode(){ have opencode || $SUDO npm install -g opencode-ai; }
 
+# gum (Charm) — para el asistente interactivo deploy/setup.sh. Vía el repo apt de Charm;
+# si no se puede, deja que setup.sh degrade a prompts de texto (no es crítico).
+ensure_gum(){
+  have gum && return 0
+  echo "[*] Instalando gum (Charm)…"
+  $SUDO mkdir -p /etc/apt/keyrings
+  curl -fsSL https://repo.charm.sh/apt/gpg.key 2>/dev/null | $SUDO gpg --dearmor -o /etc/apt/keyrings/charm.gpg 2>/dev/null || true
+  echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" \
+    | $SUDO tee /etc/apt/sources.list.d/charm.list >/dev/null 2>&1 || true
+  apt_retry update -y >/dev/null 2>&1 || true
+  apt_retry install -y gum >/dev/null 2>&1 || true
+  have gum || { echo "[!] gum no disponible; el asistente usará prompts de texto."; return 1; }
+}
+
+# textual (panel TUI) — en el venv del bot.
+ensure_textual(){
+  local py="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/bot/.venv/bin/python"
+  [ -x "$py" ] || py="$(command -v python3 || command -v python)"
+  "$py" -c "import textual" 2>/dev/null && return 0
+  echo "[*] Instalando textual en el venv del bot…"
+  "$py" -m pip install --quiet textual 2>/dev/null || echo "[!] textual no instalado (la TUI no abrirá)."
+}
+
 # Instala SOLO lo que falte (cada paso comprueba antes; apt es idempotente).
 install_missing(){
   echo "── Instalando lo que falte ──"
@@ -71,6 +94,8 @@ install_missing(){
   ensure_pd
   ensure_impacket
   ensure_opencode
+  ensure_gum
+  ensure_textual
   have bloodhound-python || { have pipx && pipx install bloodhound 2>/dev/null; } || true
   have sliver-server || { curl -fsSL https://sliver.sh/install | $SUDO bash || \
     echo "[!] Sliver falló; instálalo a mano (ver DEPLOY.md)."; }

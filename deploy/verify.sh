@@ -11,6 +11,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "$REPO_DIR"
 export PATH="$PATH:$(go env GOPATH 2>/dev/null)/bin:$HOME/.local/bin"
+# shellcheck source=deploy/banner.sh
+. "${SCRIPT_DIR}/banner.sh" 2>/dev/null || true
 
 # ── Flags: instalación / actualización (la lógica vive en deploy/lib.sh) ──────
 DO_INSTALL=0; DO_UPDATE=0
@@ -39,6 +41,7 @@ chk(){ # chk <nombre> <comando-version>
   fi
 }
 
+command -v da_banner >/dev/null 2>&1 && da_banner || true
 echo; echo -e "$(c 6)── Herramientas críticas ──$(r)"
 chk "claude"      claude --version
 chk "nmap"        nmap --version
@@ -90,6 +93,15 @@ if grep -q '"ollama/' tools/routing.json 2>/dev/null; then
     printf "  $(c 2)[OK]$(r)  %-22s %s\n" "ollama (routing)" "$(ollama --version 2>&1 | head -1 | cut -c1-30)"; OKN=$((OKN+1))
   else printf "  $(c 3)[??]$(r)  %-22s el routing enruta a ollama pero no está instalado\n" "ollama (routing)"; fi
 fi
+
+# Asistente (gum) y panel TUI (textual) — opcionales, mejoran la experiencia (no críticos).
+if command -v gum >/dev/null 2>&1; then
+  printf "  $(c 2)[OK]$(r)  %-22s %s\n" "gum (asistente)" "$(gum --version 2>&1 | head -1 | cut -c1-30)"; OKN=$((OKN+1))
+else printf "  $(c 3)[??]$(r)  %-22s opcional (deploy/setup.sh degrada a texto)\n" "gum (asistente)"; fi
+_PYV="${REPO_DIR}/bot/.venv/bin/python"; [ -x "$_PYV" ] || _PYV="$(command -v python3 || command -v python)"
+if "$_PYV" -c "import textual" >/dev/null 2>&1; then
+  printf "  $(c 2)[OK]$(r)  %-22s instalado\n" "textual (TUI)"; OKN=$((OKN+1))
+else printf "  $(c 3)[??]$(r)  %-22s opcional (panel TUI: pip install textual)\n" "textual (TUI)"; fi
 
 if [ -f rag/vulns.db ]; then
   n=$(python3 - <<'PY'

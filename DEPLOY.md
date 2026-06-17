@@ -6,9 +6,10 @@ Guía para montar el entorno completo en una **Kali nueva desde cero** (rolling,
 ```bash
 git clone <URL-de-tu-repo-privado> data-attack && cd data-attack
 chmod +x deploy/*.sh
-sudo ./deploy/auto-deploy.sh
+sudo ./deploy/auto-deploy.sh      # o:  ./deploy/setup.sh  (asistente guiado con gum)
 claude            # haz el login Pro (una vez)
 cd bot && ./.venv/bin/python bot.py
+# panel de control local en terminal:  ./deploy/dash.sh
 ```
 
 ## Qué hace `auto-deploy.sh` (idempotente, re-ejecutable)
@@ -38,6 +39,14 @@ Flags: `--update` (todo a lo último), `--skip-tools`, `--no-rag`, `--no-bot`.
 ```
 `verify.sh` comprueba también la **réplica opencode** (`tools/verify_opencode.py`: opencode.json
 + 18 agentes + cruce `routing.json`↔provider) y, si el routing enruta a Ollama, su disponibilidad.
+Comprueba además (no críticos) `gum` y `textual` para el asistente y el panel.
+
+## Asistente guiado y panel TUI
+- **`./deploy/setup.sh`** — asistente interactivo (con [gum](https://github.com/charmbracelet/gum);
+  degrada a texto plano): despliegue, `bot/.env`, `scope.json`, verificación y apertura del panel.
+- **`./deploy/dash.sh`** — **panel de control TUI** (Textual), gemelo local del bot: estado,
+  hallazgos en vivo y órdenes al Orquestador con la misma aprobación humana y el mismo scope-gate.
+  Requiere `textual` (lo instalan `auto-deploy.sh` y `verify.sh --install`).
 
 ## Login de Claude (manual, una vez)
 El login Pro es interactivo. Ejecuta `claude`, completa el OAuth, y ya queda la sesión en la VM

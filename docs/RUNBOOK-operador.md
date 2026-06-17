@@ -24,6 +24,10 @@ sudo ./deploy/auto-deploy.sh        # instala toolchain + Claude Code + RAG + ve
 `auto-deploy.sh` te pregunta `TELEGRAM_TOKEN` y `ALLOWED_USER_ID` y escribe `bot/.env`
 (permisos 600, ignorado por git). Instala el **Claude Agent SDK** vía `bot/requirements.txt`.
 
+> **Asistente guiado:** `./deploy/setup.sh` envuelve todo esto con
+> [gum](https://github.com/charmbracelet/gum) (menú: despliegue, configurar `bot/.env`, definir
+> `scope.json`, verificar, abrir el panel TUI). Degrada a prompts de texto si gum no está.
+
 ## 2. Login de Claude Code (Pro)
 ```bash
 claude            # primer arranque → login interactivo (Pro)
@@ -58,6 +62,16 @@ cd bot && ./.venv/bin/python bot.py
 # o como servicio (recomendado en E2): ver §Troubleshooting > systemd
 ```
 En Telegram: `/start`. Solo tu `user-id` responde; cualquier otro queda rechazado y logueado.
+
+## 5b. Panel de control local (TUI)
+Alternativa **local** al bot, con la MISMA lógica y las MISMAS puertas (scope_guard + aprobación
+humana + C11-C13):
+```bash
+./deploy/dash.sh        # abre el panel Textual en la terminal de la Kali
+```
+Muestra estado/scope/salud, hallazgos clasificados en vivo (🔴 real / 🟠 vigilar / 🔇 ruido) y una
+caja de orden al Orquestador; la aprobación por acción aparece como **modal**. `triage <producto>`
+consulta el RAG. El bot de Telegram sigue para el control remoto.
 
 ## 6. Primera prueba en vivo (orden sugerido)
 1. `/status` y `/health` → salud del sistema y versiones.

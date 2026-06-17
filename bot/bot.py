@@ -418,7 +418,20 @@ async def on_error(update, ctx):
     log.error("Error: %s", ctx.error)
 
 
+def _print_banner():
+    """Banner de la herramienta en el arranque (consola)."""
+    try:
+        for _n in ("data-attack.txt", "dataunix.txt"):
+            _f = REPO_DIR / "assets" / "banners" / _n
+            if _f.exists():
+                print(_f.read_text(encoding="utf-8"))
+        print("  Offensive Tools · pentest autorizado\n")
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def main():
+    _print_banner()
     if not TOKEN or not ALLOWED:
         raise SystemExit("Falta TELEGRAM_TOKEN o ALLOWED_USER_ID en bot/.env")
     app = Application.builder().token(TOKEN).concurrent_updates(True).build()

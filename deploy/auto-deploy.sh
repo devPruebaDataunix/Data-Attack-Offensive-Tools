@@ -19,6 +19,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 LOG="${SCRIPT_DIR}/deploy-$(date +%Y%m%d-%H%M%S).log"
 
+# Banner de la herramienta (helper compartido; degrada a texto plano sin TTY).
+# shellcheck source=deploy/banner.sh
+. "${SCRIPT_DIR}/banner.sh" 2>/dev/null || true
+
 # ── Flags ────────────────────────────────────────────────────────────────────
 DO_TOOLS=1; DO_RAG=1; DO_BOT=1; UPDATE=0
 for a in "$@"; do case "$a" in
@@ -198,6 +202,7 @@ run_verify(){
 # ── Orquestación ─────────────────────────────────────────────────────────────
 main(){
   info "Log: $LOG"
+  command -v da_banner >/dev/null 2>&1 && da_banner || true
   preflight
   install_base
   install_claude
@@ -210,5 +215,7 @@ main(){
   step "✔ Despliegue completado"
   ok "Arranca el bot:  cd bot && ./.venv/bin/python bot.py"
   ok "O usa la CLI:    claude   (y escribe /agents)"
+  ok "Asistente:       ./deploy/setup.sh   (configuración guiada)"
+  ok "Panel TUI:       ./deploy/dash.sh    (control local en terminal)"
 }
 main

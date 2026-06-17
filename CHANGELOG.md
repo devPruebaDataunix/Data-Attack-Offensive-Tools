@@ -4,6 +4,23 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [1.4.1] - 2026-06-17
+### Added
+- **Asistente de despliegue interactivo** `deploy/setup.sh` (con [gum](https://github.com/charmbracelet/gum);
+  degrada a prompts de texto): envuelve `auto-deploy.sh`, la configuración de `bot/.env`, la
+  generación de `contracts/scope.json` y la verificación. `deploy/lib.sh` añade `ensure_gum` y
+  `ensure_textual` (también vía `verify.sh --install`).
+- **Panel de control TUI** (`deploy/dash.sh` → `bot/tui/`, Textual): gemelo **local** del bot de
+  Telegram. Reusa el MISMO cerebro (`bot/intel`: runner, classify, scope) y pasa por las MISMAS
+  puertas (scope_guard + aprobación humana —por modal— + guardarraíles C11–C13). Muestra
+  estado/scope/salud, hallazgos clasificados en vivo (🔴/🟠/🔇) y acepta órdenes al Orquestador.
+- **Banner de marca** en `assets/banners/` (`data-attack.txt` + `dataunix.txt`) con la paleta de la
+  herramienta (cian `#00D4FF`), al inicio de los scripts de deploy, del bot y de la TUI.
+### Notes
+- Sin cambios en agentes ni guardarraíles: la TUI es un nuevo front-end sobre el Orquestador, no
+  reimplementa lógica. `textual` añadido a `bot/requirements.txt`. Verificado: validate_suite 0
+  fallos, bot 25/25, verify_opencode 10/0, dryrun OK y `bash -n` de todos los scripts.
+
 ## [1.4.0] - 2026-06-17
 ### Changed
 - **Optimización de coste — tier de modelos por agente.** Reparto recalibrado de **5/12/1** a
@@ -89,6 +106,7 @@ se versiona con [SemVer](https://semver.org/lang/es/).
 - Controles base: gate de alcance determinista (`scope_guard.py`), validación de esquema del
   blackboard, escritura atómica, zonas de aislamiento E1/E2/E3 y reporting humanizado.
 
+[1.4.1]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.4.1
 [1.4.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.4.0
 [1.3.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.3.0
 [1.2.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.2.0

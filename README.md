@@ -96,6 +96,7 @@ está en `contracts/scope.json`.
 | 🛡️ | **Guardián de alcance** | `scope_guard.py` bloquea de forma determinista cualquier acción fuera de `scope.json`. |
 | 🙋 | **Humano en el bucle** | Nada que toque el objetivo se ejecuta sin aprobación; la decisión es siempre del operador. |
 | 📱 | **Bot de Telegram** | Control remoto en lenguaje natural, resúmenes en vivo y aprobación por nivel de riesgo. |
+| 🖥️ | **Panel TUI local** | Control en la terminal (Textual): estado, hallazgos en vivo y órdenes al Orquestador con la misma aprobación humana. |
 | 🧠 | **Aprendizaje por errores** | `knowledge-postmortem` guarda lecciones de cada intento en memoria persistente y en el blackboard. |
 | 🧩 | **Multiplataforma** | Claude Code (CLI + extensión de VS Code) y espejo para opencode. |
 
@@ -146,6 +147,10 @@ chmod +x deploy/*.sh && sudo ./deploy/auto-deploy.sh
 Instala y **verifica** todo el toolchain (nmap, ProjectDiscovery, ffuf, sqlmap, Metasploit,
 NetExec, Sliver, BloodHound…), Claude Code, el RAG y el bot de Telegram. Detalle en
 [DEPLOY.md](DEPLOY.md) y [bot/README.md](bot/README.md).
+
+¿Prefieres un asistente? `./deploy/setup.sh` guía el montaje (despliegue, `bot/.env`, `scope.json`,
+verificación) con [gum](https://github.com/charmbracelet/gum); y `./deploy/dash.sh` abre el **panel
+de control TUI**.
 
 ## Plataformas soportadas
 
@@ -225,6 +230,10 @@ Mando a distancia y dashboard de intel del framework, sobre la VM E2. Le hablas 
 natural, interpreta, te pide confirmación, resume en vivo lo que hace y solo te escala lo que
 es alerta real. Corre sobre el **Claude Agent SDK** (con caída a `claude -p` si el SDK no
 está). Detalle en [bot/README.md](bot/README.md).
+
+> **Panel TUI local** (`./deploy/dash.sh`): el mismo cerebro (`bot/intel`) y las mismas puertas que
+> el bot, pero en la terminal de la Kali — estado, hallazgos clasificados en vivo y órdenes al
+> Orquestador con aprobación por modal. El bot de Telegram queda para el control remoto.
 
 <details>
 <summary><b>Aprobación por niveles de riesgo</b></summary>
