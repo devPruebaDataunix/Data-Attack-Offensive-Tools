@@ -54,6 +54,10 @@
           {
             "type": "command",
             "command": "python .claude/hooks/secret_scan.py"
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/a2a_guard.py"
           }
         ]
       }

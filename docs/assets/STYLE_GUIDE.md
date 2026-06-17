@@ -80,9 +80,11 @@ arquitectura, regenera el mapa en vez de dibujar a mano.
 
 ## 8. Banner
 
-`docs/assets/banner.png` es el banner oficial. Refleja la arquitectura real (hub-and-spoke,
-18 agentes, blackboard, scope guard, RAG KEV+EPSS, bot). No uses banners que describan una
-arquitectura A2A/mesh o un stack Docker/FastAPI/Redis: no es lo que hace la herramienta.
+`docs/assets/banner.png` es el banner oficial. Refleja la arquitectura real (hub-and-spoke con
+**bus A2A mediado**, 18 agentes, blackboard, scope guard, RAG KEV+EPSS, bot). El wordmark de la
+suite es **DATA ATTACK · HARNESS A2A** (`assets/banners/data-attack.txt`). No uses banners que
+describan una **malla peer-to-peer directa** (la nativa de Agent Teams es lab-only, ver
+`ARCHITECTURE.md §1`) ni un stack Docker/FastAPI/Redis: no es lo que hace la herramienta.
 
 ## 9. Principios
 

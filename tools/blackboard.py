@@ -64,6 +64,7 @@ def validate_engagement(data, contracts_dir=CONTRACTS):
     eng_req = _required(eng_schema)
     tgt_req = _required(os.path.join(contracts_dir, "target.schema.json"))
     fnd_req = _required(os.path.join(contracts_dir, "finding.schema.json"))
+    msg_req = _required(os.path.join(contracts_dir, "a2a-message.schema.json"))
     les_req = _nested_required(eng_schema, "lessons")
     evd_req = _nested_required(eng_schema, "evidence")
 
@@ -86,6 +87,50 @@ def validate_engagement(data, contracts_dir=CONTRACTS):
 
     _check_list(data.get("targets", []), tgt_req, "target", "target_id")
     _check_list(data.get("findings", []), fnd_req, "finding", "finding_id")
+    _check_list(data.get("messages", []), msg_req, "message", "message_id")
     _check_list(data.get("lessons", []), les_req, "lesson", "lesson_id")
     _check_list(data.get("evidence", []), evd_req, "evidence", "ts")
     return violations
+
+
+# ── Bus A2A mediado (helpers deterministas) ────────────────────────────────────
+# Un agente NO invoca a otro: deja un mensaje en messages[] y el Orquestador-router lo
+# entrega. Estos helpers son solo stdlib y no escriben a disco por sí mismos (usa
+# atomic_write_json para persistir). El techo de hops lo APLICA a2a_guard.py (C15).
+DEFAULT_MAX_A2A_HOPS = 50
+
+
+def a2a_hop_ceiling(scope):
+    """Techo de saltos A2A por engagement. Sale de scope.constraints.max_a2a_hops si es un int>0,
+    si no DEFAULT_MAX_A2A_HOPS. `scope` es el dict de scope.json (o None)."""
+    try:
+        c = (scope or {}).get("constraints", {}).get("max_a2a_hops")
+        if isinstance(c, int) and c > 0:
+            return c
+    except Exception:
+        pass
+    return DEFAULT_MAX_A2A_HOPS
+
+
+def pending_messages(data, to_agent=None):
+    """Mensajes con status 'pending' (o sin status) del blackboard, opcionalmente filtrados
+    por destinatario. Devuelve una lista (no muta `data`)."""
+    out = []
+    for m in (data or {}).get("messages", []):
+        if not isinstance(m, dict):
+            continue
+        if m.get("status", "pending") != "pending":
+            continue
+        if to_agent is not None and m.get("to_agent") != to_agent:
+            continue
+        out.append(m)
+    return out
+
+
+def set_message_status(data, message_id, status):
+    """Fija el status de un mensaje por message_id. Devuelve True si lo encontró. Muta `data`."""
+    for m in (data or {}).get("messages", []):
+        if isinstance(m, dict) and m.get("message_id") == message_id:
+            m["status"] = status
+            return True
+    return False

@@ -87,6 +87,57 @@ def kill_switch_demo(cap=3):
     return None
 
 
+def a2a_demo(cap=3):
+    """Ejercita a2a_guard.py en sandboxes temporales: mensaje válido (pasa), emisor desconocido
+    (C14 bloquea) y exceso de mensajes (C15 bloquea). Devuelve {valid, c14_spoof, c15_flood}."""
+    import importlib.util
+    import tempfile
+    import io
+    import contextlib
+    spec = importlib.util.spec_from_file_location(
+        "a2a_guard", os.path.join(ROOT, ".claude", "hooks", "a2a_guard.py"))
+    ag = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ag)
+    d = tempfile.mkdtemp()
+    ag.ENGAGEMENT = os.path.join(d, "engagement.json")
+    ag.SCOPE = os.path.join(d, "scope.json")
+    ag.CARDS = os.path.join(d, "agent-cards.json")
+    with open(ag.SCOPE, "w", encoding="utf-8") as f:
+        json.dump({"engagement_id": "DEMO", "constraints": {"max_a2a_hops": cap}}, f)
+    with open(ag.CARDS, "w", encoding="utf-8") as f:
+        json.dump({"version": "demo", "cards": [{"name": "orchestrator"},
+                   {"name": "web-exploit"}, {"name": "sqlmap"}]}, f)
+
+    def run(messages):
+        with open(ag.ENGAGEMENT, "w", encoding="utf-8") as f:
+            json.dump({"engagement_id": "DEMO", "scope_ref": "x", "phase": "exploitation",
+                       "targets": [], "findings": [], "messages": messages}, f)
+        ev = json.dumps({"tool_name": "Write", "tool_input": {"file_path": ag.ENGAGEMENT}})
+        old = sys.stdin
+        sys.stdin = io.StringIO(ev)
+        buf = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(buf):
+                ag.main()
+        except SystemExit:
+            pass
+        finally:
+            sys.stdin = old
+        return buf.getvalue()
+
+    def msg(**kw):
+        base = {"message_id": "M-1", "engagement_id": "DEMO", "from_agent": "web-exploit",
+                "to_agent": "sqlmap", "role": "request", "parts": [{"kind": "text", "text": "x"}],
+                "ts": NOW, "hops": 1}
+        base.update(kw)
+        return base
+
+    valid = run([msg()])
+    spoof = run([msg(from_agent="evil-agent")])
+    flood = run([msg(message_id=f"M-{i}") for i in range(cap + 2)])
+    return {"valid": "block" not in valid, "c14_spoof": "C14" in spoof, "c15_flood": "C15" in flood}
+
+
 def main():
     scope = json.load(open(os.path.join(ROOT, "contracts", "scope.json"), encoding="utf-8"))
     eng = {"engagement_id": scope["engagement_id"], "scope_ref": "contracts/scope.json",
@@ -178,6 +229,26 @@ def main():
     })
     print(f"  [exploit] F-{len(eng['findings']):03d} SQLi /login -> status=exploited (manual, simulado)")
 
+    # ---- FASE 4b: BUS A2A (REAL — mensajes entre agentes por el blackboard) ----
+    hr("FASE 4b · BUS A2A  [REAL — web-exploit <-> sqlmap por el bus mediado]")
+    eid = eng["engagement_id"]
+    eng["messages"] = [
+        {"message_id": "M-001", "engagement_id": eid, "from_agent": "web-exploit",
+         "to_agent": "sqlmap", "role": "request", "ref_finding": "F-003", "hops": 1,
+         "status": "delivered", "ts": NOW,
+         "parts": [{"kind": "text", "text": "SQLi candidata en /login (F-003); confírmala y "
+                                            "demuestra impacto con extracción mínima (canary)."},
+                   {"kind": "data", "data": {"finding_id": "F-003", "param": "user"}}]},
+        {"message_id": "M-002", "engagement_id": eid, "from_agent": "sqlmap",
+         "to_agent": "web-exploit", "role": "response", "ref_finding": "F-003",
+         "ref_message": "M-001", "hops": 2, "status": "done", "ts": NOW,
+         "parts": [{"kind": "text", "text": "Confirmada SQLi en 'user'; 1 fila canary, sin datos "
+                                            "reales. Devuelvo el testigo al Orquestador."}]},
+    ]
+    for m in eng["messages"]:
+        print(f"  [a2a] {m['from_agent']:14} -> {m['to_agent']:14} {m['role']:8} "
+              f"(hops={m['hops']}, {m['status']})")
+
     # ---- ESCRIBIR BLACKBOARD + VALIDAR ----
     hr("BLACKBOARD · escribir y validar contra los esquemas")
     eng["phase"] = "reporting"
@@ -214,6 +285,16 @@ def main():
     # C13 kill-switch: con techo bajo, corta a la (techo+1)-ésima acción
     blocked_at = kill_switch_demo(cap=3)
     print(f"  [C13 budget]      techo=3 -> kill-switch en la acción #{blocked_at}")
+    # C14 a2a_guard: el engagement.json recién escrito (con M-001/M-002 válidos) debe pasar limpio
+    a2a_clean = call_hook(os.path.join(".claude", "hooks", "a2a_guard.py"),
+                          {"tool_name": "Write", "tool_input": {"file_path": out}})
+    print(f"  [C14 a2a_guard]   engagement.json (2 mensajes válidos) -> "
+          f"{'LIMPIO' if not a2a_clean else 'BLOQUEA'}")
+    # C14/C15 en sandbox: emisor desconocido (anti-spoofing) y exceso de mensajes (anti-bucle)
+    a2a = a2a_demo(cap=3)
+    print(f"  [C14 a2a_guard]   emisor falso bloqueado={a2a['c14_spoof']} · "
+          f"mensaje válido pasa={a2a['valid']}")
+    print(f"  [C15 a2a_kill]    techo=3 -> exceso de mensajes A2A bloqueado={a2a['c15_flood']}")
 
     print(f"\n  fase final: {eng['phase']}  ->  listo para el agente reporting")
 

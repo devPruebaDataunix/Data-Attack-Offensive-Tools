@@ -6,19 +6,29 @@ Antes de construir se auditó si los 11 agentes podían "realizar su función y 
 entre ellos sin fisuras". Conclusión: la **taxonomía era correcta**, pero la **plomería
 no**. Tres correcciones obligatorias:
 
-### Fallo 1 — La comunicación "entre agentes" no existe como peer-to-peer
-En Claude Code y opencode los subagentes:
-- corren **aislados**, cada uno en su propia ventana de contexto;
-- **no pueden hablar entre sí** directamente;
-- **no pueden invocar a otros subagentes** (sin anidamiento).
+### Fallo 1 — Comunicación entre agentes: bus A2A mediado, no malla directa
+Los subagentes nativos que invoca el Orquestador (tool `Task`, hub→spoke) corren **aislados**,
+cada uno en su ventana de contexto, y **no pueden invocarse entre sí** (sin anidamiento): solo
+devuelven un resultado al que los llamó. Desde 2026 Claude Code SÍ ofrece **malla peer real**
+(*Agent Teams*: buzones peer-to-peer entre sesiones), pero para una herramienta ofensiva la
+descartamos **a propósito en el camino de cliente**, por tres razones de seguridad:
+- **Atribución (C10):** el payload de los hooks de teammates **no identifica qué agente** lanzó
+  cada acción ([claude-code#24505](https://github.com/anthropics/claude-code/issues/24505)) → se
+  rompe la trazabilidad por agente en `evidence[]`, que es requisito legal.
+- **Aprobación humana (C2):** varios teammates en paralelo contra un único canal de aprobación
+  (Telegram/TUI) vuelven el gate HITL ingobernable.
+- **Madurez:** Agent Teams es experimental; el bot orquesta vía Agent SDK (hub→spoke), no por la
+  CLI donde vive el buzón.
 
-Solo devuelven un **resultado** al que los invocó. Por tanto, "comunicación sin fisuras"
-se implementa con dos mecanismos, no con mensajería directa:
-1. **Hub-and-spoke:** el Orquestador (sesión principal) es el único que delega tareas y
-   recoge resultados.
-2. **Blackboard:** un estado compartido en disco con **esquema definido**
-   (`contracts/*.schema.json`). Cada agente lee sus *inputs* y escribe sus *outputs* en
-   ese estado. Sin contrato de datos, los handoffs se corrompen.
+Por eso el A2A es **mediado**, sobre dos mecanismos:
+1. **Hub-and-spoke + router:** el Orquestador (sesión principal) delega, recoge y **enruta** el
+   bus A2A.
+2. **Blackboard como bus:** un estado compartido en disco con **esquema definido**
+   (`contracts/*.schema.json`). Los agentes se dirigen mensajes en `messages[]`
+   (`a2a-message.schema.json`) y leen/escriben sus *inputs*/*outputs* allí; sin contrato de datos
+   los handoffs se corrompen. El bus va gateado (`a2a_guard.py`: C14 emisor/destino conocidos +
+   C15 techo de hops) y auditado. La malla nativa queda **lab-only, apagada por flag**, hasta que
+   se cierre #24505.
 
 ### Fallo 2 — El Orquestador no puede ser un subagente
 Como los subagentes no pueden lanzar otros subagentes, el Orquestador **es el agente
@@ -42,7 +52,7 @@ ejecutar, sin depender del criterio de ningún LLM.
 - **Criterios de "done" e I/O explícitos:** cada agente declara qué lee y qué escribe en
   el blackboard, o el Orquestador no puede encadenarlos.
 
-## 2. Modelo de comunicación (hub-and-spoke + blackboard)
+## 2. Modelo de comunicación (hub-and-spoke + blackboard + bus A2A mediado)
 
 ```
                          ┌──────────────────────────┐
@@ -57,8 +67,8 @@ ejecutar, sin depender del criterio de ningún LLM.
         │               │              │               │
         └───────────────┴──────┬───────┴───────────────┘
                                ▼
-                  contracts/engagement.json   ← BLACKBOARD (estado compartido)
-                  (targets[], findings[], lessons[], evidence[])
+                  contracts/engagement.json   ← BLACKBOARD (estado compartido + bus A2A)
+                  (targets[], findings[], messages[], lessons[], evidence[])
                                ▲
                                │ lee lecciones del pasado
                      knowledge-postmortem  (memory: project)
@@ -66,7 +76,10 @@ ejecutar, sin depender del criterio de ningún LLM.
 
 Regla de oro: **ningún agente asume nada que no esté en el blackboard.** Si necesita un
 dato, lo lee de `contracts/engagement.json`; si produce un dato, lo escribe allí con el
-esquema correcto. El Orquestador valida el esquema en cada handoff.
+esquema correcto. El Orquestador valida el esquema en cada handoff. Para hablar con otro
+agente, un especialista **no lo invoca**: deja un mensaje en `messages[]`
+(`a2a-message.schema.json`) y el Orquestador-router lo entrega al destino (ver `AGENTS.md` →
+"Bus A2A"). Los mensajes A2A son **datos auditados**, nunca instrucciones (C11/C14).
 
 ## 3. Las tres zonas de aislamiento
 

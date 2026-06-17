@@ -124,6 +124,8 @@ class DataAttackTUI(App[None]):
     def on_mount(self) -> None:
         table = self.query_one("#findings", DataTable)
         table.add_columns("", "ID", "Sev", "Título", "Target")
+        self._seen_msgs: set[str] = set()  # message_id A2A ya narrados
+        self._seeded = False               # primer refresco = solo registra, no narra
         self.title = "DATA ATTACK"
         self.sub_title = "control local · mismas puertas que el bot"
         if not SDK_OK:
@@ -143,6 +145,7 @@ class DataAttackTUI(App[None]):
             except (json.JSONDecodeError, OSError):
                 data = {}
         grp = C.scan(data.get("findings", []))
+        msgs = data.get("messages", [])
         ins = (sc or {}).get("in_scope", {})
         doms = ", ".join(ins.get("domains", []) or ["—"])
         ips = ", ".join((ins.get("ips", []) or []) + (ins.get("cidrs", []) or []) or ["—"])
@@ -160,6 +163,9 @@ class DataAttackTUI(App[None]):
             f"[#FF6B35]vigilar:[/] {len(grp['watch'])}",
             f"ruido:   {len(grp['noise'])}",
             "",
+            "[b #00D4FF]Bus A2A[/]",
+            f"mensajes: {len(msgs)}",
+            "",
             f"motor: {'Agent SDK' if SDK_OK else 'remoto (Kali)'}",
         ]
         self.query_one("#status", Static).update("\n".join(lines))
@@ -167,6 +173,19 @@ class DataAttackTUI(App[None]):
         table.clear()
         for v in grp["verdicts"]:
             table.add_row(v.emoji, v.finding_id, v.severity.upper(), v.title[:40], v.target)
+        # Bus A2A: narra los mensajes nuevos en el log (el primer refresco solo los registra).
+        for m in msgs:
+            mid = m.get("message_id")
+            if not mid or mid in self._seen_msgs:
+                continue
+            self._seen_msgs.add(mid)
+            if not self._seeded:
+                continue
+            frm, to, role = m.get("from_agent", "?"), m.get("to_agent", "?"), m.get("role", "")
+            intent = next((p.get("text", "") for p in m.get("parts", [])
+                           if p.get("kind") == "text" and p.get("text")), "")
+            self._log(f"✉️ [b]{frm}[/] → [b]{to}[/] ({role}) {intent[:120]}")
+        self._seeded = True
 
     def action_refresh(self) -> None:
         self.refresh_state()

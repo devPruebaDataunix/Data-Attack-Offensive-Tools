@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Agent Card (capacidades declaradas de un agente)",
+  "description": "Tarjeta A2A-inspirada (AgentCard v1.0: name/description/version/capabilities/skills) de UN agente. NO se edita a mano: se compila del bloque `a2a:` del frontmatter de cada .claude/agents/**/*.md a un registro único contracts/agent-cards.json (tools/build_agent_cards.py). La leen el router (AGENTS.md) para descubrir capacidades y el guard a2a_guard.py (C14) para validar que el from_agent/to_agent de un mensaje es un agente conocido. Nuestros agentes no son endpoints de red, por eso no hay `url`.",
+  "type": "object",
+  "required": ["name", "description", "phase"],
+  "properties": {
+    "name": { "type": "string", "description": "Nombre del agente (= name del frontmatter)." },
+    "description": { "type": "string", "description": "Qué hace, en una línea." },
+    "phase": {
+      "type": "string",
+      "description": "Fase del engagement en la que opera.",
+      "enum": ["orchestrator", "recon", "triage", "exploitation", "post-exploitation", "reporting", "any"]
+    },
+    "model": { "type": "string", "description": "Modelo asignado (tier de coste)." },
+    "version": { "type": "string", "description": "Versión de la card (def. la del repo)." },
+    "capabilities": {
+      "type": "array",
+      "description": "Qué OFRECE el agente a otros por A2A (A2A skills).",
+      "items": { "type": "string" }
+    },
+    "consumes": {
+      "type": "array",
+      "description": "Qué necesita recibir (claves del blackboard / tipos de mensaje).",
+      "items": { "type": "string" }
+    },
+    "produces": {
+      "type": "array",
+      "description": "Qué deja escrito al terminar (claves del blackboard).",
+      "items": { "type": "string" }
+    },
+    "tools": {
+      "type": "array",
+      "description": "Tools declaradas en el frontmatter (mínimo privilegio, C4).",
+      "items": { "type": "string" }
+    },
+    "a2a_peers": {
+      "type": "array",
+      "description": "Agentes con los que este intercambia mensajes A2A directamente por el bus (vacío = solo habla con el Orquestador).",
+      "items": { "type": "string" }
+    }
+  }
+}

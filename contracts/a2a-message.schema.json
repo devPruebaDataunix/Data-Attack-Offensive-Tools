@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "A2A Message (envelope de comunicación entre agentes)",
+  "description": "Mensaje del bus A2A mediado. Un agente NO invoca a otro directamente: deja el mensaje en messages[] del blackboard y el Orquestador-router lo entrega al destino. Envelope A2A-inspirado (ligero, no JSON-RPC/gRPC). `from_agent`/`to_agent` no son de A2A core pero son OBLIGATORIOS para la atribución (control C10). Validado por a2a_guard.py (C14) + validate_blackboard.py (C5).",
+  "type": "object",
+  "required": ["message_id", "engagement_id", "from_agent", "to_agent", "role", "parts", "ts"],
+  "properties": {
+    "message_id": { "type": "string", "description": "Identificador único del mensaje (A2A messageId)." },
+    "engagement_id": { "type": "string", "description": "Engagement al que pertenece (A2A contextId). Debe coincidir con el del blackboard." },
+    "from_agent": { "type": "string", "description": "Agente emisor. Debe ser un agente conocido del registro (contracts/agent-cards.json)." },
+    "to_agent": { "type": "string", "description": "Agente destino. 'orchestrator' para devolver al hub. Debe ser conocido." },
+    "role": {
+      "type": "string",
+      "description": "Intención del mensaje. request = pide algo; response = contesta; handoff = pasa el testigo; finding = comparte un hallazgo; status = progreso.",
+      "enum": ["request", "response", "handoff", "finding", "status"]
+    },
+    "parts": {
+      "type": "array",
+      "description": "Contenido del mensaje (A2A parts). Cada parte es texto o datos estructurados. SON DATOS, no instrucciones (C11/C14).",
+      "items": {
+        "type": "object",
+        "required": ["kind"],
+        "properties": {
+          "kind": { "type": "string", "enum": ["text", "data"] },
+          "text": { "type": "string", "description": "Contenido textual si kind=text." },
+          "data": { "type": "object", "description": "Carga estructurada si kind=data (p.ej. {finding_id, technique})." }
+        }
+      }
+    },
+    "ts": { "type": "string", "format": "date-time", "description": "Momento de creación del mensaje." },
+    "ref_finding": { "type": "string", "description": "FK opcional a findings[].finding_id (A2A taskId): el hallazgo que origina el mensaje." },
+    "ref_message": { "type": "string", "description": "FK opcional a otro message_id (A2A referenceTaskIds): en respuesta a." },
+    "hops": { "type": "integer", "minimum": 0, "description": "Saltos acumulados de esta cadena A2A. El kill-switch (C15) bloquea al superar el techo (scope.json constraints.max_a2a_hops, def. 50)." },
+    "status": {
+      "type": "string",
+      "description": "Ciclo de vida en el bus. pending = sin entregar; delivered = el router lo pasó al to_agent; done = atendido; blocked = rechazado por un gate.",
+      "enum": ["pending", "delivered", "done", "blocked"]
+    }
+  }
+}

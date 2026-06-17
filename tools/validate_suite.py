@@ -134,7 +134,9 @@ def validate_refs():
         "templates/report-template.md", "contracts/finding.schema.json",
         "contracts/target.schema.json", "contracts/engagement.schema.json",
         "contracts/scope.example.json", "rag/query_vulns.py", "rag/refresh.py",
-        ".claude/hooks/scope_guard.py",
+        ".claude/hooks/scope_guard.py", ".claude/hooks/a2a_guard.py",
+        "contracts/a2a-message.schema.json", "contracts/agent-card.schema.json",
+        "contracts/agent-cards.json", "tools/build_agent_cards.py",
         # Gobierno / flujo engagement-driven (adaptado de spec-driven)
         "CONSTITUTION.md", "templates/engagement-spec.md", "tools/analyze_engagement.py",
         "docs/engagement-driven.md",
@@ -195,8 +197,9 @@ def main():
     validate_hooks(s)
     validate_json(".mcp.json.example", ".mcp.json.example")
     validate_json(".opencode/opencode.json", "opencode.json")
-    for sch in ["finding", "target", "engagement"]:
+    for sch in ["finding", "target", "engagement", "a2a-message", "agent-card"]:
         validate_json(f"contracts/{sch}.schema.json", f"esquema {sch}")
+    validate_json("contracts/agent-cards.json", "registro agent-cards")
     validate_json("contracts/scope.example.json", "scope.example.json")
     validate_json("contracts/examples/engagement.sample.json", "engagement.sample.json")
     validate_refs()
@@ -209,6 +212,15 @@ def main():
           f"espejo opencode coherente ({len(oc)} = {len(agent_names)} agentes)",
           f"espejo opencode DESINCRONIZADO ({len(oc)} vs {len(agent_names)}) — corre tools/sync_opencode.py",
           warn=True)
+
+    # Coherencia registro A2A <-> agentes (cards = agentes + orquestador)
+    cards = validate_json("contracts/agent-cards.json", "registro agent-cards (coherencia)")
+    if cards:
+        ncards = len(cards.get("cards", []))
+        check(ncards == len(agent_names) + 1,
+              f"registro agent-cards coherente ({ncards} = {len(agent_names)} agentes + orquestador)",
+              f"registro agent-cards DESINCRONIZADO ({ncards} vs {len(agent_names)}+1) — corre tools/build_agent_cards.py",
+              warn=True)
 
     # Resumen
     fails = [m for st, m in results if st == FAIL]

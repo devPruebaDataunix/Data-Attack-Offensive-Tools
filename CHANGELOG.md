@@ -4,6 +4,36 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [1.5.0] - 2026-06-17
+### Added
+- **Comunicación A2A entre agentes (bus mediado).** Los especialistas ya pueden dirigirse mensajes
+  entre sí sin invocarse directamente: dejan un mensaje en `messages[]` del blackboard y el
+  **Orquestador-router** lo entrega (sección "Bus A2A" en `AGENTS.md`). Envelope A2A-inspirado
+  (`contracts/a2a-message.schema.json`: `message_id/engagement_id/from_agent/to_agent/role/parts/
+  ref_finding/ref_message/hops/status`). Parejas iniciales: `web-exploit ↔ sqlmap` y
+  `post-exploit ↔ lateral-discovery`.
+- **Registro de capacidades (Agent Cards).** Bloque `a2a:` en el frontmatter de cada agente,
+  compilado a `contracts/agent-cards.json` por `tools/build_agent_cards.py`
+  (`contracts/agent-card.schema.json`). Fuente única sin drift que leen el router y el guard.
+- **Guardarraíles A2A** (`.claude/hooks/a2a_guard.py`, PostToolUse): **C14** valida que
+  `from_agent`/`to_agent` son agentes conocidos (anti-spoofing) y **C15** acota la conversación
+  (techo de mensajes/`hops` por engagement, `constraints.max_a2a_hops`, def. 50 — anti-bucle LLM10).
+- **Narración A2A en vivo** en el bot (`✉️ agente X → agente Y`) y en la TUI (contador + log).
+### Changed
+- **Banner → "DATA ATTACK · HARNESS A2A"** (`assets/banners/data-attack.txt`), ahora coherente con
+  la arquitectura. El A2A **no relaja ninguna puerta**: scope_guard + budget_guard + aprobación
+  humana siguen aplicando a cada acción ofensiva.
+- **Docs alineados**: `README.md`, `ARCHITECTURE.md` (§1 Fallo 1 reescrito), `docs/comms-protocol.md`,
+  `SETUP-VSCODE.md`, `docs/engagement-driven.md`, `docs/references.md`, `docs/assets/STYLE_GUIDE.md`
+  y `GUARDRAILS.md` (C14/C15) pasan de "ni agentes hablando entre sí" a "bus A2A mediado".
+### Notes
+- Decisión de seguridad: la **malla peer nativa** (Claude Code *Agent Teams*) queda **lab-only,
+  apagada por flag** mientras el payload de los hooks no identifique al teammate
+  ([claude-code#24505](https://github.com/anthropics/claude-code/issues/24505)) — rompería la
+  atribución por agente en `evidence[]` (C10). El bus mediado preserva trazabilidad y gate único.
+- `messages[]` no es obligatorio en el esquema del engagement (retrocompatible). Verificado:
+  validate_suite 0 fallos, bot 26/26, dryrun con ronda A2A + kill-switch de hops, verify_opencode.
+
 ## [1.4.1] - 2026-06-17
 ### Added
 - **Asistente de despliegue interactivo** `deploy/setup.sh` (con [gum](https://github.com/charmbracelet/gum);

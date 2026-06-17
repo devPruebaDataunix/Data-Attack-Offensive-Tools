@@ -32,9 +32,10 @@
    python tools\validate_suite.py
    ```
 
-A partir de aquí, la sesión principal de Claude Code actúa de **Orquestador** y delega en
-los subagentes (hub-and-spoke). El hook `scope_guard` bloquea cualquier comando fuera de
-`scope.json`; el hook del mapa regenera `ARCHITECTURE_MAP.md` solo.
+A partir de aquí, la sesión principal de Claude Code actúa de **Orquestador**: delega en los
+subagentes (hub-and-spoke) y **enruta el bus A2A mediado** entre ellos. El hook `scope_guard`
+bloquea cualquier comando fuera de `scope.json`, `budget_guard`/`a2a_guard` aplican los techos
+(acciones y hops A2A), y el hook del mapa regenera `ARCHITECTURE_MAP.md` solo.
 
 ## Modelos y coste (importante en plan Pro)
 

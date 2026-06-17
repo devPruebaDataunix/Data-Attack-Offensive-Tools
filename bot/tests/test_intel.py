@@ -276,6 +276,47 @@ def test_gate_critical_requires_dual_approval():
     assert len(no_calls) == 2 and denied.behavior == "deny", "denegar la 2ª confirmación bloquea"
 
 
+# ── runner: narración del bus A2A (no requiere SDK) ─────────────────────────────
+def test_scan_narrates_a2a_messages():
+    import json
+    import tempfile
+    from intel.runner import AgentRunner
+
+    async def _run():
+        d = tempfile.mkdtemp()
+        os.makedirs(os.path.join(d, "contracts"))
+        eng = os.path.join(d, "contracts", "engagement.json")
+        base = {"engagement_id": "T", "scope_ref": "x", "phase": "exploitation",
+                "targets": [], "findings": [], "messages": []}
+        with open(eng, "w", encoding="utf-8") as f:
+            json.dump(base, f)
+
+        emits = []
+
+        async def emit(t):
+            emits.append(t)
+
+        async def noop(*a):
+            pass
+
+        r = AgentRunner(d, emit=emit, status=noop, approve=noop, on_verdict=noop)
+        await r._scan(seed=True)   # baseline: registra sin narrar
+        base["messages"] = [{"message_id": "M-1", "engagement_id": "T",
+                             "from_agent": "web-exploit", "to_agent": "sqlmap", "role": "request",
+                             "ts": "2026-01-01T00:00:00Z",
+                             "parts": [{"kind": "text", "text": "confirma SQLi en /login"}]}]
+        with open(eng, "w", encoding="utf-8") as f:
+            json.dump(base, f)
+        os.utime(eng, (r._eng_mtime + 10, r._eng_mtime + 10))  # fuerza cambio de mtime
+        await r._scan()
+        return emits
+
+    emits = asyncio.run(_run())
+    a2a = [e for e in emits if "→" in e and "web-exploit" in e and "sqlmap" in e]
+    assert len(a2a) == 1, f"esperaba 1 narración A2A, vi: {emits}"
+    assert "confirma SQLi" in a2a[0]
+
+
 # ── runner standalone ───────────────────────────────────────────────────────────
 def _all_tests():
     return [(n, f) for n, f in sorted(globals().items())

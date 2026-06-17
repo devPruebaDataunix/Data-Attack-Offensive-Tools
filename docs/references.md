@@ -42,9 +42,10 @@ la documentación oficial vigente de las plataformas. Fechas indicadas donde son
 - **Claude Code — Subagentes** (objetivo principal). Formato `.claude/agents/*.md` con
   frontmatter (name, description, tools, model, permissionMode, memory, hooks...).
   https://code.claude.com/docs/en/sub-agents
-- **Claude Code — Agent teams / background agents**: para sesiones que se comunican entre
-  sí y ejecución en paralelo monitorizada.
-  https://code.claude.com/docs/en/agent-teams
+- **Claude Code — Agent teams / background agents**: sesiones con buzón peer-to-peer y
+  ejecución en paralelo. En Data Attack lo adoptamos como **bus A2A mediado** por el blackboard
+  (el Orquestador enruta); la malla peer nativa queda **lab-only** por la atribución de hooks
+  (ver `ARCHITECTURE.md §1`). https://code.claude.com/docs/en/agent-teams
 - **opencode — Agents**: `.opencode/agent/*.md`, frontmatter (description, mode, model,
   temperature, permission). https://opencode.ai/docs/agents/
 - **VoltAgent/awesome-claude-code-subagents** — 100+ ejemplos de subagentes.

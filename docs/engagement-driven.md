@@ -16,7 +16,7 @@ reglas van por delante del "cómo".
 | `constitution` | Principios innegociables del engagement | **`CONSTITUTION.md`** |
 | `specify` | Brief del engagement (objetivos, alcance, ROE) | **`templates/engagement-spec.md`** |
 | `clarify` | Resolver lo no definido (lo hace el bot: *pregunta el scope*) | `bot/intel/scope.py` |
-| `plan` | Playbook de orquestación hub-and-spoke | `AGENTS.md` |
+| `plan` | Playbook de orquestación hub-and-spoke + bus A2A mediado | `AGENTS.md` |
 | `tasks` | Fases del engagement → agentes | modelo de fases + blackboard |
 | `implement` | Los agentes ejecutan (con gate de scope + aprobación humana) | `.claude/agents/` |
 | `analyze` | **Auditoría de coherencia** antes de cerrar | **`tools/analyze_engagement.py`** |

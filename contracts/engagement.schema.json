@@ -14,6 +14,11 @@
     "updated_at": { "type": "string", "format": "date-time" },
     "targets": { "type": "array", "items": { "$ref": "target.schema.json" } },
     "findings": { "type": "array", "items": { "$ref": "finding.schema.json" } },
+    "messages": {
+      "type": "array",
+      "description": "Bus A2A mediado: mensajes entre agentes. Un agente deja aquí su petición/respuesta y el Orquestador-router la entrega al destino. No está en `required` (retrocompatible). Cada item sigue a2a-message.schema.json.",
+      "items": { "$ref": "a2a-message.schema.json" }
+    },
     "lessons": {
       "type": "array",
       "description": "Aprendizaje basado en errores. Escrito por knowledge-postmortem.",

@@ -84,6 +84,7 @@ class AgentRunner:
 
         self._subagents: dict[str, str] = {}   # tool_use_id (Task) -> subagent_type
         self._seen: dict[str, str] = {}        # finding_id -> último status visto
+        self._seen_msgs: set[str] = set()      # message_id A2A ya narrados
         self._eng_mtime = 0.0
         self._last_status = 0.0
         self._final = ""
@@ -163,7 +164,7 @@ class AgentRunner:
     async def run(self, task: str) -> str:
         if not SDK_OK:
             return await self._run_fallback(task)
-        await self._scan_findings(seed=True)   # baseline: no re-alertar lo ya existente
+        await self._scan(seed=True)   # baseline: no re-alertar lo ya existente
         try:
             async with ClaudeSDKClient(options=self._options()) as client:
                 await client.query(task)
@@ -187,10 +188,10 @@ class AgentRunner:
                         await self._status(f"{sub}: {txt}")
                     else:                         # narración del Orquestador -> HITO
                         await self.emit(_trim(txt, 600))
-            await self._scan_findings()
+            await self._scan()
         elif isinstance(msg, ResultMessage):
             self._final = (getattr(msg, "result", None) or "").strip()
-            await self._scan_findings()
+            await self._scan()
             cost = msg.total_cost_usd
             tail = f" · ${cost:.2f}" if isinstance(cost, (int, float)) and cost else ""
             flag = "⚠️ con errores" if getattr(msg, "is_error", False) else "✅"
@@ -217,7 +218,7 @@ class AgentRunner:
         self._last_status = now
         await self.status(_trim(text, 180))
 
-    async def _scan_findings(self, seed: bool = False):
+    async def _scan(self, seed: bool = False):
         eng = self.repo / "contracts" / "engagement.json"
         if not eng.exists():
             return
@@ -241,10 +242,24 @@ class AgentRunner:
             v = C.classify(f)
             if v.level in ("real", "watch"):
                 await self.on_verdict(v, f)
+        # Bus A2A: narra cada mensaje nuevo entre agentes (X -> Y). En seed solo los registra.
+        for m in data.get("messages", []):
+            mid = m.get("message_id")
+            if not mid or mid in self._seen_msgs:
+                continue
+            self._seen_msgs.add(mid)
+            if seed:
+                continue
+            frm = m.get("from_agent", "?")
+            to = m.get("to_agent", "?")
+            role = m.get("role", "")
+            intent = next((p.get("text", "") for p in m.get("parts", [])
+                           if p.get("kind") == "text" and p.get("text")), "")
+            await self.emit(f"✉️ *{frm}* → *{to}* ({role}) {_trim(intent, 140)}".rstrip())
 
     async def _run_fallback(self, task: str) -> str:
         await self.emit("ℹ️ Agent SDK no disponible: ejecución sin streaming (degradada).")
-        await self._scan_findings(seed=True)
+        await self._scan(seed=True)
         claude = os.environ.get("CLAUDE_CLI_PATH") or shutil.which("claude") or "claude"
         prompt = ("Actúa como Orquestador siguiendo AGENTS.md. Lee contracts/scope.json. "
                   f"Tarea: {task}")
@@ -261,6 +276,6 @@ class AgentRunner:
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
         )
         out, _ = await p.communicate()
-        await self._scan_findings()
+        await self._scan()
         self._final = out.decode("utf-8", "replace")
         return self._final

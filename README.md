@@ -7,8 +7,8 @@
 
 <p align="center">
   <b>Suite de 18 agentes especialistas para pentesting y bug bounty autorizado.</b><br>
-  Orquestación hub-and-spoke sobre los subagentes nativos de Claude Code, con guardián de
-  alcance determinista, RAG de vulnerabilidades y control remoto por Telegram.
+  Orquestación hub-and-spoke con bus A2A mediado sobre los subagentes nativos de Claude Code,
+  con guardián de alcance determinista, RAG de vulnerabilidades y control remoto por Telegram.
 </p>
 
 <!-- BADGES — actividad del repo -->
@@ -32,7 +32,7 @@
 <!-- BADGES — capacidades -->
 <p align="center">
   <img src="https://img.shields.io/badge/Agentes-18_especialistas-00D4FF?style=flat-square&labelColor=0D1117" alt="18 agentes">
-  <img src="https://img.shields.io/badge/Orquestaci%C3%B3n-Hub--and--Spoke-00D4FF?style=flat-square&labelColor=0D1117" alt="Hub-and-spoke">
+  <img src="https://img.shields.io/badge/Orquestaci%C3%B3n-Hub--and--Spoke_%2B_A2A-00D4FF?style=flat-square&labelColor=0D1117" alt="Hub-and-spoke + A2A">
   <img src="https://img.shields.io/badge/Vulns-KEV%2BEPSS-00D4FF?style=flat-square&labelColor=0D1117" alt="RAG KEV+EPSS">
   <img src="https://img.shields.io/badge/Alcance-scope--guarded-3FB950?style=flat-square&labelColor=0D1117" alt="Scope guarded">
   <img src="https://img.shields.io/badge/Control-humano_en_el_bucle-3FB950?style=flat-square&labelColor=0D1117" alt="Humano en el bucle">
@@ -80,17 +80,20 @@ Una suite de **18 agentes especialistas** (de fase y de herramienta), un **orque
 ofensivo —recon, análisis, explotación y cierre— sobre el sistema nativo de **subagentes de
 Claude Code**, con un espejo equivalente para **opencode**.
 
-No hay red mallada ni agentes hablando entre sí. Manda un **orquestador** (la sesión
-principal, `AGENTS.md`): es el único que delega tareas y recoge resultados. Los agentes se
-coordinan a través de un **blackboard** —el fichero `contracts/engagement.json`—, y cada
-comando que toca un objetivo pasa antes por `scope_guard.py`, que lo bloquea si el target no
-está en `contracts/scope.json`.
+Manda un **orquestador** (la sesión principal, `AGENTS.md`): planifica, delega y **enruta**.
+Los agentes ahora pueden **dirigirse mensajes entre sí** por un **bus A2A mediado**, pero no se
+invocan directamente —dejan el mensaje en el **blackboard** (`contracts/engagement.json`) y el
+orquestador lo entrega—, así todo queda auditado y gateado. No hay malla peer-to-peer en el
+camino de cliente (decisión de seguridad; ver [`ARCHITECTURE.md`](ARCHITECTURE.md)). Cada comando
+que toca un objetivo pasa antes por `scope_guard.py`, que lo bloquea si el target no está en
+`contracts/scope.json`, y cada mensaje A2A por `a2a_guard.py` (emisor/destino válidos + techo de
+hops anti-bucle).
 
 ## Características clave
 
 | | Capacidad | Qué aporta |
 | :---: | :--- | :--- |
-| 🧭 | **Hub-and-spoke** | Un orquestador delega por fases; los agentes quedan desacoplados y se comunican por el blackboard. |
+| 🧭 | **Hub-and-spoke + bus A2A** | Un orquestador delega por fases y enruta; los agentes se dirigen mensajes A2A entre sí por el blackboard (mediado, auditado y con techo de hops), sin malla directa. |
 | 🤖 | **18 agentes especialistas** | Recon, triage, explotación web/red/AD, C2 simulado, red team de IA/LLM, informe y postmortem. |
 | 📚 | **RAG KEV+EPSS** | `vuln-triage` prioriza por lo que de verdad se explota (CISA KEV, EPSS, exploit público), sin reentrenar el modelo. |
 | 🛡️ | **Guardián de alcance** | `scope_guard.py` bloquea de forma determinista cualquier acción fuera de `scope.json`. |
