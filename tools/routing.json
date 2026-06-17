@@ -1,10 +1,10 @@
 {
-  "$comment": "Routing multi-provider — SOLO afecta al espejo opencode (.opencode/agent/*.md, que es GENERADO por tools/sync_opencode.py). NO toca .claude/agents (su frontmatter 'model' sigue siendo Anthropic, que es lo que usan Claude Code y el bot), ni el Orquestador, ni nada del runtime Anthropic. Cada clave de 'routes' es el 'name' de un agente; el valor es un modelo opencode en formato 'provider/model'. Un agente AUSENTE de 'routes' conserva el comportamiento por defecto (MODEL_MAP sobre su 'model' Anthropic). PERFIL opencode-lab (v1.4.0): 5 agentes mecánicos (recon/escaneo/parseo) enrutados a Ollama LOCAL (coste cero, sin sacar datos del equipo; los modelos locales no tienen thinking adaptativo/effort/prompt-caching, por eso solo recon/parseo y NUNCA explotación o reporting). Es para practicar/desarrollar contra laboratorios SIN gastar; el bot real (engagements) sigue 100% Anthropic. REVERTIR = vaciar 'routes' ({}) y volver a correr 'python tools/sync_opencode.py'. Los tags de modelo (p.ej. llama3.1:8b) deben coincidir con lo que el operador haya hecho 'ollama pull' y estar declarados en opencode.json; cambiar aquí es el único sitio.",
+  "$comment": "Routing multi-provider — SOLO afecta al espejo opencode (.opencode/agent/*.md, GENERADO por tools/sync_opencode.py). NO toca .claude/agents (su 'model' sigue Anthropic, que es lo que usan Claude Code y el bot real de engagements), ni el Orquestador, ni nada del runtime Anthropic. Cada clave de 'routes' es el 'name' de un agente; el valor es 'provider/model' declarado en .opencode/opencode.json. Un agente AUSENTE de 'routes' conserva su modelo Anthropic por defecto (MODEL_MAP). PERFIL ACTIVO (v1.9.0) = FREE CLOUD NO-TRAIN: los 5 agentes mecánicos (recon/escaneo/parseo) van a Groq y Cerebras, que NO entrenan con los prompts (riesgo de fuga menor). Es para practicar/desarrollar contra LABORATORIOS PROPIOS sin gastar; nunca explotación/triage/reporting (esos conservan Anthropic). REGLAS DURAS: LAB-ONLY, JAMÁS datos de cliente, NUNCA en E2/E3. Requiere exportar GROQ_API_KEY y CEREBRAS_API_KEY (ver .opencode/opencode.example.env). OPT-IN MANUAL (más catálogo, residencia/entrenamiento sensible → solo lab puro): DeepSeek/MiniMax/GLM(zhipu)/OpenRouter:free están DECLARADOS en opencode.json pero NO enrutados; para usarlos, pon aquí su 'provider/model' y exporta su clave. Alternativa OFFLINE (coste cero, el dato no sale del equipo): cambia el valor a 'ollama/<modelo>' (requiere 'ollama serve' + 'ollama pull'). REVERTIR a 100% Anthropic = vaciar 'routes' ({}) y re-correr 'python tools/sync_opencode.py'. Los IDs de modelo deben coincidir EXACTAMENTE con una clave de provider.models en opencode.json (verify_opencode.py lo valida; un id mal escrito NO pasa). Cambiar de modelo es solo aquí.",
   "routes": {
-    "osint-recon": "ollama/llama3.1:8b",
-    "recon-suite": "ollama/qwen2.5-coder:7b",
-    "active-recon": "ollama/qwen2.5-coder:7b",
-    "web-fuzzing": "ollama/qwen2.5-coder:7b",
-    "nuclei": "ollama/qwen2.5-coder:7b"
+    "osint-recon": "groq/llama-3.3-70b-versatile",
+    "recon-suite": "cerebras/qwen-3-32b",
+    "active-recon": "cerebras/gpt-oss-120b",
+    "web-fuzzing": "groq/llama-3.1-8b-instant",
+    "nuclei": "cerebras/qwen-3-32b"
   }
 }

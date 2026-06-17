@@ -4,6 +4,35 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [1.9.0] - 2026-06-18
+### Added
+- **opencode multi-modelo con modelos gratuitos (LAB-ONLY) + auto-deploy por entorno.** El espejo
+  opencode declara 6 providers **gratuitos** en `.opencode/opencode.json`: `groq` y `cerebras`
+  (OpenAI-compatible, **no entrenan** con los prompts), `deepseek`, `openrouter` (OpenAI-compatible)
+  y `minimax`/`zhipu` (**Anthropic-compatible**, `@ai-sdk/anthropic`). Todas las claves vía
+  `{env:VAR}` → despliegue **no interactivo**, sin `opencode auth login`. Nueva plantilla
+  `.opencode/opencode.example.env` (versionada; los `*.env` reales siguen gitignored).
+- **Perfil de routing free no-train (activo).** `tools/routing.json` enruta los 5 agentes mecánicos
+  (recon/escaneo/parseo) a **Groq/Cerebras**. DeepSeek/MiniMax/GLM/OpenRouter `:free` quedan
+  **declarados pero NO enrutados** (opt-in manual; entrenan/residencia sensible). Ollama local sigue
+  disponible como alternativa offline.
+- **`deploy/verify.sh`**: chequeo (no crítico) de que, si el routing usa un provider free, su clave
+  de entorno está exportada (paralelo al de Ollama).
+### Changed
+- Docs alineadas: `.opencode/README.md` (sección "Modelos gratuitos" con tabla provider/env/clase,
+  *gotcha* de IDs con `/` y Anthropic- vs OpenAI-compatible, activar/revertir), `docs/cost-optimization.md`
+  ("Modelos gratis" reescrita), `DEPLOY.md`, `docs/RUNBOOK-operador.md` y `README.md` (fila opencode +
+  nota lab-only). `deploy/lib.sh`: nota en `ensure_opencode` (claves por entorno).
+- Corregido conteo obsoleto en `docs/cost-optimization.md` (subagentes: **6** mecánicos en haiku, no 5).
+### Notes
+- **Reglas duras (innegociables):** todo el free es **LAB-ONLY** — jamás datos de cliente, **nunca**
+  en E2/E3, y solo agentes mecánicos (nunca triage/explotación/reporting). El **bot real de
+  engagements sigue 100% Anthropic** (sin free cloud, decisión deliberada: rate-limits, sin fallback,
+  *quirks* de tool-protocol). Revertir = vaciar `routes` (`{}`) + `python tools/sync_opencode.py`.
+- `verify_opencode.py` ya validaba el cruce ruta↔provider↔modelo (sin cambios de lógica): un id de
+  modelo inexistente **no pasa**. Los IDs free y los free-tier **cambian** → re-confirmar contra la
+  doc del provider / models.dev al desplegar. JSON estricto (sin `$comment` en `opencode.json`).
+
 ## [1.8.0] - 2026-06-17
 ### Added
 - **agentsview — analítica local de coste/actividad por agente.** Integrado el binario
@@ -230,6 +259,7 @@ se versiona con [SemVer](https://semver.org/lang/es/).
 - Controles base: gate de alcance determinista (`scope_guard.py`), validación de esquema del
   blackboard, escritura atómica, zonas de aislamiento E1/E2/E3 y reporting humanizado.
 
+[1.9.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.9.0
 [1.8.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.8.0
 [1.7.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.7.0
 [1.6.1]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.6.1

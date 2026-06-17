@@ -1,7 +1,7 @@
 ---
 description: Recon PASIVO. Úsalo al inicio de un engagement para mapear la superficie de ataque SIN tocar el target (subdominios, DNS, leaks, tecnologías, empleados). No envía tráfico intrusivo.
 mode: subagent
-model: ollama/llama3.1:8b
+model: groq/llama-3.3-70b-versatile
 temperature: 0.1
 permission:
   read: allow

@@ -1,7 +1,7 @@
 ---
 description: Especialista en el toolkit de recon moderno — subfinder, amass, dnsx, naabu, httpx, katana, gau y nmap. Úsalo para descubrir activos, subdominios, DNS, puertos/servicios y superficie web. Pasivo o activo según el scope.
 mode: subagent
-model: ollama/qwen2.5-coder:7b
+model: cerebras/qwen-3-32b
 temperature: 0.1
 permission:
   read: allow

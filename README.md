@@ -172,8 +172,14 @@ reutilizando el mismo `deploy/lib.sh`) y levanta el bot, montando tu login Pro (
 | Plataforma | Cómo se carga | Estado |
 | :--- | :--- | :--- |
 | **Claude Code** (CLI + extensión de VS Code) | `.claude/agents/*.md` + `.claude/settings.json` | ✅ Objetivo principal |
-| **opencode** | `.opencode/agent/*.md` + `opencode.json` | ✅ Espejo equivalente |
+| **opencode** | `.opencode/agent/*.md` + `opencode.json` | ✅ Espejo equivalente · routing multi-modelo con modelos **gratuitos** (Groq/Cerebras/… `tools/routing.json`) para lab — ver nota |
 | **VS Code** | Misma carpeta `.claude/` del workspace, vía extensión Claude Code | ✅ Sin cambios |
+
+> **Nota (modelos gratuitos del espejo opencode).** El espejo puede correr los agentes mecánicos
+> (recon/escaneo/parseo) con modelos **gratuitos** para practicar contra **laboratorios propios** sin
+> gastar (por defecto Groq/Cerebras, que no entrenan con los prompts; claves por entorno, sin `auth
+> login`). Es **LAB-ONLY**: jamás datos de cliente, nunca en E2/E3. El bot real de engagements sigue
+> **100% Anthropic**. Detalle, opt-in de más providers y reglas en [`.opencode/README.md`](.opencode/README.md).
 
 ## Instalación rápida (Claude Code)
 

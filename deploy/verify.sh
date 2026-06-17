@@ -93,6 +93,17 @@ if grep -q '"ollama/' tools/routing.json 2>/dev/null; then
     printf "  $(c 2)[OK]$(r)  %-22s %s\n" "ollama (routing)" "$(ollama --version 2>&1 | head -1 | cut -c1-30)"; OKN=$((OKN+1))
   else printf "  $(c 3)[??]$(r)  %-22s el routing enruta a ollama pero no está instalado\n" "ollama (routing)"; fi
 fi
+# Providers free del espejo opencode (LAB-ONLY): si el routing usa uno, su clave debe estar en el
+# entorno (opencode la lee con {env:VAR}). No crítico: solo afecta al runtime opencode de lab.
+for _pp in groq:GROQ_API_KEY cerebras:CEREBRAS_API_KEY deepseek:DEEPSEEK_API_KEY \
+           minimax:MINIMAX_API_KEY zhipu:ZHIPU_API_KEY openrouter:OPENROUTER_API_KEY; do
+  _prov="${_pp%%:*}"; _var="${_pp##*:}"
+  if grep -q "\"${_prov}/" tools/routing.json 2>/dev/null; then
+    if [ -n "${!_var:-}" ]; then
+      printf "  $(c 2)[OK]$(r)  %-22s clave presente\n" "${_prov} (routing)"; OKN=$((OKN+1))
+    else printf "  $(c 3)[??]$(r)  %-22s el routing usa %s pero falta %s (ver .opencode/opencode.example.env)\n" "${_prov} (routing)" "$_prov" "$_var"; fi
+  fi
+done
 
 # Asistente (gum) y panel TUI (textual) — opcionales, mejoran la experiencia (no críticos).
 if command -v gum >/dev/null 2>&1; then

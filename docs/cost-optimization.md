@@ -8,7 +8,7 @@ de resolver la box**. Resumen: el grueso del coste está en el **Orquestador**, 
 | Componente | Por qué pesa |
 | :--- | :--- |
 | **Orquestador** (sesión principal del bot / `claude -p`) | Corre en **cada turno** con el contexto creciente (AGENTS.md + preset + blackboard). Es el **término dominante**. |
-| **Subagentes** | Uno por `Task`; coste acotado a su tarea. 5 mecánicos en haiku, 8 en sonnet, 4 en opus. |
+| **Subagentes** | Uno por `Task`; coste acotado a su tarea. 6 mecánicos en haiku, 8 en sonnet, 4 en opus. |
 | **Prompt caching** | **Automático** en Claude Code / Agent SDK (system prompt + tools + defs de agente + contexto estático). No hay que activarlo. Cambiar de modelo/effort a media sesión **invalida** la caché. |
 
 > El bot **ya imprime el coste real** al terminar cada orden: `✅ Completado · N turnos · $X.XX`
@@ -53,17 +53,26 @@ rehaciendo). Bajar de tier un agente mecánico no cambia el resultado y abarata 
 Se aplican de forma **defensiva**: si la versión instalada del SDK no expone `effort`/`max_budget_usd`,
 el runner degrada (effort → flag CLI; techo USD se omite) **sin romper la sesión**.
 
-## Modelos gratis
+## Modelos gratis (espejo opencode · v1.9.0)
 
-- **opencode-lab (cableado).** `tools/routing.json` enruta 5 agentes mecánicos a **Ollama local**
-  (coste cero, el dato no sale del equipo). Solo afecta al runtime **opencode** — sirve para
-  practicar/desarrollar contra laboratorios sin gastar. El bot real (engagements) **no** lo usa.
-- **Free cloud en el bot (NO implementado, decisión deliberada).** Es viable en fase lab (sin datos
-  de cliente) vía un gateway LiteLLM (`ANTHROPIC_BASE_URL`) con un toggle reversible, PERO: los
-  free-tier tienen rate-limits agresivos, Claude Code **no tiene fallback** (si el proveedor corta, la
-  llamada muere a mitad de run) y los modelos no-Claude dan *quirks* de tool-protocol. Secuencia
-  recomendada: aplicar las palancas de arriba, **re-medir**, y montar el gateway free **solo si sigue
-  caro**. Cuando se usen datos de cliente reales → el bot vuelve a 100% Anthropic.
+- **Free cloud no-train (perfil ACTIVO).** `tools/routing.json` enruta los 5 agentes mecánicos
+  (recon/escaneo/parseo) a **Groq y Cerebras**, providers gratuitos que **no entrenan** con los
+  prompts. Solo afecta al runtime **opencode** — sirve para practicar/desarrollar contra
+  **laboratorios propios** sin gastar. Claves por entorno (`GROQ_API_KEY`/`CEREBRAS_API_KEY`, ver
+  `.opencode/opencode.example.env`); opencode las lee con `{env:VAR}`, sin `auth login`.
+- **Más catálogo (opt-in manual).** `DeepSeek`, `MiniMax`, `GLM (zhipu)` y `OpenRouter :free` están
+  **declarados** en `.opencode/opencode.json` pero **NO enrutados** (entrenan/residencia sensible).
+  Para usar uno: pon su `provider/model` en `routing.json` y exporta su clave. Detalle y *gotchas*
+  (IDs con `/`, Anthropic-compatible vs OpenAI-compatible) en `.opencode/README.md`.
+- **Alternativa offline.** Cambia la ruta a `ollama/<modelo>` (coste cero, el dato no sale del
+  equipo; requiere `ollama serve` + `ollama pull`).
+- **Reglas duras (innegociables).** Todo lo anterior es **LAB-ONLY**: **jamás** datos de cliente,
+  **nunca** en E2/E3, y solo agentes mecánicos (nunca triage/explotación/reporting). Revertir a 100%
+  Anthropic = vaciar `routes` (`{}`) + `python tools/sync_opencode.py`.
+- **El bot real sigue 100% Anthropic.** El free cloud **en el bot** sigue **sin implementar**
+  (decisión deliberada): los free-tier tienen rate-limits agresivos, Claude Code **no tiene
+  fallback** (si el proveedor corta, la llamada muere a mitad de run) y los modelos no-Claude dan
+  *quirks* de tool-protocol. Para engagements con datos de cliente → 100% Anthropic.
 
 ## Qué NO se tocó
 

@@ -24,3 +24,39 @@ config de opencode (estatica).
 - **A2A**: el bus A2A (mensajes entre agentes) es del runtime Claude Code / bot, no del espejo
   opencode — `sync_opencode.py` no propaga el bloque `a2a:` del frontmatter. opencode es un espejo
   de desarrollo/laboratorio para practicar con modelos locales, no para correr engagements con A2A.
+
+## Modelos gratuitos (LAB-ONLY) — v1.9.0
+
+El espejo opencode declara varios providers **gratuitos** para practicar/desarrollar contra
+**laboratorios propios sin gastar**. Solo afectan a opencode; el bot real de engagements sigue
+**100% Anthropic**. **Reglas duras (innegociables):** LAB-ONLY, **jamás datos de cliente**, **nunca
+en E2/E3** (air-gapped). Se enrutan solo agentes mecánicos (recon/escaneo/parseo); nunca
+triage/explotación/reporting.
+
+| provider | npm | env var | clase |
+| :--- | :--- | :--- | :--- |
+| `groq` | `@ai-sdk/openai-compatible` | `GROQ_API_KEY` | **no entrena** ✅ (perfil activo) |
+| `cerebras` | `@ai-sdk/openai-compatible` | `CEREBRAS_API_KEY` | **no entrena** ✅ (perfil activo) |
+| `deepseek` | `@ai-sdk/openai-compatible` | `DEEPSEEK_API_KEY` | entrena/residencia ⚠️ (opt-in) |
+| `minimax` | `@ai-sdk/anthropic` | `MINIMAX_API_KEY` | entrena/residencia ⚠️ (opt-in) |
+| `zhipu` (GLM) | `@ai-sdk/anthropic` | `ZHIPU_API_KEY` | entrena/residencia ⚠️ (opt-in) |
+| `openrouter` | `@ai-sdk/openai-compatible` | `OPENROUTER_API_KEY` | los `:free` entrenan ⚠️ (opt-in) |
+
+- **Perfil activo (`tools/routing.json`)**: los 5 agentes mecánicos van a **Groq/Cerebras**, que **no
+  entrenan** con los prompts (riesgo de fuga menor). El resto de providers quedan **declarados pero
+  NO enrutados** (opt-in manual: añade su `provider/model` a `routing.json` y exporta su clave).
+- **Claves por entorno, sin `auth login`**: opencode lee `{env:VAR}` en runtime. Copia
+  `opencode.example.env` → `opencode.env`, rellénalo y cárgalo (`set -a; . ./opencode.env; set +a`).
+  `opencode.env` (y todo `*.env`) está gitignored; la plantilla `*.example.env` sí se versiona.
+- **Gotcha OpenRouter / GPT-OSS**: sus IDs llevan `/` (p.ej. `deepseek/deepseek-chat-v3-0324:free`,
+  `openai/gpt-oss-120b`). En `routing.json` el valor se parte por el **primer** `/`
+  (`openrouter/deepseek/deepseek-chat-v3-0324:free` → provider `openrouter`, modelo
+  `deepseek/deepseek-chat-v3-0324:free`), y ese modelo debe existir como clave en
+  `provider.<x>.models` de `opencode.json`.
+- **MiniMax/GLM son Anthropic-compatible** (`@ai-sdk/anthropic` + `baseURL` propio), no
+  OpenAI-compatible. DeepSeek/Groq/Cerebras/OpenRouter sí son OpenAI-compatible.
+- **Los IDs de modelo y los free-tier CAMBIAN**: re-confirma contra la doc de cada provider /
+  [models.dev](https://models.dev) antes de enrutar. `tools/verify_opencode.py` valida el cruce
+  ruta↔provider↔modelo, así que un id inexistente **no pasa silenciosamente**.
+- **Revertir** a 100% Anthropic: vacía `routes` (`{}`) en `routing.json` y re-corre
+  `python tools/sync_opencode.py`.

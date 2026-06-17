@@ -136,6 +136,15 @@ Restart=on-failure
 `claude-opus-4-8`. Si tu plan no sirve alguno, ajusta el `model:` del agente o `ORCH_MODEL` en
 `bot/.env`. Recuerda: **`effort` no es válido en Haiku** (osint-recon no lo lleva).
 
+**Modelos gratuitos del espejo opencode (LAB-ONLY).** Solo el runtime **opencode** (no el bot)
+puede correr los 5 agentes mecánicos con modelos **gratuitos** (`tools/routing.json` → Groq/Cerebras
+por defecto; DeepSeek/MiniMax/GLM/OpenRouter `:free` opt-in). Es para **laboratorios propios**:
+**jamás** datos de cliente, **nunca** E2/E3. Exporta la clave del provider (ver
+`.opencode/opencode.example.env`); si falta, `verify.sh` lo avisa y la llamada opencode fallará.
+Si un modelo free da error o desaparece, re-confirma su id contra la doc del provider / models.dev y
+actualízalo en `.opencode/opencode.json` (debe coincidir con el de `routing.json`; `verify_opencode.py`
+lo cruza). **Revertir** a 100% Anthropic: vacía `routes` (`{}`) y `python tools/sync_opencode.py`.
+
 **claude-mem.** Desactivado a propósito (su worker no arranca en Windows). No es necesario para
 operar; el contexto del proyecto vive en la memoria del asistente, no en claude-mem.
 

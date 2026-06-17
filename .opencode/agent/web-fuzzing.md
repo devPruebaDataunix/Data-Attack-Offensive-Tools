@@ -1,7 +1,7 @@
 ---
 description: Especialista en descubrimiento de contenido y fuzzing web — ffuf y feroxbuster (directorios, ficheros, parámetros, vhosts, valores). Úsalo para enumerar superficie web oculta en activos en scope antes de explotar.
 mode: subagent
-model: ollama/qwen2.5-coder:7b
+model: groq/llama-3.1-8b-instant
 temperature: 0.1
 permission:
   read: allow

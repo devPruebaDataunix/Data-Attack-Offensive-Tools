@@ -57,6 +57,9 @@ ensure_impacket(){
 }
 
 ensure_claude(){ have claude || $SUDO npm install -g @anthropic-ai/claude-code; }
+# Espejo opencode. Los providers free (Groq/Cerebras/… ver .opencode/opencode.json) leen su clave
+# de {env:VAR} en runtime → deploy NO interactivo, sin 'opencode auth login'. El operador exporta
+# las claves (cp .opencode/opencode.example.env .opencode/opencode.env; rellena; carga el env).
 ensure_opencode(){ have opencode || $SUDO npm install -g opencode-ai; }
 
 # gum (Charm) — para el asistente interactivo deploy/setup.sh. Vía el repo apt de Charm;

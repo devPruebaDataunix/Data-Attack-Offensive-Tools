@@ -42,8 +42,17 @@ Flags: `--update` (todo a lo último), `--skip-tools`, `--no-rag`, `--no-bot`.
 ./deploy/verify.sh --update     # además actualiza todo a su última versión
 ```
 `verify.sh` comprueba también la **réplica opencode** (`tools/verify_opencode.py`: opencode.json
-+ 18 agentes + cruce `routing.json`↔provider) y, si el routing enruta a Ollama, su disponibilidad.
++ 18 agentes + cruce `routing.json`↔provider) y, si el routing enruta a Ollama o a un provider free
+(Groq/Cerebras/…), su disponibilidad / que esté exportada su clave de entorno.
 Comprueba además (no críticos) `gum`, `textual` y `agentsview` (asistente, panel TUI y analítica de coste).
+
+> **Modelos gratuitos del espejo opencode (LAB-ONLY).** El espejo opencode puede correr agentes
+> mecánicos (recon/escaneo/parseo) con modelos **gratuitos** para practicar contra laboratorios
+> propios sin gastar. Por defecto van a **Groq/Cerebras** (no entrenan con los prompts). Despliegue
+> **no interactivo** (sin `opencode auth login`): `cp .opencode/opencode.example.env
+> .opencode/opencode.env`, rellena las claves y cárgalas (`set -a; . .opencode/opencode.env; set +a`).
+> **Regla dura:** LAB-ONLY, **jamás** datos de cliente, **nunca** E2/E3. El bot real de engagements
+> sigue 100% Anthropic. Detalle y opt-in de más providers en `.opencode/README.md`.
 
 ## Asistente guiado y panel TUI
 - **`./deploy/setup.sh`** — asistente interactivo (con [gum](https://github.com/charmbracelet/gum);
