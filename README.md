@@ -46,10 +46,12 @@
 </p>
 
 > [!WARNING]
-> **USO AUTORIZADO ÚNICAMENTE.** Estos agentes operan exclusivamente dentro del alcance de un
-> contrato de pentest firmado o de un programa de bug bounty con scope explícito.
+> **USO AUTORIZADO ÚNICAMENTE.**
+> Estos agentes operan exclusivamente dentro del alcance de un contrato de pentest firmado o de un programa de bug bounty con scope explícito.
 > `contracts/scope.json` es la fuente de verdad del alcance y un *hook* lo aplica de forma
-> determinista antes de cada acción. Operar fuera de scope es ilegal. No lo hagas.
+> determinista antes de cada acción.
+> Operar fuera de scope es ilegal.
+>       No lo hagas.
 
 ---
 
