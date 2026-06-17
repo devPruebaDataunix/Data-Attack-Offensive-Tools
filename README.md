@@ -12,13 +12,13 @@
 </p>
 
 <!-- BADGES — actividad del repo -->
-<p align="center">
+<!--<p align="center">
   <a href="https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/stargazers"><img src="https://img.shields.io/github/stars/devPruebaDataunix/Data-Attack-Offensive-Tools?style=for-the-badge&logo=github&color=FFD700&labelColor=0D1117" alt="Stars"></a>
   <a href="https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/network/members"><img src="https://img.shields.io/github/forks/devPruebaDataunix/Data-Attack-Offensive-Tools?style=for-the-badge&logo=github&color=00D4FF&labelColor=0D1117" alt="Forks"></a>
   <a href="https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/issues"><img src="https://img.shields.io/github/issues/devPruebaDataunix/Data-Attack-Offensive-Tools?style=for-the-badge&logo=github&color=FF6B35&labelColor=0D1117" alt="Issues"></a>
   <a href="https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/commits"><img src="https://img.shields.io/github/last-commit/devPruebaDataunix/Data-Attack-Offensive-Tools?style=for-the-badge&logo=git&logoColor=white&color=3FB950&labelColor=0D1117" alt="Último commit"></a>
   <a href="https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases"><img src="https://img.shields.io/github/v/release/devPruebaDataunix/Data-Attack-Offensive-Tools?style=for-the-badge&logo=github&color=8957E5&labelColor=0D1117&label=versi%C3%B3n" alt="Última versión"></a>
-</p>
+</p> -->
 
 <!-- BADGES — identidad y stack real -->
 <p align="center">
