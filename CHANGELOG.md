@@ -4,6 +4,22 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [1.6.1] - 2026-06-17
+### Fixed
+- **pdtm `-silent` inexistente.** `pdtm -ia/-ua -silent` imprimía `flag provided but not defined:
+  -silent` y abortaba la instalación de las ProjectDiscovery tools en un deploy fresco. Sustituido
+  por los flags correctos **`-duc -nc`** (disable-update-check + no-color) en `deploy/auto-deploy.sh`
+  y `deploy/lib.sh` (`ensure_pd` y `update_all`). (`nuclei -update-templates -silent` SÍ es válido,
+  se mantiene.)
+- **Falsos `[ERR]` tras instalar Claude Code.** `auto-deploy.sh` no refrescaba el PATH tras
+  `npm install -g @anthropic-ai/claude-code`, así que `claude` parecía no instalado y el verify
+  interno (pasos 2 y 6) fallaba y devolvía exit !=0 aunque el entorno estaba correcto. Ahora añade
+  el bin global de npm al PATH + `hash -r`, y el aviso de versión es tolerante.
+### Notes
+- Detectados en el despliegue live en Kali (`dataunix`). El entorno ya estaba operativo
+  (verify 31 OK / 0 críticos); estos arreglos dejan el **primer despliegue 100% limpio**. Sin
+  cambios funcionales en agentes/guardarraíles.
+
 ## [1.6.0] - 2026-06-17
 ### Added
 - **Despliegue en contenedores (Docker).** `Dockerfile` (base Kali rolling) que trae el toolchain

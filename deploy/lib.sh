@@ -45,7 +45,7 @@ ensure_pd(){
   export PATH="$PATH:$(gobin)"
   have pdtm || go install github.com/projectdiscovery/pdtm/cmd/pdtm@latest
   export PATH="$PATH:$(gobin)"
-  pdtm -ia -silent 2>/dev/null || true
+  pdtm -ia -duc -nc 2>/dev/null || true   # pdtm no tiene -silent; -duc/-nc son los flags quietos
   have nuclei && { nuclei -update-templates -silent 2>/dev/null || true; }
   have gau || go install github.com/lc/gau/v2/cmd/gau@latest 2>/dev/null || true
 }
@@ -129,7 +129,7 @@ update_all(){
   apt_retry update -y && apt_retry upgrade -y
   if have go; then
     export PATH="$PATH:$(gobin)"
-    have pdtm && { pdtm -ua -silent 2>/dev/null || true; }
+    have pdtm && { pdtm -ua -duc -nc 2>/dev/null || true; }
   fi
   have nuclei && { nuclei -update-templates -silent 2>/dev/null || true; }
   have pipx && { pipx upgrade-all 2>/dev/null || true; }

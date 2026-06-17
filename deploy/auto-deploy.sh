@@ -120,7 +120,12 @@ install_claude(){
     ok "claude ya instalado ($(claude --version 2>/dev/null))"
   else
     $SUDO npm install -g @anthropic-ai/claude-code
-    ok "Instalado: $(claude --version 2>/dev/null)"
+    # El bin global de npm puede no estar en el PATH de ESTA shell tras instalar, y bash
+    # cachea las rutas de comandos -> 'claude' parecía no instalado y daba falsos [ERR] en
+    # los pasos 2 y 6. Añadimos el bin global al PATH (persiste al resto de fases y al verify) + rehash.
+    export PATH="$(npm prefix -g 2>/dev/null)/bin:$PATH"; hash -r 2>/dev/null || true
+    local _v; _v="$(claude --version 2>/dev/null || true)"
+    ok "Instalado: ${_v:-claude (se resolverá en shell nueva; el verify final lo confirma)}"
   fi
   warn "LOGIN PRO (manual, una vez): ejecuta 'claude' y completa el login con tu cuenta Pro."
   warn "El bot usa el Agent SDK / 'claude -p', que requiere esa sesión iniciada en esta máquina."
@@ -139,7 +144,9 @@ install_tools(){
   # ProjectDiscovery via pdtm (subfinder, httpx, nuclei, naabu, katana, dnsx…)
   export PATH="$PATH:$(go env GOPATH)/bin"
   if ! have pdtm; then info "Instalando pdtm (ProjectDiscovery Tool Manager)…"; go install github.com/projectdiscovery/pdtm/cmd/pdtm@latest; fi
-  if [ "$UPDATE" -eq 1 ]; then pdtm -ua -silent || true; else pdtm -ia -silent || true; fi
+  # pdtm NO tiene -silent (daba "flag provided but not defined"); los flags quietos son
+  # -duc (no comprobar updates de pdtm) y -nc (sin color, mejor para el log).
+  if [ "$UPDATE" -eq 1 ]; then pdtm -ua -duc -nc || true; else pdtm -ia -duc -nc || true; fi
   have nuclei && { info "Actualizando plantillas de Nuclei…"; nuclei -update-templates -silent || true; }
 
   # gau
