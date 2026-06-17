@@ -74,9 +74,9 @@
 
 ---
 
-## Qué es
+## Qué es Data Attack
 
-Una suite de **18 agentes especialistas** (de fase y de herramienta), un **orquestador**, un
+Data Attack es una suite de **18 agentes especialistas** (de fase y de herramienta), un **orquestador**, un
 **guardián de alcance** (hook determinista), un **RAG de vulnerabilidades** KEV+EPSS y un
 **bot de Telegram** para conducir todo desde el móvil. Cubre las fases de un engagement
 ofensivo —recon, análisis, explotación y cierre— sobre el sistema nativo de **subagentes de
