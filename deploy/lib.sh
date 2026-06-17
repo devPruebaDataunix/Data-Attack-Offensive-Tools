@@ -103,6 +103,40 @@ ensure_textual(){
   "$py" -m pip install --quiet textual 2>/dev/null || echo "[!] textual no instalado (la TUI no abrirá)."
 }
 
+# agentsview — analítica local-first de sesiones de Claude Code (coste/actividad por agente).
+# Binario standalone (Go, MIT). VERSIÓN FIJADA + verificación SHA256 (auditable, sin curl|bash).
+# Lee ~/.claude/projects/ y sirve una UI en 127.0.0.1:8080 (local-only). Aquí SOLO se instala el
+# binario (instalar != exponer datos de cliente): el daemon se arranca a propósito con
+# deploy/agentsview.sh up. Un fallo de red NO debe tumbar el deploy (no crítico).
+AGENTSVIEW_VERSION="0.33.1"
+ensure_agentsview(){
+  have agentsview && return 0
+  local arch tgz base dest tmp bin
+  case "$(uname -m)" in
+    x86_64|amd64)  arch="amd64" ;;
+    aarch64|arm64) arch="arm64" ;;
+    *) echo "[!] arquitectura $(uname -m) no soportada por agentsview; omito (no crítico)."; return 1 ;;
+  esac
+  tgz="agentsview_${AGENTSVIEW_VERSION}_linux_${arch}.tar.gz"
+  base="https://github.com/kenn-io/agentsview/releases/download/v${AGENTSVIEW_VERSION}"
+  dest="$HOME/.local/bin"; mkdir -p "$dest"
+  tmp="$(mktemp -d)" || return 1
+  echo "[*] Instalando agentsview ${AGENTSVIEW_VERSION} (binario de release + verificación SHA256)…"
+  if ! ( cd "$tmp" \
+         && curl -fsSLO "${base}/${tgz}" \
+         && curl -fsSLO "${base}/SHA256SUMS" \
+         && grep " ${tgz}\$" SHA256SUMS | sha256sum -c - >/dev/null ); then
+    echo "[!] descarga/verificación de agentsview falló; omito (no crítico)."; rm -rf "$tmp"; return 1
+  fi
+  tar -C "$tmp" -xzf "$tmp/${tgz}" 2>/dev/null || true
+  bin="$(find "$tmp" -type f -name agentsview 2>/dev/null | head -1)"
+  [ -n "$bin" ] || { echo "[!] binario agentsview no hallado en el paquete; omito."; rm -rf "$tmp"; return 1; }
+  install -m 0755 "$bin" "$dest/agentsview" 2>/dev/null || { cp "$bin" "$dest/agentsview"; chmod +x "$dest/agentsview"; }
+  rm -rf "$tmp"
+  export PATH="$PATH:$dest"
+  have agentsview || echo "[!] agentsview instalado en $dest, pero ~/.local/bin no está en el PATH (añádelo)."
+}
+
 # Instala SOLO lo que falte (cada paso comprueba antes; apt es idempotente).
 install_missing(){
   echo "── Instalando lo que falte ──"
@@ -117,6 +151,7 @@ install_missing(){
   ensure_opencode
   ensure_gum
   ensure_textual
+  ensure_agentsview
   have bloodhound-python || { have pipx && pipx install bloodhound 2>/dev/null; } || true
   have sliver-server || { curl -fsSL https://sliver.sh/install | $SUDO bash || \
     echo "[!] Sliver falló; instálalo a mano (ver DEPLOY.md)."; }

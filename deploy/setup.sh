@@ -80,6 +80,7 @@ action=$(choose \
   "Definir alcance (scope.json)" \
   "Verificar entorno" \
   "Abrir panel de control (TUI)" \
+  "Analítica de coste/actividad (agentsview)" \
   "Salir")
 
 case "$action" in
@@ -89,5 +90,6 @@ case "$action" in
   "Definir alcance"*)            setup_scope ;;
   "Verificar entorno"*)          bash "${SCRIPT_DIR}/verify.sh" ;;
   "Abrir panel de control"*)     exec bash "${SCRIPT_DIR}/dash.sh" ;;
+  "Analítica de coste"*)         exec bash "${SCRIPT_DIR}/agentsview.sh" up ;;
   *)                             note "Hasta luego."; exit 0 ;;
 esac

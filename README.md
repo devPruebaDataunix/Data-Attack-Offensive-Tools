@@ -103,6 +103,7 @@ hops anti-bucle).
 | 🙋 | **Humano en el bucle** | Nada que toque el objetivo se ejecuta sin aprobación; la decisión es siempre del operador. |
 | 📱 | **Bot de Telegram** | Control remoto en lenguaje natural, resúmenes en vivo y aprobación por nivel de riesgo. |
 | 🖥️ | **Panel TUI local** | Control en la terminal (Textual): estado, hallazgos en vivo y órdenes al Orquestador con la misma aprobación humana. |
+| 📊 | **Analítica de coste local** | [agentsview](https://github.com/kenn-io/agentsview) (local-first) lee `~/.claude/projects/` → coste y actividad por agente en `127.0.0.1:8080`. Re-medir el gasto sin sacar datos. |
 | 🧠 | **Aprendizaje por errores** | `knowledge-postmortem` guarda lecciones de cada intento en memoria persistente y en el blackboard. |
 | 🧩 | **Multiplataforma** | Claude Code (CLI + extensión de VS Code) y espejo para opencode. |
 
@@ -161,6 +162,10 @@ de control TUI**.
 ¿O en **contenedores**? `./deploy/docker.sh up` construye la imagen (Kali + toolchain + Claude Code,
 reutilizando el mismo `deploy/lib.sh`) y levanta el bot, montando tu login Pro (`~/.claude`) y
 `bot/.env` (no se hornean). Detalle en [DEPLOY.md](DEPLOY.md) → "Despliegue en contenedores".
+
+¿Cuánto cuesta? `./deploy/agentsview.sh up` abre dashboards **locales** de coste/actividad por agente
+([agentsview](https://github.com/kenn-io/agentsview); lee `~/.claude/projects/`, sirve en
+`127.0.0.1:8080`, telemetría off — nunca expuesto).
 
 ## Plataformas soportadas
 
@@ -304,7 +309,7 @@ especificar antes de ejecutar, y auditar la coherencia antes de reportar.
 - **Secretos fuera del repo:** token y user-id en `bot/.env` (ignorado por git).
 - **Regla de evidencia:** sin fuente, no se explota; sin evidencia, no es un hallazgo.
 - **Gobierno por [CONSTITUTION.md](CONSTITUTION.md)** y auditoría de coherencia previa al informe.
-- **Capa de guardarraíles deterministas** (gate de alcance, validación del blackboard, anti-inyección, detector de secretos y kill-switch de consumo) mapeada a OWASP LLM Top 10 — ver [GUARDRAILS.md](GUARDRAILS.md).
+- **Capa de guardarraíles deterministas** (gate de alcance, validación del blackboard, anti-inyección, detector de secretos, kill-switch de consumo y **validador del bus A2A** —emisor/destino conocidos + topología de pares + techo de hops) mapeada a OWASP LLM Top 10 — ver [GUARDRAILS.md](GUARDRAILS.md).
 - **Historial de versiones** en [CHANGELOG.md](CHANGELOG.md) (SemVer) y en las [releases](https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases).
 
 ## Estructura del repositorio
@@ -321,7 +326,7 @@ cyberseg-agents/
 ├── bot/            → bot de Telegram (Claude Agent SDK) + clasificador de riesgo
 ├── deploy/         → auto-deploy y verificación del toolchain en Kali (+ Docker: Dockerfile/compose)
 ├── dryrun/         → prueba end-to-end segura (sin atacar)
-├── .claude/        → settings, hook de alcance y los 18 subagentes
+├── .claude/        → settings, hooks (alcance, presupuesto, blackboard, secretos, A2A) y los 18 subagentes
 └── .opencode/      → espejo de los agentes para opencode
 ```
 

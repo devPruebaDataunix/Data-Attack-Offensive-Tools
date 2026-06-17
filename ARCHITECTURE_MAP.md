@@ -3,7 +3,7 @@
 
 # 🗺️ Mapa de Arquitectura — Cyberseg Agents
 
-> **Generado:** 2026-06-17 17:34:45 UTC · **Refleja el estado real** del proyecto en ese momento.
+> **Generado:** 2026-06-17 21:53:50 UTC · **Refleja el estado real** del proyecto en ese momento.
 > Regenerar a mano: `python tools/gen_arch_diagram.py`
 
 ## Qué es esto (para reconstruir contexto si se pierde)

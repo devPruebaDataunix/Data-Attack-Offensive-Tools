@@ -57,7 +57,7 @@ adivinar.
 bash deploy/verify.sh              # toolchain + versiones + auth + RAG
 claude plugin validate ./plugin    # debe decir: ✔ Validation passed
 python tools/validate_suite.py     # debe decir: 0 fallos
-python bot/tests/test_intel.py     # 25/25 OK (clasificación / scope / gate)
+python bot/tests/test_intel.py     # 26/26 OK (clasificación / scope / gate / A2A)
 python dryrun/run_dryrun.py        # cadena completa SIMULADA (sin atacar): scope+RAG+blackboard
 ```
 
@@ -77,6 +77,17 @@ humana + C11-C13):
 Muestra estado/scope/salud, hallazgos clasificados en vivo (🔴 real / 🟠 vigilar / 🔇 ruido) y una
 caja de orden al Orquestador; la aprobación por acción aparece como **modal**. `triage <producto>`
 consulta el RAG. El bot de Telegram sigue para el control remoto.
+
+## 5c. Analítica de coste/actividad (agentsview)
+El `auto-deploy` instala el binario `agentsview` (versión fijada + verificación SHA256). Para ver
+coste y actividad por agente sobre tus sesiones de Claude Code:
+```bash
+./deploy/agentsview.sh up        # dashboard en http://127.0.0.1:8080 (local-only, telemetria off)
+./deploy/agentsview.sh usage     # desglose de coste/uso en la terminal (--agent, --since…)
+```
+**Local-only e innegociable**: lee `~/.claude/projects/`, que contiene **datos de cliente** en claro
+→ siempre `127.0.0.1`, telemetría off, **nunca** `--public-url`, en la máquina del operador. Es la vía
+recomendada para **re-medir el coste** (ver [cost-optimization.md](cost-optimization.md)).
 
 ## 6. Primera prueba en vivo (orden sugerido)
 1. `/status` y `/health` → salud del sistema y versiones.

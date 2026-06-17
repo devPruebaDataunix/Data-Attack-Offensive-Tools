@@ -4,6 +4,28 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [1.8.0] - 2026-06-17
+### Added
+- **agentsview — analítica local de coste/actividad por agente.** Integrado el binario
+  [agentsview](https://github.com/kenn-io/agentsview) (Go, MIT, local-first), que lee
+  `~/.claude/projects/` y calcula coste/tokens por sesión, día, modelo y agente. `ensure_agentsview`
+  en `deploy/lib.sh` lo instala desde el **release fijado `v0.33.1` con verificación SHA256**
+  (auditable, sin `curl|bash`) a `~/.local/bin`, y entra en `install_missing` (auto-deploy por
+  defecto). Launcher `deploy/agentsview.sh` (`up`/`usage`/`open`/`status`/`down`/`install`).
+  `deploy/setup.sh` (opción de menú) y `deploy/verify.sh` (chequeo **no crítico**) integrados.
+  **Desbloquea la re-medición de coste.**
+### Changed
+- Docs alineados: `docs/cost-optimization.md` ("Re-medir el coste con agentsview"), `DEPLOY.md`,
+  `docs/RUNBOOK-operador.md` (+ corrige `25/25`→`26/26` tests del bot) y `README.md` (característica
+  + despliegue).
+### Notes
+- **Higiene (innegociable):** los transcripts de `~/.claude/projects/` contienen datos de cliente en
+  claro → agentsview es **local-only** (vincula a `127.0.0.1`, telemetría off con
+  `AGENTSVIEW_TELEMETRY_ENABLED=0`, **nunca** `--public-url`), read-only sobre los transcripts.
+  Instalar ≠ arrancar: el auto-deploy instala el binario; el daemon se levanta a propósito. El
+  arranque real se verifica en la Kali (binario Linux); en dev se validó lo estático (`bash -n`,
+  validate_suite, etc.). Sin cambios en agentes/guardarraíles.
+
 ## [1.7.0] - 2026-06-17
 ### Added
 - **Router A2A reforzado por hook.** Nuevo `.claude/hooks/a2a_router_nudge.py` (PostToolUse sobre
@@ -208,6 +230,7 @@ se versiona con [SemVer](https://semver.org/lang/es/).
 - Controles base: gate de alcance determinista (`scope_guard.py`), validación de esquema del
   blackboard, escritura atómica, zonas de aislamiento E1/E2/E3 y reporting humanizado.
 
+[1.8.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.8.0
 [1.7.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.7.0
 [1.6.1]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.6.1
 [1.6.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.6.0

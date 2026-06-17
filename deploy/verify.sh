@@ -112,6 +112,12 @@ if command -v docker >/dev/null 2>&1; then
   else printf "  $(c 3)[??]$(r)  %-22s docker sí, compose no (instala docker-compose-plugin)\n" "docker compose"; fi
 else printf "  $(c 3)[??]$(r)  %-22s opcional (despliegue en contenedores: deploy/docker.sh)\n" "docker"; fi
 
+# agentsview — analitica local de coste/actividad por agente (opcional; el auto-deploy instala el
+# binario, se arranca con deploy/agentsview.sh up). NO critico: que falte no impide operar.
+if command -v agentsview >/dev/null 2>&1; then
+  printf "  $(c 2)[OK]$(r)  %-22s %s\n" "agentsview" "$(agentsview --version 2>&1 | head -1 | cut -c1-30)"; OKN=$((OKN+1))
+else printf "  $(c 3)[??]$(r)  %-22s opcional (analitica de coste: deploy/agentsview.sh up)\n" "agentsview"; fi
+
 if [ -f rag/vulns.db ]; then
   n=$(python3 - <<'PY'
 import sqlite3;print(sqlite3.connect("rag/vulns.db").execute("SELECT COUNT(*) FROM vulns").fetchone()[0])

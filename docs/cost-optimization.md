@@ -14,6 +14,23 @@ de resolver la box**. Resumen: el grueso del coste está en el **Orquestador**, 
 > El bot **ya imprime el coste real** al terminar cada orden: `✅ Completado · N turnos · $X.XX`
 > (`bot/intel/runner.py`). Re-medir = correr un engagement y leer esa línea. No hace falta instrumentar nada.
 
+## Re-medir el coste con agentsview (v1.8.0)
+
+Para un desglose **histórico y por agente** (más allá del total por orden que imprime el bot), la
+suite integra [agentsview](https://github.com/kenn-io/agentsview): analítica **local-first** que lee
+`~/.claude/projects/` y calcula coste/tokens por sesión, día, modelo y agente. El `auto-deploy`
+instala el binario (versión fijada + verificación SHA256); el daemon se arranca a propósito:
+
+```bash
+./deploy/agentsview.sh up        # dashboard en http://127.0.0.1:8080 (local-only, telemetria off)
+./deploy/agentsview.sh usage     # desglose de coste/uso por dia en la terminal (--agent, --since…)
+```
+
+**Higiene (innegociable):** los transcripts de `~/.claude/projects/` contienen **datos de cliente** en
+claro → agentsview se usa **siempre local** (vincula a `127.0.0.1`, telemetría off con
+`AGENTSVIEW_TELEMETRY_ENABLED=0`), **nunca** con `--public-url`, y en una máquina del operador. Es
+read-only sobre los transcripts. Decláralo en el NDA/ROE como índice local de sesiones.
+
 ## Tier de modelos por agente (4 opus · 8 sonnet · 6 haiku)
 
 | Tier | Agentes | Criterio |

@@ -141,6 +141,7 @@ def validate_refs():
         # Despliegue en contenedores (v1.6.0)
         "Dockerfile", "docker-compose.yml", ".dockerignore", "deploy/docker.sh",
         "deploy/auto-deploy.sh", "deploy/lib.sh", "deploy/verify.sh", "deploy/setup.sh",
+        "deploy/agentsview.sh",
         # Gobierno / flujo engagement-driven (adaptado de spec-driven)
         "CONSTITUTION.md", "templates/engagement-spec.md", "tools/analyze_engagement.py",
         "docs/engagement-driven.md",

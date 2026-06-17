@@ -23,6 +23,10 @@ cd bot && ./.venv/bin/python bot.py
 | 5 Bot | venv + dependencias + crea `bot/.env` (te pregunta token y user-id) |
 | 6 Verify | `deploy/verify.sh` — presencia + versión de cada herramienta, validadores, RAG, auth |
 
+> El paso 3 instala además **agentsview** (analítica local de coste, binario fijado + SHA256). Se
+> instala con el toolchain pero **no se arranca**: el daemon se levanta a propósito con
+> `./deploy/agentsview.sh up`. Ver "Analítica de coste/actividad" más abajo.
+
 Flags: `--update` (todo a lo último), `--skip-tools`, `--no-rag`, `--no-bot`.
 
 ## Últimas versiones
@@ -39,7 +43,7 @@ Flags: `--update` (todo a lo último), `--skip-tools`, `--no-rag`, `--no-bot`.
 ```
 `verify.sh` comprueba también la **réplica opencode** (`tools/verify_opencode.py`: opencode.json
 + 18 agentes + cruce `routing.json`↔provider) y, si el routing enruta a Ollama, su disponibilidad.
-Comprueba además (no críticos) `gum` y `textual` para el asistente y el panel.
+Comprueba además (no críticos) `gum`, `textual` y `agentsview` (asistente, panel TUI y analítica de coste).
 
 ## Asistente guiado y panel TUI
 - **`./deploy/setup.sh`** — asistente interactivo (con [gum](https://github.com/charmbracelet/gum);
@@ -47,6 +51,18 @@ Comprueba además (no críticos) `gum` y `textual` para el asistente y el panel.
 - **`./deploy/dash.sh`** — **panel de control TUI** (Textual), gemelo local del bot: estado,
   hallazgos en vivo y órdenes al Orquestador con la misma aprobación humana y el mismo scope-gate.
   Requiere `textual` (lo instalan `auto-deploy.sh` y `verify.sh --install`).
+
+## Analítica de coste/actividad (agentsview)
+[agentsview](https://github.com/kenn-io/agentsview) da dashboards **locales** de coste y actividad por
+agente leyendo `~/.claude/projects/`. El `auto-deploy` instala el binario (versión fijada + SHA256); se
+arranca a propósito:
+```bash
+./deploy/agentsview.sh up        # dashboard en http://127.0.0.1:8080 (local-only, telemetria off)
+./deploy/agentsview.sh usage     # desglose de coste/uso en la terminal
+```
+**Local-only por diseño** (los transcripts llevan datos de cliente): vincula a `127.0.0.1`, telemetría
+off, **nunca** `--public-url`, máquina del operador. Read-only sobre los transcripts. Detalle en
+`docs/cost-optimization.md`.
 
 ## Login de Claude (manual, una vez)
 El login Pro es interactivo. Ejecuta `claude`, completa el OAuth, y ya queda la sesión en la VM
