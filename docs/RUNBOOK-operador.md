@@ -4,7 +4,7 @@
 > El hook `scope_guard.py` lo aplica de forma determinista en cada acción; el bot además pide
 > aprobación humana por cada comando que toca el target. Operar fuera de scope es ilegal.
 
-Guía de puesta en marcha de extremo a extremo en una **Kali nueva**, y primera prueba en vivo.
+Guía de puesta en marcha de extremo a extremo en una máquina virtual **Kali Linux**, y primera prueba en vivo.
 
 ---
 
