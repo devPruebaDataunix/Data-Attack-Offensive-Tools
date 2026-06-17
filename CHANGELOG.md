@@ -4,6 +4,31 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [1.6.0] - 2026-06-17
+### Added
+- **Despliegue en contenedores (Docker).** `Dockerfile` (base Kali rolling) que trae el toolchain
+  ofensivo + Claude Code + el repo **reutilizando `deploy/lib.sh install_missing`** (sin duplicar la
+  lista de herramientas), `docker-compose.yml` (servicio `bot` + `rag-init` one-shot) y orquestador
+  `deploy/docker.sh` (build/rag/up/down/logs/shell/status). El login Pro (`~/.claude`) y `bot/.env`
+  se **montan** en runtime, nunca se hornean (`.dockerignore`). Alternativa reproducible al deploy
+  de host; el modelo nativo sigue siendo Kali + Claude Code.
+- **`ensure_docker` y `ensure_perms`** en `deploy/lib.sh`. `ensure_docker` instala Docker + Compose
+  v2 si faltan; `ensure_perms` restablece el bit `+x` de los scripts.
+### Changed
+- **Permisos de ejecución arreglados de raíz.** El bit `+x` de `deploy/*.sh` ahora se graba en el
+  índice de git (modo `100755`), así sobrevive a clones desde Windows/zip; además `auto-deploy.sh`
+  y `docker.sh` hacen `chmod +x` en runtime (cinturón y tirantes).
+- **Integración**: `deploy/setup.sh` añade la opción "Desplegar en contenedores (Docker)";
+  `deploy/verify.sh` añade el chequeo de Docker/Compose (+ validez de `docker-compose.yml`);
+  `auto-deploy.sh` menciona la ruta de contenedores; `validate_suite.py` exige los artefactos nuevos.
+- **Docs alineados (sin incongruencias)**: README (badge Docker + sección de despliegue), DEPLOY.md
+  ("Despliegue en contenedores"), RUNBOOK, y `docs/assets/STYLE_GUIDE.md` aclara que Docker es una
+  opción de *despliegue*, no la *arquitectura* (el motor son los subagentes de Claude Code).
+### Notes
+- El **build de la imagen requiere un host con Docker** (la Kali) y se verifica allí; en el entorno
+  de desarrollo se validó todo lo estático (sintaxis bash, validate_suite, bot 26/26, dryrun,
+  verify_opencode). `~/.claude` se monta rw (Claude Code escribe estado) → un operador por máquina.
+
 ## [1.5.0] - 2026-06-17
 ### Added
 - **Comunicación A2A entre agentes (bus mediado).** Los especialistas ya pueden dirigirse mensajes

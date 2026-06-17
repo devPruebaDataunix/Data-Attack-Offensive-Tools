@@ -75,6 +75,7 @@ da_banner
 note "Asistente de Data Attack — ¿qué quieres hacer?"
 action=$(choose \
   "Despliegue completo (auto-deploy)" \
+  "Desplegar en contenedores (Docker)" \
   "Configurar bot (.env)" \
   "Definir alcance (scope.json)" \
   "Verificar entorno" \
@@ -83,6 +84,7 @@ action=$(choose \
 
 case "$action" in
   "Despliegue completo"*)        exec sudo "${SCRIPT_DIR}/auto-deploy.sh" ;;
+  "Desplegar en contenedores"*)  exec bash "${SCRIPT_DIR}/docker.sh" up ;;
   "Configurar bot"*)             setup_env ;;
   "Definir alcance"*)            setup_scope ;;
   "Verificar entorno"*)          bash "${SCRIPT_DIR}/verify.sh" ;;

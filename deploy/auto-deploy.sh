@@ -203,6 +203,8 @@ run_verify(){
 main(){
   info "Log: $LOG"
   command -v da_banner >/dev/null 2>&1 && da_banner || true
+  # Restablece el bit +x de los scripts (se pierde al clonar/copiar desde Windows o un zip).
+  chmod +x "${SCRIPT_DIR}"/*.sh 2>/dev/null || true
   preflight
   install_base
   install_claude
@@ -217,5 +219,6 @@ main(){
   ok "O usa la CLI:    claude   (y escribe /agents)"
   ok "Asistente:       ./deploy/setup.sh   (configuración guiada)"
   ok "Panel TUI:       ./deploy/dash.sh    (control local en terminal)"
+  ok "Contenedores:    ./deploy/docker.sh up   (despliegue en Docker — alternativa al de host)"
 }
 main

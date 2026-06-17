@@ -1,0 +1,34 @@
+# Contexto de build mínimo y SIN secretos (estos se montan en runtime, no se hornean).
+.git
+.gitattributes
+*.log
+deploy/*.log
+
+# Secretos y datos de cliente — NUNCA en la imagen (se montan como volúmenes).
+bot/.env
+*.env
+!*.example.env
+*.token
+*.key
+*.pem
+contracts/scope.json
+contracts/engagement.json
+contracts/.action_count
+engagements/
+
+# Generado / pesado (se puebla en runtime con el servicio rag-init).
+rag/vulns.db
+rag/vulns.db-*
+report/INFORME-*.md
+report/findings-summary.csv
+
+# Python / venv / caches (se recrean en la imagen).
+**/__pycache__/
+*.pyc
+.venv/
+bot/.venv/
+
+# Editor / OS / assets pesados no necesarios para ejecutar.
+.vscode/
+.DS_Store
+docs/assets/*.png

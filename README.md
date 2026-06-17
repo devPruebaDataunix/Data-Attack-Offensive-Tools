@@ -27,6 +27,7 @@
   <img src="https://img.shields.io/badge/Shell-Bash-4EAA25?style=for-the-badge&logo=gnubash&logoColor=white&labelColor=0D1117" alt="Bash">
   <img src="https://img.shields.io/badge/Motor-Claude_Code-FF6B35?style=for-the-badge&logo=anthropic&logoColor=white&labelColor=0D1117" alt="Claude Code">
   <img src="https://img.shields.io/badge/RAG-SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white&labelColor=0D1117" alt="SQLite">
+  <img src="https://img.shields.io/badge/Deploy-Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white&labelColor=0D1117" alt="Docker (deploy opcional)">
 </p>
 
 <!-- BADGES — capacidades -->
@@ -156,6 +157,10 @@ NetExec, Sliver, BloodHound…), Claude Code, el RAG y el bot de Telegram. Detal
 ¿Prefieres un asistente? `./deploy/setup.sh` guía el montaje (despliegue, `bot/.env`, `scope.json`,
 verificación) con [gum](https://github.com/charmbracelet/gum); y `./deploy/dash.sh` abre el **panel
 de control TUI**.
+
+¿O en **contenedores**? `./deploy/docker.sh up` construye la imagen (Kali + toolchain + Claude Code,
+reutilizando el mismo `deploy/lib.sh`) y levanta el bot, montando tu login Pro (`~/.claude`) y
+`bot/.env` (no se hornean). Detalle en [DEPLOY.md](DEPLOY.md) → "Despliegue en contenedores".
 
 ## Plataformas soportadas
 
@@ -314,7 +319,7 @@ cyberseg-agents/
 ├── tools/          → análisis de coherencia + generador del mapa de arquitectura
 ├── rag/            → RAG de vulnerabilidades KEV+EPSS (SQLite)
 ├── bot/            → bot de Telegram (Claude Agent SDK) + clasificador de riesgo
-├── deploy/         → auto-deploy y verificación del toolchain en Kali
+├── deploy/         → auto-deploy y verificación del toolchain en Kali (+ Docker: Dockerfile/compose)
 ├── dryrun/         → prueba end-to-end segura (sin atacar)
 ├── .claude/        → settings, hook de alcance y los 18 subagentes
 └── .opencode/      → espejo de los agentes para opencode

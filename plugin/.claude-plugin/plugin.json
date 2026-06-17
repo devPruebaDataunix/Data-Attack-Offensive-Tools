@@ -1,7 +1,7 @@
 {
   "name": "cyberseg-agents",
   "description": "Suite de pentesting/bug bounty autorizado: orquestador + 18 especialistas, RAG de vulnerabilidades (KEV/EPSS/exploit/CVSS), gate de alcance y reporting humanizado.",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "author": {
     "name": "Cyberseg"
   }

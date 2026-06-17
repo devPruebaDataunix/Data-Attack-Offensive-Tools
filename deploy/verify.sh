@@ -103,6 +103,15 @@ if "$_PYV" -c "import textual" >/dev/null 2>&1; then
   printf "  $(c 2)[OK]$(r)  %-22s instalado\n" "textual (TUI)"; OKN=$((OKN+1))
 else printf "  $(c 3)[??]$(r)  %-22s opcional (panel TUI: pip install textual)\n" "textual (TUI)"; fi
 
+# Docker + Compose — opcional (solo para el despliegue en contenedores, deploy/docker.sh).
+if command -v docker >/dev/null 2>&1; then
+  if docker compose version >/dev/null 2>&1 || command -v docker-compose >/dev/null 2>&1; then
+    if docker compose -f "${REPO_DIR}/docker-compose.yml" config -q >/dev/null 2>&1; then
+      printf "  $(c 2)[OK]$(r)  %-22s %s · compose válido\n" "docker (contenedores)" "$(docker --version 2>&1 | head -1 | cut -c1-22)"; OKN=$((OKN+1))
+    else printf "  $(c 2)[OK]$(r)  %-22s %s\n" "docker (contenedores)" "$(docker --version 2>&1 | head -1 | cut -c1-30)"; OKN=$((OKN+1)); fi
+  else printf "  $(c 3)[??]$(r)  %-22s docker sí, compose no (instala docker-compose-plugin)\n" "docker compose"; fi
+else printf "  $(c 3)[??]$(r)  %-22s opcional (despliegue en contenedores: deploy/docker.sh)\n" "docker"; fi
+
 if [ -f rag/vulns.db ]; then
   n=$(python3 - <<'PY'
 import sqlite3;print(sqlite3.connect("rag/vulns.db").execute("SELECT COUNT(*) FROM vulns").fetchone()[0])

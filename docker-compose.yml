@@ -1,0 +1,35 @@
+# =============================================================================
+#  Data Attack — despliegue en contenedores (primer despliegue reproducible).
+#  Orquéstalo con deploy/docker.sh (build / rag / up / down / logs / shell).
+#
+#  Requisitos en el HOST (la Kali con Docker):
+#   - Login Pro de Claude hecho una vez en el host -> se reutiliza vía ~/.claude.
+#   - bot/.env con TELEGRAM_TOKEN y ALLOWED_USER_ID (no se hornea; se monta).
+#  Lab-only / zona E2. Ver DEPLOY.md -> "Despliegue en contenedores".
+# =============================================================================
+services:
+  bot:
+    build: .
+    image: data-attack:latest
+    container_name: data-attack-bot
+    env_file:
+      - path: bot/.env
+        required: false           # si falta, el bot avisará en runtime (no rompe el parseo)
+    volumes:
+      - ${HOME:-/root}/.claude:/root/.claude          # reutiliza (y actualiza) el login Pro del host
+      - ./contracts:/opt/data-attack/contracts         # scope/engagement (datos de cliente, montados)
+      - ./engagements:/opt/data-attack/engagements      # artefactos crudos del engagement
+      - ./rag:/opt/data-attack/rag                      # store de vulnerabilidades (persistente)
+      - ./report:/opt/data-attack/report                # informes
+    network_mode: host                                  # acceso a la VLAN del engagement (lab)
+    restart: unless-stopped
+
+  # Puebla/actualiza el RAG (one-shot). Correr con:  docker compose run --rm rag-init
+  rag-init:
+    build: .
+    image: data-attack:latest
+    container_name: data-attack-rag-init
+    command: "python3 rag/refresh.py --epss-all"
+    volumes:
+      - ./rag:/opt/data-attack/rag
+    profiles: ["init"]

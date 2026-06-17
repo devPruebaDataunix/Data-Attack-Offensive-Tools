@@ -25,8 +25,13 @@ sudo ./deploy/auto-deploy.sh        # instala toolchain + Claude Code + RAG + ve
 (permisos 600, ignorado por git). Instala el **Claude Agent SDK** vía `bot/requirements.txt`.
 
 > **Asistente guiado:** `./deploy/setup.sh` envuelve todo esto con
-> [gum](https://github.com/charmbracelet/gum) (menú: despliegue, configurar `bot/.env`, definir
-> `scope.json`, verificar, abrir el panel TUI). Degrada a prompts de texto si gum no está.
+> [gum](https://github.com/charmbracelet/gum) (menú: despliegue, **contenedores**, configurar
+> `bot/.env`, definir `scope.json`, verificar, abrir el panel TUI). Degrada a prompts de texto si
+> gum no está.
+
+> **En contenedores (alternativa):** `./deploy/docker.sh up` construye la imagen (Kali + toolchain
+> + Claude Code, reutilizando `deploy/lib.sh`) y levanta el bot, montando tu login Pro (`~/.claude`,
+> haz §2 antes) y `bot/.env`. Detalle en [DEPLOY.md](../DEPLOY.md) → "Despliegue en contenedores".
 
 ## 2. Login de Claude Code (Pro)
 ```bash

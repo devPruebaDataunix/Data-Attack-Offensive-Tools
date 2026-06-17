@@ -84,7 +84,9 @@ arquitectura, regenera el mapa en vez de dibujar a mano.
 **bus A2A mediado**, 18 agentes, blackboard, scope guard, RAG KEV+EPSS, bot). El wordmark de la
 suite es **DATA ATTACK · HARNESS A2A** (`assets/banners/data-attack.txt`). No uses banners que
 describan una **malla peer-to-peer directa** (la nativa de Agent Teams es lab-only, ver
-`ARCHITECTURE.md §1`) ni un stack Docker/FastAPI/Redis: no es lo que hace la herramienta.
+`ARCHITECTURE.md §1`) ni un stack de **microservicios** Docker/FastAPI/Redis como *arquitectura*
+(el motor son los subagentes de Claude Code; Docker es solo una opción de **despliegue**
+reproducible, ver `DEPLOY.md`): no es lo que hace la herramienta.
 
 ## 9. Principios
 

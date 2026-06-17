@@ -55,6 +55,37 @@ El login Pro es interactivo. Ejecuta `claude`, completa el OAuth, y ya queda la 
 > Nota de coste: desde el 15-jun-2026, `claude -p`/Agent SDK en planes de suscripción consumen de
 > un crédito mensual de Agent SDK separado del uso interactivo.
 
+## Despliegue en contenedores (Docker) — alternativa reproducible al deploy de host
+La suite se puede levantar en Docker para un primer despliegue reproducible. La imagen
+(`Dockerfile`, base **Kali rolling**) trae el toolchain ofensivo + Claude Code + el repo,
+**reutilizando el mismo `deploy/lib.sh`** que el deploy de host (sin duplicar la lista de tools).
+
+```bash
+./deploy/docker.sh up        # build + RAG (si falta) + levanta el bot
+./deploy/docker.sh logs      # sigue los logs del bot
+./deploy/docker.sh shell     # shell dentro de la imagen (toolchain disponible)
+./deploy/docker.sh status    # estado de los contenedores
+./deploy/docker.sh down      # para y elimina
+```
+
+Requisitos en el host (con Docker):
+- **Login Pro de Claude hecho una vez en el host** (`claude` → OAuth). Se reutiliza montando
+  `~/.claude` en el contenedor; lo necesitan el bot y los agentes.
+- **`bot/.env`** con `TELEGRAM_TOKEN` y `ALLOWED_USER_ID` (créalo con `./deploy/setup.sh`). Se
+  **monta**, no se hornea en la imagen.
+- Datos de cliente (`contracts/`, `engagements/`, `rag/`, `report/`) se montan como volúmenes →
+  persisten fuera de la imagen y nunca se hornean ni se commitean (`.dockerignore`).
+
+Notas:
+- El **RAG se puebla en runtime** (`./deploy/docker.sh rag`, o automático en `up`), no se hornea
+  (evita CVEs caducos en la imagen).
+- Red: el servicio usa `network_mode: host` para alcanzar la VLAN del engagement (lab).
+- `~/.claude` se monta en lectura/escritura (Claude Code escribe estado de sesión) → asume un
+  **único operador** por máquina.
+- El **build requiere Docker** y se hace en el host (no en Windows). `docker.sh` instala
+  Docker/Compose si faltan (`ensure_docker`). Es una **alternativa** al deploy de host, no un
+  requisito: el modelo nativo sigue siendo Kali + Claude Code.
+
 ## Bot como servicio (opcional, systemd)
 ```ini
 # /etc/systemd/system/databot.service

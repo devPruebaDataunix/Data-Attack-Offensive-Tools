@@ -73,6 +73,27 @@ ensure_gum(){
   have gum || { echo "[!] gum no disponible; el asistente usará prompts de texto."; return 1; }
 }
 
+# Permisos de ejecución de los scripts de deploy. El bit +x se PIERDE al clonar/copiar desde
+# Windows o desde un zip (git lo guarda en el modo del índice, no en .gitattributes). Esto lo
+# restablece en runtime — cinturón y tirantes junto al modo 100755 ya grabado en el repo.
+ensure_perms(){
+  local d; d="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  chmod +x "$d"/*.sh 2>/dev/null || true
+}
+
+# Docker + Compose v2 (para el despliegue en contenedores: deploy/docker.sh, docker-compose.yml).
+# Solo se necesita para la ruta de contenedores; NO va en install_missing (el deploy de host no
+# lo requiere). En Kali/Debian: docker.io + el plugin compose; arranca el servicio.
+ensure_docker(){
+  if have docker && docker compose version >/dev/null 2>&1; then return 0; fi
+  echo "[*] Instalando Docker + Compose v2…"
+  apt_retry install -y docker.io docker-compose-plugin 2>/dev/null \
+    || apt_retry install -y docker.io docker-compose 2>/dev/null || true
+  $SUDO systemctl enable --now docker 2>/dev/null || $SUDO service docker start 2>/dev/null || true
+  have docker || { echo "[!] Docker no disponible; instálalo a mano (ver DEPLOY.md)."; return 1; }
+  docker compose version >/dev/null 2>&1 || echo "[!] 'docker compose' (v2) no disponible; usa 'docker-compose' o instala el plugin."
+}
+
 # textual (panel TUI) — en el venv del bot.
 ensure_textual(){
   local py="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/bot/.venv/bin/python"
