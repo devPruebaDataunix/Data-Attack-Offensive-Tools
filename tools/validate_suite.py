@@ -135,6 +135,7 @@ def validate_refs():
         "contracts/target.schema.json", "contracts/engagement.schema.json",
         "contracts/scope.example.json", "rag/query_vulns.py", "rag/refresh.py",
         ".claude/hooks/scope_guard.py", ".claude/hooks/a2a_guard.py",
+        ".claude/hooks/a2a_router_nudge.py", "CLAUDE.md",
         "contracts/a2a-message.schema.json", "contracts/agent-card.schema.json",
         "contracts/agent-cards.json", "tools/build_agent_cards.py",
         # Despliegue en contenedores (v1.6.0)
@@ -194,6 +195,22 @@ def validate_plugin():
         check(bool(ok), f"{rel}: SKILL.md con name+description", f"{rel}: SKILL.md incompleto")
 
 
+def validate_a2a_peers(cards):
+    """Topología A2A coherente: cada peer declarado existe y la relación es BIDIRECCIONAL
+    (si A lista a B, B debe listar a A). Es lo que el guard C14 usa para permitir el par."""
+    if not cards:
+        return
+    by_name = {c.get("name"): set(c.get("a2a_peers") or []) for c in cards.get("cards", [])}
+    for name, peers in sorted(by_name.items()):
+        for p in sorted(peers):
+            if not check(p in by_name, f"a2a_peers: '{name}' -> '{p}' es un agente conocido",
+                         f"a2a_peers: '{name}' apunta a peer inexistente '{p}'"):
+                continue
+            check(name in by_name.get(p, set()),
+                  f"a2a_peers: relación {name} <-> {p} bidireccional",
+                  f"a2a_peers: '{name}' lista a '{p}' pero '{p}' no lista a '{name}' (asimétrico)")
+
+
 def main():
     agent_names = validate_agents()
     s = validate_json(".claude/settings.json", "settings.json")
@@ -206,6 +223,13 @@ def main():
     validate_json("contracts/scope.example.json", "scope.example.json")
     validate_json("contracts/examples/engagement.sample.json", "engagement.sample.json")
     validate_refs()
+    # CLAUDE.md debe importar AGENTS.md: así la CLI carga el playbook del Orquestador (Claude Code
+    # no auto-lee AGENTS.md, solo CLAUDE.md). El bot/TUI lo cargan vía setting_sources=["project"].
+    claude_md = os.path.join(ROOT, "CLAUDE.md")
+    if os.path.isfile(claude_md):
+        check("@AGENTS.md" in open(claude_md, encoding="utf-8").read(),
+              "CLAUDE.md importa @AGENTS.md",
+              "CLAUDE.md no importa @AGENTS.md (el Orquestador no cargaría su playbook en la CLI)")
     validate_plugin()
     validate_python()
 
@@ -224,6 +248,7 @@ def main():
               f"registro agent-cards coherente ({ncards} = {len(agent_names)} agentes + orquestador)",
               f"registro agent-cards DESINCRONIZADO ({ncards} vs {len(agent_names)}+1) — corre tools/build_agent_cards.py",
               warn=True)
+        validate_a2a_peers(cards)
 
     # Resumen
     fails = [m for st, m in results if st == FAIL]

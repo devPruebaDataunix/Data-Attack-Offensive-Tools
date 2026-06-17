@@ -3,7 +3,7 @@
 
 # 🗺️ Mapa de Arquitectura — Cyberseg Agents
 
-> **Generado:** 2026-06-17 13:50:42 UTC · **Refleja el estado real** del proyecto en ese momento.
+> **Generado:** 2026-06-17 17:34:45 UTC · **Refleja el estado real** del proyecto en ese momento.
 > Regenerar a mano: `python tools/gen_arch_diagram.py`
 
 ## Qué es esto (para reconstruir contexto si se pierde)
@@ -90,7 +90,7 @@ flowchart TB
 ## Componentes de soporte (estado real)
 
 - **Orquestador (hub):** `AGENTS.md` — sesión principal, no es un subagente.
-- **Hook de alcance:** a2a_guard.py, budget_guard.py, scope_guard.py, secret_scan.py, validate_blackboard.py (PreToolUse, bloquea fuera de scope).
+- **Hook de alcance:** a2a_guard.py, a2a_router_nudge.py, budget_guard.py, scope_guard.py, secret_scan.py, validate_blackboard.py (PreToolUse, bloquea fuera de scope).
 - **Blackboard / contratos:** a2a-message.schema.json, agent-card.schema.json, agent-cards.json, engagement.json, engagement.schema.json, examples, finding.schema.json, scope.example.json, scope.json, target.schema.json.
 - **RAG de vulnerabilidades:** db.py, enrich_cve5.py, enrich_epss.py, enrich_exploits.py, enrich_msf.py, enrich_nuclei.py, ingest_kev.py, query_vulns.py, refresh.py (KEV+EPSS, alimenta a vuln-triage).
 - **Gobierno / coherencia:** `CONSTITUTION.md` (principios innegociables) · `tools/analyze_engagement.py` (auditoría de coherencia, `/analyze` adaptado).

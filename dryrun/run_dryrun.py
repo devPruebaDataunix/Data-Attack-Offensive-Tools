@@ -105,8 +105,11 @@ def a2a_demo(cap=3):
     with open(ag.SCOPE, "w", encoding="utf-8") as f:
         json.dump({"engagement_id": "DEMO", "constraints": {"max_a2a_hops": cap}}, f)
     with open(ag.CARDS, "w", encoding="utf-8") as f:
-        json.dump({"version": "demo", "cards": [{"name": "orchestrator"},
-                   {"name": "web-exploit"}, {"name": "sqlmap"}]}, f)
+        json.dump({"version": "demo", "cards": [
+            {"name": "orchestrator", "a2a_peers": []},
+            {"name": "web-exploit", "a2a_peers": ["sqlmap"]},
+            {"name": "sqlmap", "a2a_peers": ["web-exploit"]},
+            {"name": "post-exploit", "a2a_peers": []}]}, f)
 
     def run(messages):
         with open(ag.ENGAGEMENT, "w", encoding="utf-8") as f:
@@ -134,8 +137,10 @@ def a2a_demo(cap=3):
 
     valid = run([msg()])
     spoof = run([msg(from_agent="evil-agent")])
+    offtopo = run([msg(to_agent="post-exploit")])  # destino conocido pero NO peer de web-exploit
     flood = run([msg(message_id=f"M-{i}") for i in range(cap + 2)])
-    return {"valid": "block" not in valid, "c14_spoof": "C14" in spoof, "c15_flood": "C15" in flood}
+    return {"valid": "block" not in valid, "c14_spoof": "C14" in spoof,
+            "c14_topology": "TOPOLOG" in offtopo, "c15_flood": "C15" in flood}
 
 
 def main():
@@ -294,6 +299,7 @@ def main():
     a2a = a2a_demo(cap=3)
     print(f"  [C14 a2a_guard]   emisor falso bloqueado={a2a['c14_spoof']} · "
           f"mensaje válido pasa={a2a['valid']}")
+    print(f"  [C14 topología]   destino fuera de pareja bloqueado={a2a['c14_topology']}")
     print(f"  [C15 a2a_kill]    techo=3 -> exceso de mensajes A2A bloqueado={a2a['c15_flood']}")
 
     print(f"\n  fase final: {eng['phase']}  ->  listo para el agente reporting")

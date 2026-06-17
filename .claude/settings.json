@@ -60,6 +60,15 @@
             "command": "python .claude/hooks/a2a_guard.py"
           }
         ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/a2a_router_nudge.py"
+          }
+        ]
       }
     ]
   }

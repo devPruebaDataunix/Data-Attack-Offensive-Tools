@@ -4,6 +4,37 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [1.7.0] - 2026-06-17
+### Added
+- **Router A2A reforzado por hook.** Nuevo `.claude/hooks/a2a_router_nudge.py` (PostToolUse sobre
+  `Task`): tras cada retorno de subagente, si quedan mensajes A2A `pending` en el blackboard, le
+  recuerda al Orquestador ejecutar el ciclo del router (entregar, marcar `delivered`, `hops++`,
+  `evidence[]`). No entrega por sí mismo (un hook no invoca agentes); convierte el router de
+  instrucción de prompt en un recordatorio **determinista** para que no se pierda ningún relevo.
+- **`CLAUDE.md`** que importa `@AGENTS.md`: garantiza que la **CLI** de Claude Code cargue el
+  playbook del Orquestador (Claude Code no auto-lee `AGENTS.md`, solo `CLAUDE.md`). El bot/TUI ya lo
+  cargaban vía `setting_sources=["project"]`, así que `bot/intel/runner.py` deja de anexarlo a mano
+  (evita la doble carga) y conserva solo el addendum del canal Telegram.
+- **8 parejas A2A nuevas** (10 en total): `web-exploit↔web-fuzzing`; `vuln-triage↔web-exploit`/
+  `network-exploit`/`metasploit`/`ai-security`; `network-exploit↔metasploit`; `post-exploit↔sliver`;
+  `lateral-discovery↔netexec`. El resto de relevos siguen pasando por el hub (a propósito).
+### Changed
+- **C14 endurecido — topología de pares.** `a2a_guard.py` ahora exige que `to_agent` sea un peer
+  declarado de `from_agent` (`a2a_peers` del registro) o el hub (`orchestrator`); los relevos fuera
+  de pareja van por el Orquestador. `validate_suite.py` comprueba que la topología `a2a_peers` es
+  coherente y **bidireccional**.
+### Fixed
+- **Crash de opencode al arrancar.** `.opencode/opencode.json` llevaba claves `$comment`/
+  `$comment_provider` que el validador estricto de opencode (Zod `.strict()`) rechaza
+  (`Unrecognized keys`) y, sobre Bun, acaba en `IOT instruction` (SIGABRT). Se eliminan (la
+  documentación pasa a `.opencode/README.md`) y `verify_opencode.py` rechaza ahora claves de nivel
+  superior desconocidas para que no se repita. (`tools/routing.json` conserva su `$comment`: lo lee
+  nuestro propio Python, no opencode.)
+### Notes
+- Ninguna puerta se relaja: el bus A2A sigue siendo datos auditados (C11/C14/C15) y toda acción
+  ofensiva pasa por `scope_guard` + `budget_guard` + aprobación humana. Verificado: validate_suite
+  0 fallos, bot 26/26, dryrun con ronda A2A + topología + kill-switches, verify_opencode.
+
 ## [1.6.1] - 2026-06-17
 ### Fixed
 - **pdtm `-silent` inexistente.** `pdtm -ia/-ua -silent` imprimía `flag provided but not defined:
@@ -177,6 +208,10 @@ se versiona con [SemVer](https://semver.org/lang/es/).
 - Controles base: gate de alcance determinista (`scope_guard.py`), validación de esquema del
   blackboard, escritura atómica, zonas de aislamiento E1/E2/E3 y reporting humanizado.
 
+[1.7.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.7.0
+[1.6.1]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.6.1
+[1.6.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.6.0
+[1.5.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.5.0
 [1.4.1]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.4.1
 [1.4.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.4.0
 [1.3.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.3.0

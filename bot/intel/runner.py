@@ -113,11 +113,10 @@ class AgentRunner:
         return PermissionResultAllow()
 
     def _options(self):
-        append = ""
-        persona = self.repo / "AGENTS.md"
-        if persona.exists():
-            append = persona.read_text(encoding="utf-8")
-        append += (
+        # El playbook del Orquestador (AGENTS.md) lo carga Claude Code como memoria del proyecto
+        # vía CLAUDE.md (que importa @AGENTS.md) + setting_sources=["project"]. NO lo anexamos
+        # aquí: hacerlo lo duplicaría en contexto. Este append solo añade lo del canal remoto.
+        append = (
             "\n\n## Canal Telegram (operador remoto)\n"
             "Operas a través de un bot de Telegram. Sé conciso. Antes de cada fase anuncia "
             "en UNA frase qué vas a hacer y por qué (el operador lo ve como hito en vivo). "

@@ -1,6 +1,5 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "$comment": "Config opencode para Cyberseg Agents. El orquestador es el agente primary; los 18 especialistas (en agent/*.md, generados por tools/sync_opencode.py) son subagents.",
   "agent": {
     "orchestrator": {
       "mode": "primary",
@@ -19,7 +18,6 @@
   "permission": {
     "bash": "ask"
   },
-  "$comment_provider": "Ollama LOCAL para el piloto de routing (ver tools/routing.json). Keyless: habla OpenAI-compatible contra el daemon local. Inerte hasta que un agente referencie 'ollama/...'; el Orquestador y los agentes no enrutados siguen en anthropic/*. Requiere 'ollama serve' + 'ollama pull <modelo>'. Si las tool-calls fallan, sube num_ctx en Ollama (~16k-32k).",
   "provider": {
     "ollama": {
       "npm": "@ai-sdk/openai-compatible",

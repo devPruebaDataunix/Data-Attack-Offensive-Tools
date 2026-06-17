@@ -110,10 +110,21 @@ con quién está en `contracts/agent-cards.json` (campo `a2a_peers` de cada card
    si una conversación se desboca, se bloquea (anti-bucle, LLM10). No lo sortees.
 6. Registra la entrega en `evidence[]` (quién→quién, finding, ts) — trazabilidad (C10).
 
-**Parejas A2A actuales** (el resto de relevos siguen pasando por ti como handoff normal):
-`web-exploit ↔ sqlmap` (confirmar/explotar SQLi) y `post-exploit ↔ lateral-discovery` (acceso →
-descubrimiento interno). Si añades agentes a un par, anótalo en su frontmatter `a2a.peers` y
-regenera el registro con `python tools/build_agent_cards.py`.
+> El hook `a2a_router_nudge.py` (PostToolUse sobre `Task`) **refuerza** este ciclo: tras cada
+> retorno de subagente, si quedan mensajes `pending` te inyecta un recordatorio con la lista. NO
+> entrega por sí mismo (un hook no invoca agentes) — la entrega es tuya; solo evita que se te
+> olvide el relevo.
+
+**Parejas A2A actuales** (el resto de relevos siguen pasando por ti como handoff normal por el hub):
+- `web-exploit ↔ sqlmap` (confirmar/explotar SQLi) · `web-exploit ↔ web-fuzzing` (superficie oculta)
+- `vuln-triage ↔ web-exploit` / `↔ network-exploit` / `↔ metasploit` / `↔ ai-security` (handoff de candidatos al vector)
+- `network-exploit ↔ metasploit` (módulo MSF de infra)
+- `post-exploit ↔ lateral-discovery` (acceso → descubrimiento interno) · `post-exploit ↔ sliver` (C2 si la ROE lo autoriza)
+- `lateral-discovery ↔ netexec` (enumeración AD/interna)
+
+El hook `a2a_guard.py` (C14) exige que el destino sea un **peer declarado** del emisor (o el hub):
+los relevos fuera de pareja van por ti (`to_agent: orchestrator`). Si añades agentes a un par,
+anótalo en su frontmatter `a2a.peers` y regenera el registro con `python tools/build_agent_cards.py`.
 
 > El A2A **no relaja ninguna puerta**: cada acción ofensiva sigue pasando por `scope_guard` +
 > `budget_guard` + aprobación humana, la pida quien la pida. Los mensajes A2A son datos auditados

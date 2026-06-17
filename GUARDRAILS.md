@@ -73,8 +73,14 @@ flowchart TB
 | C11 | **Separación datos/instrucciones** — los 9 agentes que ingieren contenido del target lo tratan como DATOS, nunca como instrucciones | Soft (prompt), uniforme | bloque "Anti-inyección" en osint-recon, recon-suite, active-recon, web-exploit, web-fuzzing, nuclei, sqlmap, vuln-triage, ai-security | **LLM01 Prompt Injection** |
 | C12 | **Detector de secretos del operador** — bloquea si una clave del motor/operador (privada, `sk-ant`, token del bot) aparece en el blackboard; `redact()` además sanea el informe | Determinista | `tools/redactor.py` + `.claude/hooks/secret_scan.py` (PostToolUse) | **LLM02 Sensitive Info Disclosure** |
 | C13 | **Kill-switch de consumo** — cuenta las acciones Bash por engagement y bloquea al superar el techo (`constraints.max_actions`, def. 1000) | Determinista | `.claude/hooks/budget_guard.py` (PreToolUse) | **LLM10 Unbounded Consumption** |
-| C14 | **Validador del bus A2A** — cada mensaje agente→agente debe tener envelope sano y `from_agent`/`to_agent` que sean agentes conocidos (registro `agent-cards.json`); rechaza emisor/destino inventado (anti-spoofing). Los mensajes A2A se tratan como DATOS (la regla soft es C11) | Determinista | `.claude/hooks/a2a_guard.py` (PostToolUse) | **LLM01 Prompt Injection** |
+| C14 | **Validador del bus A2A** — cada mensaje agente→agente debe tener envelope sano y `from_agent`/`to_agent` que sean agentes conocidos (registro `agent-cards.json`); rechaza emisor/destino inventado (anti-spoofing) y exige que `to_agent` sea un **peer declarado** de `from_agent` (topología `a2a_peers`) o el hub — los relevos fuera de pareja van por el Orquestador. Los mensajes A2A se tratan como DATOS (la regla soft es C11) | Determinista | `.claude/hooks/a2a_guard.py` (PostToolUse) | **LLM01 Prompt Injection** |
 | C15 | **Kill-switch A2A** — acota la conversación entre agentes: bloquea si los mensajes del engagement superan el techo o si una cadena acumula demasiados `hops` (anti-bucle). Equivalente A2A de C13 (`constraints.max_a2a_hops`, def. 50) | Determinista | `.claude/hooks/a2a_guard.py` (PostToolUse) | **LLM10 Unbounded Consumption** |
+
+> **Refuerzo del router A2A (no es un gate):** `a2a_router_nudge.py` (PostToolUse sobre `Task`)
+> recuerda al Orquestador, tras cada retorno de subagente, que entregue los mensajes A2A `pending`
+> del blackboard (inyecta la lista por `additionalContext`). No bloquea nada: convierte el ciclo
+> del router de "instrucción de prompt" en un recordatorio determinista para que no se pierda
+> ningún relevo (trazabilidad C10).
 
 ## Dónde corren los controles (repo vs plugin)
 

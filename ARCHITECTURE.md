@@ -12,9 +12,11 @@ cada uno en su ventana de contexto, y **no pueden invocarse entre sí** (sin ani
 devuelven un resultado al que los llamó. Desde 2026 Claude Code SÍ ofrece **malla peer real**
 (*Agent Teams*: buzones peer-to-peer entre sesiones), pero para una herramienta ofensiva la
 descartamos **a propósito en el camino de cliente**, por tres razones de seguridad:
-- **Atribución (C10):** el payload de los hooks de teammates **no identifica qué agente** lanzó
-  cada acción ([claude-code#24505](https://github.com/anthropics/claude-code/issues/24505)) → se
-  rompe la trazabilidad por agente en `evidence[]`, que es requisito legal.
+- **Atribución (C10):** la identidad del *teammate* en los hooks de **Agent Teams** se descartó
+  ([claude-code#24505](https://github.com/anthropics/claude-code/issues/24505), cerrado como *not
+  planned*) → en la malla nativa se rompe la trazabilidad por agente en `evidence[]`, que es
+  requisito legal. (Es distinto de los **subagentes** hub→spoke, cuyos hooks sí exponen
+  `agent_id`/`agent_type` — ese es el modelo que usamos.)
 - **Aprobación humana (C2):** varios teammates en paralelo contra un único canal de aprobación
   (Telegram/TUI) vuelven el gate HITL ingobernable.
 - **Madurez:** Agent Teams es experimental; el bot orquesta vía Agent SDK (hub→spoke), no por la

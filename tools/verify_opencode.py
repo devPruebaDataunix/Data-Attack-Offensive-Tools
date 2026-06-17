@@ -74,6 +74,24 @@ def main():
         finish()
     ok("opencode.json es JSON válido")
 
+    # Claves de nivel superior reconocidas por opencode. Su validador (Zod .strict()) ABORTA ante
+    # cualquier clave desconocida (p.ej. un '$comment' -> "Unrecognized keys" + crash SIGABRT sobre
+    # Bun). Lo validamos aquí porque json.load() sí acepta esas claves y el fallo solo saltaría en
+    # runtime. Documentación: .opencode/README.md (no en el JSON).
+    ALLOWED_TOP = {
+        "$schema", "model", "small_model", "provider", "agent", "default_agent", "command",
+        "mcp", "lsp", "formatter", "tools", "permission", "instructions", "share", "attachment",
+        "plugin", "snapshot", "autoupdate", "compaction", "watcher", "server", "shell",
+        "disabled_providers", "enabled_providers", "experimental", "keybinds", "theme", "username",
+    }
+    unknown = sorted(k for k in oc if k not in ALLOWED_TOP)
+    if unknown:
+        fail(f"opencode.json tiene claves de nivel superior NO reconocidas por opencode {unknown}: "
+             "su validador (Zod .strict()) abortaría al arrancar. Quítalas (documenta en "
+             ".opencode/README.md).")
+    else:
+        ok("opencode.json sin claves de nivel superior desconocidas")
+
     # Orquestador primary
     if oc.get("agent", {}).get("orchestrator", {}).get("mode") == "primary":
         ok("orquestador 'primary' declarado")

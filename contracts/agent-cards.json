@@ -1,12 +1,12 @@
 {
-  "version": "1.6.1",
+  "version": "1.7.0",
   "cards": [
     {
       "name": "active-recon",
       "description": "Recon ACTIVO / enumeración. Úsalo tras osint-recon para escanear puertos, identificar servicios y versiones, y hacer fingerprinting web sobre activos EN SCOPE. Envía tráfico al target.",
       "phase": "recon",
       "model": "claude-haiku-4-5",
-      "version": "1.6.1",
+      "version": "1.7.0",
       "capabilities": [],
       "consumes": [],
       "produces": [],
@@ -25,10 +25,20 @@
       "description": "Red teaming de aplicaciones con IA/LLM. Úsalo cuando el target en scope sea (o incorpore) un chatbot, asistente, agente o pipeline RAG basado en LLM. Cubre prompt injection, excessive agency, fuga de system prompt y ataques a vector/embedding (OWASP LLM Top 10).",
       "phase": "exploitation",
       "model": "claude-opus-4-8",
-      "version": "1.6.1",
-      "capabilities": [],
-      "consumes": [],
-      "produces": [],
+      "version": "1.7.0",
+      "capabilities": [
+        "llm-redteam",
+        "prompt-injection",
+        "excessive-agency"
+      ],
+      "consumes": [
+        "findings:candidate",
+        "a2a:request"
+      ],
+      "produces": [
+        "findings:confirmed",
+        "a2a:response"
+      ],
       "tools": [
         "Read",
         "Write",
@@ -39,14 +49,16 @@
         "WebSearch",
         "WebFetch"
       ],
-      "a2a_peers": []
+      "a2a_peers": [
+        "vuln-triage"
+      ]
     },
     {
       "name": "c2-exfil",
       "description": "Simulación CONTROLADA de C2, exfiltración e impacto para demostrar el riesgo de negocio sin causar daño real. Úsalo en la fase final de explotación cuando la ROE autoriza demostrar impacto. Exfiltración siempre simulada (canary), nunca datos reales.",
       "phase": "post-exploitation",
       "model": "claude-sonnet-4-6",
-      "version": "1.6.1",
+      "version": "1.7.0",
       "capabilities": [],
       "consumes": [],
       "produces": [],
@@ -65,7 +77,7 @@
       "description": "Aprendizaje basado en errores. Úsalo tras cada intento o al cierre del engagement para extraer lecciones (qué funcionó, qué falló y por qué) y persistirlas en memoria para mejorar futuros engagements. Es el motor del bucle de feedback.",
       "phase": "reporting",
       "model": "claude-haiku-4-5",
-      "version": "1.6.1",
+      "version": "1.7.0",
       "capabilities": [],
       "consumes": [],
       "produces": [],
@@ -83,7 +95,7 @@
       "description": "Descubrimiento INTERNO y movimiento lateral desde un punto de apoyo comprometido EN SCOPE. Úsalo para mapear la red interna, identificar hosts/servicios adyacentes y demostrar pivoting controlado.",
       "phase": "post-exploitation",
       "model": "claude-sonnet-4-6",
-      "version": "1.6.1",
+      "version": "1.7.0",
       "capabilities": [
         "internal-discovery",
         "lateral-movement",
@@ -106,7 +118,8 @@
         "Bash"
       ],
       "a2a_peers": [
-        "post-exploit"
+        "post-exploit",
+        "netexec"
       ]
     },
     {
@@ -114,10 +127,21 @@
       "description": "Operador SENIOR de Metasploit Framework. Úsalo cuando un finding trae módulo MSF (campo msf_modules del RAG) o cuando MSF es la herramienta idónea — búsqueda de módulos, exploits, msfvenom, payloads, meterpreter, handlers, post-explotación, auxiliares y pivoting. Todo EN SCOPE.",
       "phase": "exploitation",
       "model": "claude-sonnet-4-6",
-      "version": "1.6.1",
-      "capabilities": [],
-      "consumes": [],
-      "produces": [],
+      "version": "1.7.0",
+      "capabilities": [
+        "msf-module-exec",
+        "exploit",
+        "post-exploitation",
+        "pivoting"
+      ],
+      "consumes": [
+        "findings:candidate",
+        "a2a:request"
+      ],
+      "produces": [
+        "findings:confirmed",
+        "a2a:response"
+      ],
       "tools": [
         "Read",
         "Write",
@@ -126,17 +150,31 @@
         "Glob",
         "Bash"
       ],
-      "a2a_peers": []
+      "a2a_peers": [
+        "vuln-triage",
+        "network-exploit"
+      ]
     },
     {
       "name": "netexec",
       "description": "Especialista en NetExec (nxc, sucesor de CrackMapExec) + Impacket + recolección BloodHound para Active Directory e infraestructura Windows — SMB, LDAP, WinRM, MSSQL, RDP. Úsalo en pentest interno/AD sobre hosts en scope.",
       "phase": "exploitation",
       "model": "claude-sonnet-4-6",
-      "version": "1.6.1",
-      "capabilities": [],
-      "consumes": [],
-      "produces": [],
+      "version": "1.7.0",
+      "capabilities": [
+        "ad-enum",
+        "cred-validation",
+        "bloodhound",
+        "impacket"
+      ],
+      "consumes": [
+        "a2a:request",
+        "targets:internal"
+      ],
+      "produces": [
+        "findings:confirmed",
+        "a2a:response"
+      ],
       "tools": [
         "Read",
         "Write",
@@ -145,17 +183,30 @@
         "Glob",
         "Bash"
       ],
-      "a2a_peers": []
+      "a2a_peers": [
+        "lateral-discovery"
+      ]
     },
     {
       "name": "network-exploit",
       "description": "Explotación de servicios de red e infraestructura (no-HTTP). Úsalo para findings sobre SMB, SSH, RDP, bases de datos expuestas, RPC, servicios con CVE/KEV de infra y credenciales por defecto, EN SCOPE.",
       "phase": "exploitation",
       "model": "claude-sonnet-4-6",
-      "version": "1.6.1",
-      "capabilities": [],
-      "consumes": [],
-      "produces": [],
+      "version": "1.7.0",
+      "capabilities": [
+        "network-exploit-confirm",
+        "infra-exploit",
+        "default-creds"
+      ],
+      "consumes": [
+        "findings:candidate",
+        "a2a:request",
+        "a2a:response"
+      ],
+      "produces": [
+        "findings:confirmed",
+        "a2a:request"
+      ],
       "tools": [
         "Read",
         "Write",
@@ -164,14 +215,17 @@
         "Glob",
         "Bash"
       ],
-      "a2a_peers": []
+      "a2a_peers": [
+        "vuln-triage",
+        "metasploit"
+      ]
     },
     {
       "name": "nuclei",
       "description": "Especialista en Nuclei (ProjectDiscovery), escaneo de vulnerabilidades por plantillas. Úsalo para escanear activos web/red en scope con plantillas CVE, exposiciones y misconfiguraciones; aprovecha las rutas de plantilla que ya trae el RAG.",
       "phase": "triage",
       "model": "claude-haiku-4-5",
-      "version": "1.6.1",
+      "version": "1.7.0",
       "capabilities": [],
       "consumes": [],
       "produces": [],
@@ -190,7 +244,7 @@
       "description": "Sesión principal (AGENTS.md). Planifica, delega, valida handoffs y enruta el bus A2A mediado.",
       "phase": "orchestrator",
       "model": "claude-opus-4-8",
-      "version": "1.6.1",
+      "version": "1.7.0",
       "capabilities": [
         "route-a2a",
         "delegate",
@@ -219,7 +273,7 @@
       "description": "Recon PASIVO. Úsalo al inicio de un engagement para mapear la superficie de ataque SIN tocar el target (subdominios, DNS, leaks, tecnologías, empleados). No envía tráfico intrusivo.",
       "phase": "recon",
       "model": "claude-haiku-4-5",
-      "version": "1.6.1",
+      "version": "1.7.0",
       "capabilities": [],
       "consumes": [],
       "produces": [],
@@ -240,7 +294,7 @@
       "description": "Post-explotación en un host ya comprometido EN SCOPE. Úsalo para escalada de privilegios, persistencia (demostrativa), evasión y acceso a credenciales locales. Solo tras obtener acceso autorizado.",
       "phase": "post-exploitation",
       "model": "claude-opus-4-8",
-      "version": "1.6.1",
+      "version": "1.7.0",
       "capabilities": [
         "privesc",
         "persistence-demo",
@@ -264,7 +318,8 @@
         "Bash"
       ],
       "a2a_peers": [
-        "lateral-discovery"
+        "lateral-discovery",
+        "sliver"
       ]
     },
     {
@@ -272,7 +327,7 @@
       "description": "Especialista en el toolkit de recon moderno — subfinder, amass, dnsx, naabu, httpx, katana, gau y nmap. Úsalo para descubrir activos, subdominios, DNS, puertos/servicios y superficie web. Pasivo o activo según el scope.",
       "phase": "recon",
       "model": "claude-haiku-4-5",
-      "version": "1.6.1",
+      "version": "1.7.0",
       "capabilities": [],
       "consumes": [],
       "produces": [],
@@ -291,7 +346,7 @@
       "description": "Redacción del informe del engagement. Úsalo al cierre para convertir los findings confirmados en un informe profesional (estructura estándar de pentest) con impacto de negocio, reproducción, remediación y mapeo CWE/CVSS/OWASP/ATT&CK. Redacta con calidad humana (sin tono IA). No ejecuta tooling ofensivo.",
       "phase": "reporting",
       "model": "claude-opus-4-8",
-      "version": "1.6.1",
+      "version": "1.7.0",
       "capabilities": [],
       "consumes": [],
       "produces": [],
@@ -309,10 +364,20 @@
       "description": "Operador de Sliver C2 (open source) para post-explotación y simulación de adversario controlada. Úsalo cuando la ROE autoriza C2 — generación de implants, listeners, sesiones, pivoting y tareas, todo reversible y en scope.",
       "phase": "post-exploitation",
       "model": "claude-sonnet-4-6",
-      "version": "1.6.1",
-      "capabilities": [],
-      "consumes": [],
-      "produces": [],
+      "version": "1.7.0",
+      "capabilities": [
+        "c2-implant",
+        "listeners",
+        "pivoting",
+        "impact-demo"
+      ],
+      "consumes": [
+        "a2a:request"
+      ],
+      "produces": [
+        "findings:confirmed",
+        "a2a:response"
+      ],
       "tools": [
         "Read",
         "Write",
@@ -321,14 +386,16 @@
         "Glob",
         "Bash"
       ],
-      "a2a_peers": []
+      "a2a_peers": [
+        "post-exploit"
+      ]
     },
     {
       "name": "sqlmap",
       "description": "Especialista senior en sqlmap, automatización de inyección SQL. Úsalo para detectar y explotar SQLi en endpoints en scope, con extracción mínima para demostrar impacto sin dañar datos.",
       "phase": "exploitation",
       "model": "claude-sonnet-4-6",
-      "version": "1.6.1",
+      "version": "1.7.0",
       "capabilities": [
         "sqli-detect",
         "sqli-exploit",
@@ -359,10 +426,20 @@
       "description": "Análisis y priorización de vulnerabilidades. Úsalo tras active-recon para correlacionar servicios/versiones con CVE/KEV/advisories actuales, descartar falsos positivos y priorizar por impacto explotable. Es el puente entre recon y explotación.",
       "phase": "triage",
       "model": "claude-sonnet-4-6",
-      "version": "1.6.1",
-      "capabilities": [],
-      "consumes": [],
-      "produces": [],
+      "version": "1.7.0",
+      "capabilities": [
+        "cve-correlation",
+        "prioritization",
+        "source-backed-triage"
+      ],
+      "consumes": [
+        "targets:enriched",
+        "a2a:response"
+      ],
+      "produces": [
+        "findings:candidate",
+        "a2a:request"
+      ],
       "tools": [
         "Read",
         "Write",
@@ -373,14 +450,19 @@
         "WebSearch",
         "WebFetch"
       ],
-      "a2a_peers": []
+      "a2a_peers": [
+        "web-exploit",
+        "network-exploit",
+        "metasploit",
+        "ai-security"
+      ]
     },
     {
       "name": "web-exploit",
       "description": "Explotación de aplicaciones web (capa 7 HTTP/S). Úsalo para verificar y explotar findings web EN SCOPE — inyección, auth/sesión, IDOR, SSRF, SSTI, XSS, deserialización. Es el caballo de batalla de bug bounty.",
       "phase": "exploitation",
       "model": "claude-opus-4-8",
-      "version": "1.6.1",
+      "version": "1.7.0",
       "capabilities": [
         "web-exploit-confirm",
         "sqli-triage",
@@ -405,7 +487,9 @@
         "WebFetch"
       ],
       "a2a_peers": [
-        "sqlmap"
+        "sqlmap",
+        "web-fuzzing",
+        "vuln-triage"
       ]
     },
     {
@@ -413,10 +497,19 @@
       "description": "Especialista en descubrimiento de contenido y fuzzing web — ffuf y feroxbuster (directorios, ficheros, parámetros, vhosts, valores). Úsalo para enumerar superficie web oculta en activos en scope antes de explotar.",
       "phase": "exploitation",
       "model": "claude-haiku-4-5",
-      "version": "1.6.1",
-      "capabilities": [],
-      "consumes": [],
-      "produces": [],
+      "version": "1.7.0",
+      "capabilities": [
+        "content-discovery",
+        "param-fuzzing",
+        "vhost-fuzzing"
+      ],
+      "consumes": [
+        "a2a:request"
+      ],
+      "produces": [
+        "targets:enriched",
+        "a2a:response"
+      ],
       "tools": [
         "Read",
         "Write",
@@ -425,7 +518,9 @@
         "Glob",
         "Bash"
       ],
-      "a2a_peers": []
+      "a2a_peers": [
+        "web-exploit"
+      ]
     }
   ]
 }

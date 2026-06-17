@@ -36,14 +36,17 @@ def block(reason):
     sys.exit(0)
 
 
-def known_agents():
-    """Nombres de agente válidos del registro. Conjunto vacío => no podemos validar nombres
-    (fail-open: no bloqueamos por nombres si no hay registro)."""
+def peers_map():
+    """Mapa name -> set(a2a_peers) del registro (topología A2A declarada en el frontmatter,
+    compilada por build_agent_cards.py). Las CLAVES son los agentes conocidos (anti-spoofing C14);
+    los VALORES, sus peers (topología C14). Una sola lectura de agent-cards.json. Vacío => no
+    validamos nombres ni topología (fail-open)."""
     try:
         with open(CARDS, "r", encoding="utf-8") as f:
-            return {c.get("name") for c in json.load(f).get("cards", []) if c.get("name")}
+            cards = json.load(f).get("cards", [])
+        return {c.get("name"): set(c.get("a2a_peers") or []) for c in cards if c.get("name")}
     except Exception:
-        return set()
+        return {}
 
 
 def hop_ceiling():
@@ -96,7 +99,8 @@ def main():
               f"(techo {cap}). Detén el intercambio entre agentes y revisa con el operador antes "
               f"de seguir. Sube el techo con constraints.max_a2a_hops en contracts/scope.json.")
 
-    agents = known_agents()
+    peers = peers_map()           # una sola lectura del registro
+    agents = set(peers)           # las claves del registro = agentes conocidos (C14 anti-spoofing)
     for i, m in enumerate(messages):
         if not isinstance(m, dict):
             continue  # la presencia de campos la valida validate_blackboard.py (C5)
@@ -117,6 +121,18 @@ def main():
                           f"{role_key}='{who}', que NO es un agente conocido (no está en "
                           f"contracts/agent-cards.json). Corrige el destinatario/emisor o "
                           f"regenera el registro con tools/build_agent_cards.py.")
+
+        # C14 — topología de pares: un agente solo dirige mensajes a sus a2a_peers declarados;
+        # los relevos fuera de la pareja van por el hub (to_agent: orchestrator, siempre válido).
+        if peers:
+            frm = m.get("from_agent")
+            to = m.get("to_agent")
+            if frm and to and frm != "orchestrator" and to != "orchestrator":
+                if to not in peers.get(frm, set()):
+                    block(f"MENSAJE A2A FUERA DE TOPOLOGÍA (C14/LLM01): el mensaje {mid} va de "
+                          f"'{frm}' a '{to}', que NO es un peer A2A declarado de '{frm}' "
+                          f"(contracts/agent-cards.json -> a2a_peers). Para relevos fuera de tu "
+                          f"pareja usa el hub (to_agent: orchestrator), o corrige el destinatario.")
 
     sys.exit(0)
 
