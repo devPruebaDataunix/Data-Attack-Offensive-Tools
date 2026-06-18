@@ -4,6 +4,34 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [1.10.0] - 2026-06-18
+### Added
+- **TUI de control total** (`bot/tui/`): el panel local (Textual) pasa de pantalla única a una
+  interfaz por **pestañas** que cubre todos los planos de control del engagement, **sin relajar
+  ninguna puerta**:
+  - **Bus A2A** — inspector de mensajes (de→a, rol, status, hops, preview) + resumen y techo de hops.
+  - **Agentes** — roster de los 18 (+orquestador) desde `agent-cards.json` (fase, modelo, peers).
+  - **Presupuesto** — barra del kill-switch C13 (`.action_count`/`max_actions`) + coste de la última
+    orden + timeline de fase.
+  - **RAG** — estado del store (última sync KEV/EPSS/…) + refresco manual.
+  - **Evidencia** — engagements con artefactos + tabla `evidence[]`.
+  - **Acciones** (overrides del operador, auditados) — kill-switch (aborta la orden en curso),
+    delegación dirigida (la ejecuta el Orquestador por el hub), override de fase, control manual del
+    bus A2A (status de un mensaje) y selección de modelo/effort del Orquestador (persistente en `.env`).
+- **Separación lógica/presentación**: `bot/tui/state.py` (lector único + renders puros) y
+  `bot/tui/actions.py` (escrituras vía `tools/blackboard`) son stdlib puro y quedan cubiertos por una
+  nueva suite `bot/tests/test_tui.py` (22 tests). El CSS se extrae a `bot/tui/app.tcss`.
+### Changed
+- `bot/intel/runner.py` (aditivo, no afecta al bot): expone `last_cost_usd`/`last_turns` de la última
+  orden y un `abort()` cooperativo que el gate respeta (kill-switch).
+- `README.md`: "Panel TUI de control total" (característica + nota + referencia de comandos).
+### Notes
+- **Ninguna puerta se relaja**: las acciones que tocan el target siguen pasando por `scope_guard` +
+  `budget_guard` + aprobación humana; la "delegación dirigida" NO invoca al subagente directamente
+  (lo hace el Orquestador por el hub). Lógica verificada (test_tui 22/22, test_intel 26/26,
+  validate_suite, py_compile + revisión de código); la interacción Textual se valida en la Kali
+  (Textual no corre en el host de desarrollo Windows).
+
 ## [1.9.2] - 2026-06-18
 ### Changed
 - **README — registro de la sección "Despliegue en Kali (E2)" elevado.** Mismos pasos y comandos,
@@ -283,6 +311,7 @@ se versiona con [SemVer](https://semver.org/lang/es/).
 - Controles base: gate de alcance determinista (`scope_guard.py`), validación de esquema del
   blackboard, escritura atómica, zonas de aislamiento E1/E2/E3 y reporting humanizado.
 
+[1.10.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.10.0
 [1.9.2]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.9.2
 [1.9.1]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.9.1
 [1.9.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.9.0

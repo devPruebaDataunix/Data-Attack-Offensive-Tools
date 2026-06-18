@@ -1,0 +1,41 @@
+/* TUI de control total — Data Attack. Paleta Dracula/DataUnix. */
+Screen { background: #0D1117; }
+
+#hdr { height: 1; color: #C9D1D9; background: #161B22; padding: 0 1; }
+
+TabbedContent { height: 1fr; }
+
+/* Panel (dashboard) */
+#dash-status { width: 40; border: round #00D4FF; padding: 0 1; }
+#dash-findings { border: round #00D4FF; }
+
+/* Resúmenes / cabeceras de paneles */
+#a2a-summary, #roster-hdr, #ev-hdr, #budget-box, #phase-box, #rag-box {
+    padding: 0 1;
+    height: auto;
+}
+#budget-box { border: round #00D4FF; }
+#phase-box { border: round #3FB950; }
+#rag-box { border: round #00D4FF; }
+
+DataTable { height: auto; }
+
+/* Botones del RAG */
+#rag-btns { height: auto; padding: 1 0; }
+
+/* Panel de acciones */
+ActionsPanel { padding: 0 1; }
+ActionsPanel Input { margin: 0 0 1 0; }
+ActionsPanel Button { margin: 0 0 1 0; }
+ActionsPanel Label { padding: 1 0 0 0; }
+
+/* Log + línea de orden persistentes */
+#log { height: 10; border: round #3FB950; padding: 0 1; }
+#cmd { border: tall #00D4FF; }
+
+/* Modal de aprobación humana */
+#appr-box { background: #161B22; border: thick #FF4444; padding: 1 2; width: 76; height: auto; }
+#appr-title { color: #FF4444; text-style: bold; }
+#appr-cmd { color: #C9D1D9; padding: 1 0; }
+#appr-btns { height: auto; align: center middle; }
+Button { margin: 0 2; }

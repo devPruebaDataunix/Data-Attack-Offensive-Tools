@@ -1,13 +1,17 @@
 """
-Panel de control TUI (Textual) — gemelo LOCAL del bot de Telegram.
+Panel de control TUI (Textual) — gemelo LOCAL del bot de Telegram, ahora con CONTROL TOTAL.
 
 Reusa EXACTAMENTE el mismo cerebro que el bot (bot/intel: runner, classify, scope) y pasa por
-las MISMAS puertas de seguridad: el hook determinista scope_guard (vía setting_sources del runner),
-la APROBACIÓN HUMANA por acción (aquí un modal en vez del teclado de Telegram) y los guardarraíles
-C11-C13. No reimplementa lógica: es otro front-end sobre el Orquestador. La TUI NO puede saltarse
-ninguna puerta.
+las MISMAS puertas: el hook scope_guard (vía setting_sources del runner), la APROBACIÓN HUMANA
+por acción (modal) y los guardarraíles C11-C15. La TUI NO puede saltarse ninguna puerta: los
+planos de acción son overrides del operador sobre el blackboard/config, o delegaciones que el
+Orquestador ejecuta por el hub (con todas las puertas).
 
 Arranque:  ./deploy/dash.sh     (o, desde bot/:  python -m tui)
+
+Estructura: pestañas (Panel · Bus A2A · Agentes · Presupuesto · RAG · Evidencia · Acciones) sobre
+un log de eventos y una línea de orden persistentes. La lógica vive en state.py/actions.py (puros,
+testeados en bot/tests/test_tui.py); aquí solo está el cableado Textual.
 """
 from __future__ import annotations
 
@@ -21,8 +25,8 @@ from textual import work
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
-from textual.widgets import (Button, DataTable, Footer, Header, Input, Label,
-                             RichLog, Static)
+from textual.widgets import (Button, Footer, Header, Input, Label, RichLog,
+                             Static, TabbedContent, TabPane)
 
 # El paquete intel vive en bot/ (un nivel por encima de tui/).
 BOT_DIR = Path(__file__).resolve().parent.parent
@@ -33,6 +37,10 @@ if str(BOT_DIR) not in sys.path:
 from intel import classify as C            # noqa: E402
 from intel import scope as scp             # noqa: E402
 from intel.runner import AgentRunner, SDK_OK  # noqa: E402
+
+from . import actions as A                 # noqa: E402
+from . import panels as P                  # noqa: E402
+from . import state as S                   # noqa: E402
 
 PY = sys.executable or "python3"
 
@@ -48,29 +56,19 @@ def _load_env() -> dict:
     return env
 
 
-_ENV = _load_env()
+def _read_cfg() -> tuple[str, str, "float | None"]:
+    """Relee la config del Orquestador en CADA orden (el panel de acciones puede cambiarla)."""
+    env = _load_env()
 
+    def g(k, d):
+        return env.get(k) or os.environ.get(k) or d
 
-def _cfg(key: str, default: str) -> str:
-    return _ENV.get(key) or os.environ.get(key) or default
-
-
-ORCH_MODEL = _cfg("ORCH_MODEL", "claude-opus-4-8")
-ORCH_EFFORT = _cfg("ORCH_EFFORT", "medium")
-_mx = _cfg("ORCH_MAX_USD", "").strip()
-try:
-    ORCH_MAX_USD = float(_mx) if _mx else None
-except ValueError:
-    ORCH_MAX_USD = None
-
-
-def _banner() -> str:
-    parts = []
-    for name in ("data-attack.txt", "dataunix.txt"):
-        f = REPO_DIR / "assets" / "banners" / name
-        if f.exists():
-            parts.append(f.read_text(encoding="utf-8").rstrip("\n"))
-    return "\n".join(parts) if parts else "DATA ATTACK"
+    mx = (g("ORCH_MAX_USD", "") or "").strip()
+    try:
+        max_usd = float(mx) if mx else None
+    except ValueError:
+        max_usd = None
+    return g("ORCH_MODEL", "claude-opus-4-8"), g("ORCH_EFFORT", "medium"), max_usd
 
 
 class ApprovalModal(ModalScreen[bool]):
@@ -93,109 +91,95 @@ class ApprovalModal(ModalScreen[bool]):
 
 
 class DataAttackTUI(App[None]):
-    CSS = """
-    Screen { background: #0D1117; }
-    #banner { color: #00D4FF; height: auto; padding: 0 1; }
-    #status { width: 40; border: round #00D4FF; padding: 0 1; }
-    #findings { border: round #00D4FF; }
-    #log { height: 12; border: round #3FB950; padding: 0 1; }
-    #cmd { border: tall #00D4FF; }
-    #appr-box { background: #161B22; border: thick #FF4444; padding: 1 2; width: 76; height: auto; }
-    #appr-title { color: #FF4444; text-style: bold; }
-    #appr-cmd { color: #C9D1D9; padding: 1 0; }
-    #appr-btns { height: auto; align: center middle; }
-    Button { margin: 0 2; }
-    """
-    BINDINGS = [("q", "quit", "Salir"), ("r", "refresh", "Refrescar")]
+    CSS_PATH = "app.tcss"
+    BINDINGS = [("q", "quit", "Salir"), ("r", "refresh", "Refrescar"),
+                ("ctrl+k", "abort", "Kill-switch")]
 
     _running = False
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
-        yield Static(_banner(), id="banner")
-        with Horizontal():
-            yield Static("", id="status")
-            yield DataTable(id="findings")
+        yield Static("", id="hdr")
+        with TabbedContent():
+            with TabPane("Panel", id="tab-dash"):
+                yield P.DashboardPanel()
+            with TabPane("Bus A2A", id="tab-a2a"):
+                yield P.A2APanel()
+            with TabPane("Agentes", id="tab-roster"):
+                yield P.RosterPanel()
+            with TabPane("Presupuesto", id="tab-budget"):
+                yield P.BudgetPanel()
+            with TabPane("RAG", id="tab-rag"):
+                yield P.RagPanel()
+            with TabPane("Evidencia", id="tab-ev"):
+                yield P.EvidencePanel()
+            with TabPane("Acciones", id="tab-act"):
+                yield P.ActionsPanel()
         yield RichLog(id="log", highlight=True, markup=True, wrap=True)
         yield Input(placeholder="Orden al Orquestador (p.ej. 'haz recon de ...')  ·  'triage <producto>'",
                     id="cmd")
         yield Footer()
 
     def on_mount(self) -> None:
-        table = self.query_one("#findings", DataTable)
-        table.add_columns("", "ID", "Sev", "Título", "Target")
-        self._seen_msgs: set[str] = set()  # message_id A2A ya narrados
-        self._seeded = False               # primer refresco = solo registra, no narra
         self.title = "DATA ATTACK"
-        self.sub_title = "control local · mismas puertas que el bot"
+        self.sub_title = "control total · mismas puertas que el bot"
+        self._seen_msgs: set[str] = set()
+        self._seeded = False
+        self._runner: "AgentRunner | None" = None
+        self._last_cost: "float | None" = None
+        # Refs de paneles (todos viven montados aunque su pestaña esté oculta).
+        self._dash = self.query_one(P.DashboardPanel)
+        self._a2a = self.query_one(P.A2APanel)
+        self._roster = self.query_one(P.RosterPanel)
+        self._budget = self.query_one(P.BudgetPanel)
+        self._rag = self.query_one(P.RagPanel)
+        self._evidence = self.query_one(P.EvidencePanel)
         if not SDK_OK:
-            self._log("[#FF6B35]Agent SDK no instalado aquí: las órdenes al Orquestador "
-                      "se ejecutan en la Kali. El panel sí muestra estado, hallazgos y triage.[/]")
+            self._log("[#FF6B35]Agent SDK no instalado aquí: las órdenes al Orquestador se "
+                      "ejecutan en la Kali. El panel sí muestra estado, hallazgos y triage.[/]")
         self.refresh_state()
+        self._fetch_rag_status()
         self.set_interval(5.0, self.refresh_state)
 
-    # ── estado / blackboard ──────────────────────────────────────────────────
+    # ── refresco global (lector único) ───────────────────────────────────────────
     def refresh_state(self) -> None:
-        sc = scp.load_scope(REPO_DIR)
-        eng = REPO_DIR / "contracts" / "engagement.json"
-        data = {}
-        if eng.exists():
-            try:
-                data = json.loads(eng.read_text(encoding="utf-8"))
-            except (json.JSONDecodeError, OSError):
-                data = {}
-        grp = C.scan(data.get("findings", []))
-        msgs = data.get("messages", [])
-        ins = (sc or {}).get("in_scope", {})
-        doms = ", ".join(ins.get("domains", []) or ["—"])
-        ips = ", ".join((ins.get("ips", []) or []) + (ins.get("cidrs", []) or []) or ["—"])
-        lines = [
-            "[b #00D4FF]Engagement[/]",
-            f"id:   {data.get('engagement_id', '—')}",
-            f"fase: {data.get('phase', '—')}",
-            "",
-            "[b #00D4FF]Scope[/]",
-            f"dom: {doms}",
-            f"ip:  {ips}",
-            "",
-            "[b #00D4FF]Hallazgos[/]",
-            f"[#FF4444]reales:[/]  {len(grp['real'])}",
-            f"[#FF6B35]vigilar:[/] {len(grp['watch'])}",
-            f"ruido:   {len(grp['noise'])}",
-            "",
-            "[b #00D4FF]Bus A2A[/]",
-            f"mensajes: {len(msgs)}",
-            "",
-            f"motor: {'Agent SDK' if SDK_OK else 'remoto (Kali)'}",
-        ]
-        self.query_one("#status", Static).update("\n".join(lines))
-        table = self.query_one("#findings", DataTable)
-        table.clear()
-        for v in grp["verdicts"]:
-            table.add_row(v.emoji, v.finding_id, v.severity.upper(), v.title[:40], v.target)
-        # Bus A2A: narra los mensajes nuevos en el log (el primer refresco solo los registra).
-        for m in msgs:
-            mid = m.get("message_id")
+        snap = S.build_snapshot(REPO_DIR, self._last_cost)
+        grp = C.scan(snap.eng.get("findings", []))
+        self.query_one("#hdr", Static).update(S.header_line(snap.eng, snap.count, snap.cap, snap.cost))
+        self._dash.refresh_from(snap, grp, SDK_OK)
+        self._a2a.refresh_from(snap)
+        self._roster.refresh_from(snap)
+        self._budget.refresh_from(snap)
+        self._evidence.refresh_from(snap, S.engagement_dirs(REPO_DIR))
+        # Bus A2A: narra en el log los mensajes nuevos (el primer refresco solo los registra).
+        for m in snap.eng.get("messages", []) or []:
+            mid = m.get("message_id") if isinstance(m, dict) else None
             if not mid or mid in self._seen_msgs:
                 continue
             self._seen_msgs.add(mid)
             if not self._seeded:
                 continue
             frm, to, role = m.get("from_agent", "?"), m.get("to_agent", "?"), m.get("role", "")
-            intent = next((p.get("text", "") for p in m.get("parts", [])
+            intent = next((p.get("text", "") for p in m.get("parts", []) or []
                            if p.get("kind") == "text" and p.get("text")), "")
             self._log(f"✉️ [b]{frm}[/] → [b]{to}[/] ({role}) {intent[:120]}")
         self._seeded = True
 
     def action_refresh(self) -> None:
         self.refresh_state()
+        self._fetch_rag_status()
         self._log("[#3FB950]Estado refrescado.[/]")
+
+    def action_abort(self) -> None:
+        self._abort_order()
 
     def _log(self, msg: str) -> None:
         self.query_one("#log", RichLog).write(msg)
 
-    # ── entrada de órdenes ─────────────────────────────────────────────────────
+    # ── entrada de órdenes (solo el input #cmd) ──────────────────────────────────
     def on_input_submitted(self, event: Input.Submitted) -> None:
+        if event.input.id != "cmd":
+            return                       # los inputs del panel de acciones no lanzan órdenes
         task = event.value.strip()
         event.input.value = ""
         if not task:
@@ -204,7 +188,6 @@ class DataAttackTUI(App[None]):
         if low.startswith("triage ") or low.startswith("/triage "):
             self.run_triage(task.split(" ", 1)[1].strip())
             return
-        # Pre-chequeo de scope (NO sustituye al hook scope_guard; solo avisa si falta).
         question = scp.scope_question(task, scp.load_scope(REPO_DIR))
         if question:
             self._log(f"[#FF6B35]{question}[/]")
@@ -212,6 +195,56 @@ class DataAttackTUI(App[None]):
         self._log(f"[b #00D4FF]Orden:[/] {task}")
         self.run_order(task)
 
+    # ── botones de los paneles ────────────────────────────────────────────────────
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        bid = event.button.id or ""
+        if bid == "act-abort":
+            self._abort_order()
+        elif bid == "act-deleg":
+            agent = self.query_one("#act-deleg-agent", Input).value.strip()
+            obj = self.query_one("#act-deleg-obj", Input).value.strip()
+            if not agent or not obj:
+                self._log("[#FF6B35]Delegación: indica agente y objetivo.[/]")
+                return
+            names = S.agent_names(S.load_cards(REPO_DIR))
+            if names and agent not in names:
+                self._log(f"[#FF6B35]Agente desconocido: {agent} (revisa la pestaña Agentes).[/]")
+                return
+            self.query_one("#act-deleg-obj", Input).value = ""
+            order = A.compose_delegation(agent, obj)
+            self._log(f"[b #00D4FF]Delegación dirigida → {agent}[/]")
+            self.run_order(order)
+        elif bid == "act-phase-btn":
+            self._do_action(A.set_phase(REPO_DIR, self.query_one("#act-phase", Input).value.strip()))
+        elif bid == "act-a2a-btn":
+            mid = self.query_one("#act-a2a-id", Input).value.strip()
+            st = self.query_one("#act-a2a-status", Input).value.strip()
+            self._do_action(A.set_a2a_status(REPO_DIR, mid, st))
+        elif bid == "act-model-btn":
+            self._do_action(A.set_env_var(REPO_DIR, "ORCH_MODEL",
+                                          self.query_one("#act-model", Input).value.strip()))
+        elif bid == "act-effort-btn":
+            self._do_action(A.set_env_var(REPO_DIR, "ORCH_EFFORT",
+                                          self.query_one("#act-effort", Input).value.strip()))
+        elif bid == "rag-refresh":
+            self._run_rag_refresh(False)
+        elif bid == "rag-refresh-epss":
+            self._run_rag_refresh(True)
+
+    def _do_action(self, result: "tuple[bool, str]") -> None:
+        ok, msg = result
+        self._log(("[#3FB950]✓ " if ok else "[#FF4444]✗ ") + msg + "[/]")
+        if ok:
+            self.refresh_state()
+
+    def _abort_order(self) -> None:
+        if self._runner is not None and self._running:
+            self._runner.abort()
+            self._log("[#FF4444]⛔ Kill-switch: orden abortada — se denegará toda acción pendiente.[/]")
+        else:
+            self._log("[#6E7681]No hay ninguna orden en curso.[/]")
+
+    # ── triage (RAG) ──────────────────────────────────────────────────────────────
     @work(exclusive=True, group="triage")
     async def run_triage(self, query: str) -> None:
         if not query:
@@ -223,7 +256,7 @@ class DataAttackTUI(App[None]):
         out, _ = await proc.communicate()
         try:
             results = json.loads(out.decode("utf-8", "replace")).get("results", [])
-        except json.JSONDecodeError:
+        except ValueError:
             self._log("[#FF4444]Sin resultados (¿RAG poblado?).[/]")
             return
         if not results:
@@ -234,10 +267,29 @@ class DataAttackTUI(App[None]):
             self._log(f"  • {r.get('cve')} {str(r.get('severity', '')).upper()} "
                       f"CVSS={r.get('cvss')} EPSS={r.get('epss')} {flags}")
 
+    # ── RAG: estado y refresco ────────────────────────────────────────────────────
+    @work(exclusive=True, group="ragstatus")
+    async def _fetch_rag_status(self) -> None:
+        proc = await asyncio.create_subprocess_exec(
+            PY, "rag/query_vulns.py", "--query", "apache", "--json", "--limit", "1",
+            cwd=str(REPO_DIR), stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
+        out, _ = await proc.communicate()
+        self._rag.refresh_from(S.parse_rag_store(out.decode("utf-8", "replace")))
+
+    @work(exclusive=True, group="ragrefresh")
+    async def _run_rag_refresh(self, epss_all: bool) -> None:
+        self._log("[#00D4FF]Refrescando el RAG… (puede tardar)[/]")
+        proc = await asyncio.create_subprocess_exec(
+            *A.rag_refresh_cmd(epss_all), cwd=str(REPO_DIR),
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
+        await proc.communicate()
+        self._log("[#3FB950]RAG refrescado.[/]" if proc.returncode == 0
+                  else "[#FF4444]Fallo al refrescar el RAG (revisa la Kali).[/]")
+        self._fetch_rag_status()
+
+    # ── orden al Orquestador ──────────────────────────────────────────────────────
     @work(group="order")
     async def run_order(self, task: str) -> None:
-        # Sin exclusive: una segunda orden NO cancela la que corre; el guard la rechaza
-        # (igual que el bot: una orden a la vez por sesión).
         if self._running:
             self._log("[#FF6B35]Ya hay una orden en curso; espera a que termine.[/]")
             return
@@ -259,9 +311,11 @@ class DataAttackTUI(App[None]):
             self._log(f"{verdict.emoji} [b]{verdict.finding_id}[/] {verdict.title[:50]}")
             self.refresh_state()
 
+        model, effort, max_usd = _read_cfg()
         self._running = True
         runner = AgentRunner(REPO_DIR, emit, status, approve, on_verdict,
-                             model=ORCH_MODEL, effort=ORCH_EFFORT, max_usd=ORCH_MAX_USD)
+                             model=model, effort=effort, max_usd=max_usd)
+        self._runner = runner
         try:
             final = await runner.run(task)
         except Exception as exc:  # noqa: BLE001 - se reporta al panel, no se traga
@@ -269,6 +323,8 @@ class DataAttackTUI(App[None]):
             return
         finally:
             self._running = False
+            self._runner = None
+            self._last_cost = runner.last_cost_usd
             self.refresh_state()
         if final:
             self._log(f"[#3FB950]Resultado:[/] {final[:1500]}")

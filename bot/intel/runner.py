@@ -88,9 +88,22 @@ class AgentRunner:
         self._eng_mtime = 0.0
         self._last_status = 0.0
         self._final = ""
+        # Telemetría de la última orden (la consume la TUI; el bot la ignora). Aditivo.
+        self.last_cost_usd: Optional[float] = None
+        self.last_turns: Optional[int] = None
+        # Kill-switch cooperativo: si el operador aborta, el gate deniega TODA acción siguiente.
+        self._aborted = False
+
+    def abort(self) -> None:
+        """Aborta la orden en curso: a partir de aquí el gate deniega cualquier herramienta.
+        Lo invoca el kill-switch de la TUI; complementa la cancelación del worker Textual."""
+        self._aborted = True
 
     # ---- gate de permiso por acción (por tier de riesgo) ----------------------
     async def _gate(self, tool_name, tool_input, ctx):
+        # Kill-switch del operador (TUI): una vez abortada la orden, se deniega TODO.
+        if self._aborted:
+            return PermissionResultDeny(message="Orden abortada por el operador (kill-switch de la TUI).")
         # Solo gateamos comandos de shell; el resto de tools las decide el modo de permiso.
         if tool_name != "Bash":
             return PermissionResultAllow()
@@ -192,6 +205,10 @@ class AgentRunner:
             self._final = (getattr(msg, "result", None) or "").strip()
             await self._scan()
             cost = msg.total_cost_usd
+            # Telemetría para la TUI (aditivo; el bot no lo usa).
+            if isinstance(cost, (int, float)):
+                self.last_cost_usd = cost
+            self.last_turns = getattr(msg, "num_turns", None)
             tail = f" · ${cost:.2f}" if isinstance(cost, (int, float)) and cost else ""
             flag = "⚠️ con errores" if getattr(msg, "is_error", False) else "✅"
             await self.emit(f"{flag} Completado · {msg.num_turns} turnos{tail}.")

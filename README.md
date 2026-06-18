@@ -103,7 +103,7 @@ hops anti-bucle).
 | 🛡️ | **Guardián de alcance** | `scope_guard.py` bloquea de forma determinista cualquier acción fuera de `scope.json`. |
 | 🙋 | **Humano en el bucle** | Nada que toque el objetivo se ejecuta sin aprobación; la decisión es siempre del operador. |
 | 📱 | **Bot de Telegram** | Control remoto en lenguaje natural, resúmenes en vivo y aprobación por nivel de riesgo. |
-| 🖥️ | **Panel TUI local** | Control en la terminal (Textual): estado, hallazgos en vivo y órdenes al Orquestador con la misma aprobación humana. |
+| 🖥️ | **Panel TUI de control total** | Terminal (Textual) por pestañas: estado, **bus A2A**, roster de agentes, **presupuesto/coste**, RAG, evidencia y **acciones** (kill-switch, delegación dirigida, override de fase) — con las mismas puertas que el bot. |
 | 📊 | **Analítica de coste local** | [agentsview](https://github.com/kenn-io/agentsview) (local-first) lee `~/.claude/projects/` → coste y actividad por agente en `127.0.0.1:8080`. Re-medir el gasto sin sacar datos. |
 | 🧠 | **Aprendizaje por errores** | `knowledge-postmortem` guarda lecciones de cada intento en memoria persistente y en el blackboard. |
 | 🧩 | **Multiplataforma** | Claude Code (CLI + extensión de VS Code) y espejo para opencode. |
@@ -309,9 +309,12 @@ natural, interpreta, te pide confirmación, resume en vivo lo que hace y solo te
 es alerta real. Corre sobre el **Claude Agent SDK** (con caída a `claude -p` si el SDK no
 está). Detalle en [bot/README.md](bot/README.md).
 
-> **Panel TUI local** (`./deploy/dash.sh`): el mismo cerebro (`bot/intel`) y las mismas puertas que
-> el bot, pero en la terminal de la Kali — estado, hallazgos clasificados en vivo y órdenes al
-> Orquestador con aprobación por modal. El bot de Telegram queda para el control remoto.
+> **Panel TUI de control total** (`./deploy/dash.sh`): el mismo cerebro (`bot/intel`) y las mismas
+> puertas que el bot, en la terminal de la Kali, organizado en **pestañas** — *Panel* (estado/hallazgos),
+> *Bus A2A* (inspector de mensajes + hops), *Agentes* (roster), *Presupuesto* (kill-switch + coste),
+> *RAG*, *Evidencia* y *Acciones* (abortar la orden en curso, delegación dirigida, override de fase,
+> control del bus A2A, modelo/effort). Ninguna acción se salta el scope ni la aprobación humana. El
+> bot de Telegram queda para el control remoto.
 
 <details>
 <summary><b>Aprobación por niveles de riesgo</b></summary>
@@ -399,7 +402,7 @@ Chuleta de todo lo ejecutable, por categoría. Salvo que se indique otra cosa, l
 | Comando | Qué hace |
 | :--- | :--- |
 | `cd bot && ./.venv/bin/python bot.py` | Arranca el **bot de Telegram** (control remoto). |
-| `./deploy/dash.sh` | **Panel TUI** en la terminal (gemelo local del bot). |
+| `./deploy/dash.sh` | **Panel TUI de control total** (pestañas: A2A, agentes, presupuesto, RAG, evidencia, acciones). |
 | `claude` → `/agents` | Abre la **CLI de Claude Code** y lista los 18 agentes. |
 
 ### 💰 Coste (agentsview · local)
