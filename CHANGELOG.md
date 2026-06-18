@@ -4,6 +4,17 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [1.9.2] - 2026-06-18
+### Changed
+- **README — registro de la sección "Despliegue en Kali (E2)" elevado.** Mismos pasos y comandos,
+  pero con vocabulario más preciso y profesional sin perder accesibilidad: subsecciones "Requisitos
+  previos", "Despliegue paso a paso", "Resolución de problemas" y "Variantes de despliegue". Se
+  retira el tono coloquial/hand-holding (metáforas, pulsaciones de teclas de `nano`, "copia y pega
+  tal cual") en favor de terminología del dominio (toolchain ofensivo, idempotente, alcance/
+  `scope_guard.py`, credenciales, sesión autenticada).
+### Notes
+- Cambio **solo de documentación** (redacción). Sin cambios funcionales ni de comandos.
+
 ## [1.9.1] - 2026-06-18
 ### Changed
 - **README — sección "Despliegue en Kali (E2)" reescrita para personas no técnicas**: requisitos
@@ -272,6 +283,7 @@ se versiona con [SemVer](https://semver.org/lang/es/).
 - Controles base: gate de alcance determinista (`scope_guard.py`), validación de esquema del
   blackboard, escritura atómica, zonas de aislamiento E1/E2/E3 y reporting humanizado.
 
+[1.9.2]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.9.2
 [1.9.1]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.9.1
 [1.9.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.9.0
 [1.8.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.8.0

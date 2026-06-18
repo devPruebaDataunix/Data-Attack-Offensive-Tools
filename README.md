@@ -145,88 +145,84 @@ flowchart TB
 
 ## Despliegue en Kali (E2)
 
-¿Es tu primera vez montando algo así? Sigue estos pasos **en orden**. Cada comando se **copia y se
-pega** tal cual en la terminal de tu Kali.
+Despliegue completo sobre una Kali desde cero. Ejecuta los pasos **en orden**; el detalle técnico
+ampliado está en [DEPLOY.md](DEPLOY.md).
 
-### Lo que necesitas antes de empezar
+### Requisitos previos
 
-- 🐉 **Una máquina Kali Linux** (es la "E2": el equipo desde el que se trabaja). Si no tienes una,
-  descarga una imagen o una máquina virtual lista para usar en
-  [kali.org/get-kali](https://www.kali.org/get-kali/) y arráncala. Con una VM (VirtualBox/VMware)
-  basta: dale **≥ 4 GB de RAM** y **≥ 15 GB de disco libre**.
-- 🌐 **Conexión a internet** en esa Kali.
-- 📱 **Un bot de Telegram:** abre [@BotFather](https://t.me/BotFather), envía `/newbot`, sigue los
-  pasos y **copia el token** que te da. Apunta también tu **ID de usuario** numérico (te lo dice
-  [@userinfobot](https://t.me/userinfobot)).
-- 🔑 **Una cuenta de Claude Pro** (es el motor que piensa).
+- 🐉 **Kali Linux** como host de trabajo (la zona "E2"), nativa o en máquina virtual. Si partes de
+  cero, descarga una imagen oficial desde [kali.org/get-kali](https://www.kali.org/get-kali/) y
+  reserva **≥ 4 GB de RAM** y **≥ 15 GB de disco**.
+- 🌐 **Salida a internet** desde la Kali.
+- 📱 **Credenciales del bot de Telegram**: registra un bot con [@BotFather](https://t.me/BotFather)
+  (`/newbot`) y guarda su **token**, junto con tu **ID de usuario** numérico
+  ([@userinfobot](https://t.me/userinfobot)). El bot es el canal de control remoto.
+- 🔑 **Sesión de Claude Pro** activa: es el modelo que razona y ejecuta los agentes.
 
-### Montaje paso a paso
+### Despliegue paso a paso
 
-**1. Descarga la herramienta**
+**1. Clona el repositorio**
 ```bash
 git clone https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools.git data-attack
 cd data-attack
 ```
-Descarga el proyecto en una carpeta `data-attack` y entra en ella.
 
-**2. Instálalo todo con un solo comando**
+**2. Despliega el entorno completo**
 ```bash
 chmod +x deploy/*.sh
 sudo ./deploy/auto-deploy.sh
 ```
-Revisa tu sistema y luego instala las herramientas de pentesting (nmap, sqlmap, Metasploit, NetExec,
-Sliver, ProjectDiscovery…), Claude Code, la base de vulnerabilidades y el bot. **A mitad del proceso
-te pedirá el token de Telegram y tu ID** — pégalos cuando los pida. Tarda un rato según tu conexión,
-y es **seguro volver a ejecutarlo** si algo se corta. Cuando termina verás **`✔ Despliegue completado`**.
+Instala y verifica el toolchain ofensivo (nmap, sqlmap, Metasploit, NetExec, Sliver,
+ProjectDiscovery…), Claude Code, el RAG de vulnerabilidades y el bot. El instalador es
+**idempotente** —puedes relanzarlo sin riesgo si se interrumpe— y solicita el **token de Telegram**
+y tu **ID** durante la ejecución. Finaliza con `✔ Despliegue completado`.
 
-> 🔐 **Solo la primera vez:** inicia sesión en Claude. Ejecuta `claude`, completa el login con tu
-> cuenta Pro y ciérralo. El bot necesita esa sesión iniciada en la máquina.
+> 🔐 **Autenticación inicial (una vez):** ejecuta `claude` e inicia sesión con tu cuenta Pro. El bot
+> opera sobre esa sesión, por lo que debe quedar autenticada en la máquina.
 
-**3. Di qué tienes permiso de atacar (el alcance)**
+**3. Declara el alcance autorizado**
 ```bash
 cp contracts/scope.example.json contracts/scope.json
 nano contracts/scope.json
 ```
-`scope.json` es la lista de dominios e IPs **autorizados**. Edítalo con los de tu engagement y guarda
-(en `nano`: `Ctrl+O`, `Enter`, `Ctrl+X`). ⚠️ **Atacar algo fuera de esa lista es ilegal.** La
-herramienta lo bloquea sola, pero la responsabilidad es tuya.
+`scope.json` define los dominios e IPs **en alcance**. Cumpliméntalo con los del engagement. Toda
+acción contra un objetivo ausente de ese fichero la bloquea `scope_guard.py`; operar fuera de alcance
+es ilegal y recae sobre el operador.
 
-**4. Arranca y controla** (elige una forma)
+**4. Inicia el control** (una de estas vías)
 
-| Cómo | Comando |
+| Vía | Comando |
 | :--- | :--- |
-| 📱 Desde el móvil (Telegram) | `cd bot && ./.venv/bin/python bot.py` |
-| 🖥️ En la terminal (panel TUI) | `./deploy/dash.sh` |
-| ⌨️ Línea de comandos | `claude` y escribe `/agents` |
+| 📱 Bot de Telegram (remoto) | `cd bot && ./.venv/bin/python bot.py` |
+| 🖥️ Panel TUI (terminal) | `./deploy/dash.sh` |
+| ⌨️ CLI de Claude Code | `claude` → `/agents` |
 
-**5. Comprueba que todo está bien**
+**5. Verifica el entorno**
 ```bash
 ./deploy/verify.sh
 ```
-Muestra una tabla de ✅/faltante. Si todo sale ✅, escríbele al bot por Telegram (por ejemplo,
-"estado") y debería contestarte.
+Devuelve un cuadro de estado (✅/faltante) y termina con error si falta algún componente crítico.
 
-### Si algo no funciona
+### Resolución de problemas
 
-- **Se cortó a mitad / "sin conectividad":** revisa tu internet y **vuelve a lanzar**
-  `sudo ./deploy/auto-deploy.sh`. Es repetible, no rompe nada.
-- **El bot no responde:** ¿hiciste el login con `claude`? ¿existe el archivo `bot/.env` con el token
-  y tu ID? Vuelve a crearlo con el asistente: `./deploy/setup.sh`.
-- **Falta alguna herramienta:** `./deploy/verify.sh --install` instala lo que falte.
+- **El despliegue se interrumpe:** revisa la conectividad y **relanza** `sudo ./deploy/auto-deploy.sh`
+  (es idempotente, no deja el entorno a medias).
+- **El bot no responde:** confirma la sesión de `claude` y que `bot/.env` contiene el token y tu ID;
+  regenéralo con `./deploy/setup.sh` si procede.
+- **Falta alguna herramienta:** `./deploy/verify.sh --install` instala los componentes pendientes.
 
-### Otras formas de montarlo (opcionales)
+### Variantes de despliegue
 
-- 🧭 **Con asistente guiado:** `./deploy/setup.sh` te lleva paso a paso por el despliegue, el
-  `bot/.env`, el `scope.json` y la verificación, con menús
-  ([gum](https://github.com/charmbracelet/gum)).
-- 🐳 **En contenedores (Docker):** `./deploy/docker.sh up` construye una imagen y levanta el bot
-  **sin instalar el toolchain** en tu Kali (monta tu login Pro `~/.claude` y `bot/.env`, no se
-  hornean). Detalle en [DEPLOY.md](DEPLOY.md) → "Despliegue en contenedores".
-- 💰 **¿Cuánto cuesta?** `./deploy/agentsview.sh up` abre un panel **local** de coste/actividad por
-  agente ([agentsview](https://github.com/kenn-io/agentsview); lee `~/.claude/projects/`, sirve en
-  `127.0.0.1:8080`, telemetría off — **nunca expuesto** a internet).
+- 🧭 **Asistente guiado:** `./deploy/setup.sh` cubre despliegue, `bot/.env`, `scope.json` y
+  verificación mediante menús ([gum](https://github.com/charmbracelet/gum)).
+- 🐳 **Contenedores:** `./deploy/docker.sh up` construye la imagen y levanta el bot sin instalar el
+  toolchain en el host (monta tu sesión Pro `~/.claude` y `bot/.env`; no se incrustan en la imagen).
+  Ver [DEPLOY.md](DEPLOY.md) → "Despliegue en contenedores".
+- 💰 **Coste:** `./deploy/agentsview.sh up` expone un panel **local** de coste/actividad por agente
+  ([agentsview](https://github.com/kenn-io/agentsview); lee `~/.claude/projects/`, sirve en
+  `127.0.0.1:8080`, telemetría desactivada — nunca expuesto a internet).
 
-> El detalle técnico completo está en [DEPLOY.md](DEPLOY.md) y [bot/README.md](bot/README.md).
+> Detalle técnico completo en [DEPLOY.md](DEPLOY.md) y [bot/README.md](bot/README.md).
 
 ## Plataformas soportadas
 
