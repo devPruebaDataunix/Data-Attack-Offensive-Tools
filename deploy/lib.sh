@@ -40,14 +40,23 @@ ensure_go(){
 }
 
 # ProjectDiscovery: pdtm + sus tools (subfinder/httpx/naabu/katana/dnsx…), binarios prebuilt.
+# `go install` puede fallar si la VM no resuelve proxy.golang.org/sum.golang.org por DNS: forzamos el
+# fallback a 'direct' (clona de github, cuyo DNS sí resuelve) y desactivamos la checksum DB. NO fatal.
 ensure_pd(){
   ensure_go || { echo "[ERR] sin Go no se pueden instalar las PD tools."; return 1; }
   export PATH="$PATH:$(gobin)"
-  have pdtm || go install github.com/projectdiscovery/pdtm/cmd/pdtm@latest
+  export GOPROXY="${GOPROXY:-https://proxy.golang.org|direct}" GOSUMDB="${GOSUMDB:-off}"
+  if ! have pdtm; then
+    go install github.com/projectdiscovery/pdtm/cmd/pdtm@latest 2>/dev/null \
+      || GOPROXY=direct go install github.com/projectdiscovery/pdtm/cmd/pdtm@latest 2>/dev/null \
+      || echo "[!] pdtm NO instalado (¿DNS/red?): faltarán subfinder/httpx/nuclei/naabu/katana/dnsx." \
+              "Manual: GOPROXY=direct GOSUMDB=off go install github.com/projectdiscovery/pdtm/cmd/pdtm@latest"
+  fi
   export PATH="$PATH:$(gobin)"
-  pdtm -ia -duc -nc 2>/dev/null || true   # pdtm no tiene -silent; -duc/-nc son los flags quietos
+  have pdtm && { pdtm -ia -duc -nc 2>/dev/null || true; }   # pdtm no tiene -silent; -duc/-nc = quietos
   have nuclei && { nuclei -update-templates -silent 2>/dev/null || true; }
-  have gau || go install github.com/lc/gau/v2/cmd/gau@latest 2>/dev/null || true
+  have gau || go install github.com/lc/gau/v2/cmd/gau@latest 2>/dev/null \
+    || GOPROXY=direct go install github.com/lc/gau/v2/cmd/gau@latest 2>/dev/null || true
 }
 
 ensure_impacket(){
@@ -56,11 +65,21 @@ ensure_impacket(){
   pipx install impacket 2>/dev/null || true
 }
 
-ensure_claude(){ have claude || $SUDO npm install -g @anthropic-ai/claude-code; }
+# Kali gatea los postinstall de npm (warn 'allow-scripts'), pero el binario de claude lo crea npm
+# igualmente; si el install falla (red), avisamos sin abortar.
+ensure_claude(){
+  have claude && return 0
+  $SUDO npm install -g @anthropic-ai/claude-code \
+    || echo "[!] claude no se instaló (¿npm/red?). Reintenta: sudo npm install -g @anthropic-ai/claude-code"
+}
 # Espejo opencode. Los providers free (Groq/Cerebras/… ver .opencode/opencode.json) leen su clave
 # de {env:VAR} en runtime → deploy NO interactivo, sin 'opencode auth login'. El operador exporta
 # las claves (cp .opencode/opencode.example.env .opencode/opencode.env; rellena; carga el env).
-ensure_opencode(){ have opencode || $SUDO npm install -g opencode-ai; }
+ensure_opencode(){
+  have opencode && return 0
+  $SUDO npm install -g opencode-ai \
+    || echo "[!] opencode no se instaló (lab-only; ¿npm/red?). Reintenta: sudo npm install -g opencode-ai"
+}
 
 # gum (Charm) — para el asistente interactivo deploy/setup.sh. Vía el repo apt de Charm;
 # si no se puede, deja que setup.sh degrade a prompts de texto (no es crítico).
@@ -97,13 +116,27 @@ ensure_docker(){
   docker compose version >/dev/null 2>&1 || echo "[!] 'docker compose' (v2) no disponible; usa 'docker-compose' o instala el plugin."
 }
 
-# textual (panel TUI) — en el venv del bot.
+# textual (panel TUI) — SIEMPRE en el venv del bot. Kali es PEP 668 ('externally-managed'): NO se
+# puede pip-instalar al python del sistema. Si el venv no existe (p.ej. ruta verify --install, que no
+# pasa por el setup_bot del auto-deploy), se crea aquí. Reporta el error real si pip falla.
 ensure_textual(){
-  local py="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/bot/.venv/bin/python"
-  [ -x "$py" ] || py="$(command -v python3 || command -v python)"
+  local repo venv py req errf
+  repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+  venv="$repo/bot/.venv"; py="$venv/bin/python"; req="$repo/bot/requirements.txt"
+  if [ ! -x "$py" ]; then
+    echo "[*] Creando el venv del bot…"
+    python3 -m venv "$venv" 2>/dev/null \
+      || { echo "[!] No pude crear bot/.venv (instala 'python3-venv'); la TUI no abrirá."; return 1; }
+  fi
   "$py" -c "import textual" 2>/dev/null && return 0
-  echo "[*] Instalando textual en el venv del bot…"
-  "$py" -m pip install --quiet textual 2>/dev/null || echo "[!] textual no instalado (la TUI no abrirá)."
+  echo "[*] Instalando dependencias del bot (textual + SDK + telegram) en el venv…"
+  errf="$(mktemp 2>/dev/null || echo /tmp/da_pip_err)"
+  "$py" -m pip install --quiet --upgrade pip 2>/dev/null || true
+  [ -f "$req" ] && { "$py" -m pip install --quiet -r "$req" 2>"$errf" || true; }
+  "$py" -c "import textual" 2>/dev/null || "$py" -m pip install --quiet textual 2>"$errf" || true
+  if "$py" -c "import textual" 2>/dev/null; then rm -f "$errf"; return 0; fi
+  echo "[!] textual no instalado (la TUI no abrirá): $(tail -1 "$errf" 2>/dev/null)"
+  rm -f "$errf"; return 1
 }
 
 # agentsview — analítica local-first de sesiones de Claude Code (coste/actividad por agente).

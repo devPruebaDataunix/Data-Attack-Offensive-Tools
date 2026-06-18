@@ -62,6 +62,7 @@
 - [Características clave](#características-clave)
 - [Arquitectura](#arquitectura)
 - [Despliegue en Kali (E2)](#despliegue-en-kali-e2)
+- [Actualizar](#actualizar)
 - [Plataformas soportadas](#plataformas-soportadas)
 - [Instalación rápida (Claude Code)](#instalación-rápida-claude-code)
 - [Los 18 agentes](#los-18-agentes)
@@ -111,32 +112,40 @@ hops anti-bucle).
 ## Arquitectura
 
 El orquestador delega por fases hacia tres zonas de aislamiento (E1 recon, E2 explotación,
-E3 cierre). Los agentes escriben hallazgos en el blackboard; `vuln-triage` consulta el RAG; y
-el hook de alcance vigila cada comando de la zona E2 contra el objetivo.
+E3 cierre) y hace de **router del bus A2A** entre agentes. Los agentes escriben hallazgos y
+mensajes en el blackboard; `vuln-triage` consulta el RAG; y cada acción que toca al objetivo pasa
+por los **guardarraíles deterministas** (alcance, presupuesto, bus A2A) **+ aprobación humana**.
 
 ```mermaid
 flowchart TB
-    ORQ["🧭 Orquestador · AGENTS.md<br/>sesión principal (hub)"]
-    SG{{"🛡️ scope_guard.py<br/>hook PreToolUse"}}
-    BB[("🗒️ Blackboard<br/>engagement.json")]
-    RAGDB[("📚 RAG KEV+EPSS<br/>rag/ (SQLite)")]
-    subgraph E1["🟦 E1 · Recon"]
+    OP["👤 Operador<br/>Telegram · TUI de control total"]
+    ORQ["🧭 Orquestador · AGENTS.md<br/>sesión principal · hub + router A2A"]
+    subgraph GATES["🛡️ Guardarraíles deterministas (hooks)"]
+        SG["scope_guard"]
+        BG["budget_guard"]
+        AG["a2a_guard"]
+    end
+    BB[("🗒️ Blackboard · engagement.json<br/>targets · findings · mensajes A2A · evidencia")]
+    RAGDB[("📚 RAG KEV+EPSS<br/>SQLite")]
+    subgraph E1["🟦 E1 · Recon (3)"]
         R["osint-recon · active-recon · recon-suite"]
     end
-    subgraph E2["🟥 E2 · Explotación"]
-        X["vuln-triage · nuclei · web-exploit · web-fuzzing<br/>sqlmap · network-exploit · post-exploit · lateral-discovery<br/>metasploit · netexec · sliver · c2-exfil · ai-security"]
+    subgraph E2["🟥 E2 · Explotación (13)"]
+        X["vuln-triage · nuclei · web-exploit · web-fuzzing · sqlmap<br/>network-exploit · metasploit · netexec<br/>post-exploit · lateral-discovery · sliver · c2-exfil · ai-security"]
     end
-    subgraph E3["🟩 E3 · Cierre"]
+    subgraph E3["🟩 E3 · Cierre (2)"]
         C["reporting · knowledge-postmortem"]
     end
-    ORQ ==>|delega / recoge| E1 & E2 & E3
+    OP -->|órdenes · aprobación humana| ORQ
+    ORQ -->|delega y enruta| E1
+    ORQ -->|delega y enruta| E2
+    ORQ -->|delega y enruta| E3
+    ORQ -.->|cada acción pasa por| GATES
     E1 -.->|targets| BB
-    E2 -.->|findings| BB
-    E3 -.->|lecciones / informe| BB
+    E2 -.->|findings · A2A| BB
+    E3 -.->|informe · lecciones| BB
     BB -.->|reinyecta lecciones| ORQ
-    X ==>|consulta CVE| RAGDB
-    SG -.->|valida cada comando| E2
-    ORQ -.->|lee alcance| SG
+    X -->|consulta CVE| RAGDB
 ```
 
 > El mapa completo y siempre al día vive en [ARCHITECTURE_MAP.md](ARCHITECTURE_MAP.md) — se
@@ -223,6 +232,42 @@ Devuelve un cuadro de estado (✅/faltante) y termina con error si falta algún 
   `127.0.0.1:8080`, telemetría desactivada — nunca expuesto a internet).
 
 > Detalle técnico completo en [DEPLOY.md](DEPLOY.md) y [bot/README.md](bot/README.md).
+
+## Actualizar
+
+¿Tienes el repositorio clonado en una versión antigua? Estos pasos lo llevan a la última
+**conservando tus datos de runtime** (`contracts/scope.json`, `contracts/engagement.json`,
+`bot/.env`, `rag/vulns.db` y `engagements/` están en `.gitignore` y no se tocan).
+
+**1. Comprueba cómo de atrás vas**
+```bash
+cd data-attack
+git fetch origin
+git log --oneline -1                  # tu versión actual
+git log --oneline -1 origin/master    # la última publicada
+```
+
+**2. Actualiza el código**
+```bash
+git pull --ff-only origin master
+```
+Si tienes ediciones locales y `--ff-only` se queja, apártalas y vuelve a aplicarlas:
+```bash
+git stash && git pull --ff-only origin master && git stash pop
+```
+*(Opción de fuerza —descarta cambios locales del código, no tus datos—:* `git reset --hard origin/master`*.)*
+
+**3. Instala lo nuevo y reverifica**
+```bash
+chmod +x deploy/*.sh
+./deploy/verify.sh --install     # instala solo lo que falte (TUI/textual, agentsview, opencode, toolchain)
+./deploy/verify.sh               # tabla de estado: todo en ✅
+```
+Para **actualizar además todo el toolchain** a su última versión: `sudo ./deploy/auto-deploy.sh --update`.
+
+> El despliegue es **idempotente** y **tolerante a fallos de red**: si un componente no se puede
+> instalar (p. ej. un fallo de DNS), te avisa y **continúa con el resto** en vez de abortar;
+> re-ejecútalo cuando se resuelva. Lo que ha cambiado entre versiones, en [CHANGELOG.md](CHANGELOG.md).
 
 ## Plataformas soportadas
 

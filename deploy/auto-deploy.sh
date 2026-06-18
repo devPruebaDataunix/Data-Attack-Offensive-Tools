@@ -119,7 +119,8 @@ install_claude(){
   if have claude && [ "$UPDATE" -eq 0 ]; then
     ok "claude ya instalado ($(claude --version 2>/dev/null))"
   else
-    $SUDO npm install -g @anthropic-ai/claude-code
+    $SUDO npm install -g @anthropic-ai/claude-code \
+      || warn "npm install de claude-code falló (¿red?). Reintenta luego: sudo npm install -g @anthropic-ai/claude-code"
     # El bin global de npm puede no estar en el PATH de ESTA shell tras instalar, y bash
     # cachea las rutas de comandos -> 'claude' parecía no instalado y daba falsos [ERR] en
     # los pasos 2 y 6. Añadimos el bin global al PATH (persiste al resto de fases y al verify) + rehash.
@@ -143,7 +144,16 @@ install_tools(){
 
   # ProjectDiscovery via pdtm (subfinder, httpx, nuclei, naabu, katana, dnsx…)
   export PATH="$PATH:$(go env GOPATH)/bin"
-  if ! have pdtm; then info "Instalando pdtm (ProjectDiscovery Tool Manager)…"; go install github.com/projectdiscovery/pdtm/cmd/pdtm@latest; fi
+  # `go install` resuelve por proxy.golang.org/sum.golang.org; si la VM no los resuelve por DNS,
+  # caemos a 'direct' (clona de github, cuyo DNS sí resuelve) y desactivamos la checksum DB.
+  # El '|direct' ya reintenta solo; el segundo intento explícito es cinturón y tirantes. NO fatal.
+  export GOPROXY="${GOPROXY:-https://proxy.golang.org|direct}" GOSUMDB="${GOSUMDB:-off}"
+  if ! have pdtm; then
+    info "Instalando pdtm (ProjectDiscovery Tool Manager)…"
+    go install github.com/projectdiscovery/pdtm/cmd/pdtm@latest \
+      || GOPROXY=direct go install github.com/projectdiscovery/pdtm/cmd/pdtm@latest \
+      || warn "pdtm no se pudo instalar (¿DNS/red?): faltarán subfinder/httpx/nuclei/naabu/katana/dnsx. Reintenta: GOPROXY=direct GOSUMDB=off go install github.com/projectdiscovery/pdtm/cmd/pdtm@latest"
+  fi
   # pdtm NO tiene -silent (daba "flag provided but not defined"); los flags quietos son
   # -duc (no comprobar updates de pdtm) y -nc (sin color, mejor para el log).
   if [ "$UPDATE" -eq 1 ]; then pdtm -ua -duc -nc || true; else pdtm -ia -duc -nc || true; fi
@@ -173,8 +183,11 @@ install_tools(){
 setup_rag(){
   step "4/6  RAG de vulnerabilidades"
   cd "$REPO_DIR"
-  python3 rag/refresh.py --epss-all
-  ok "RAG poblado."
+  if python3 rag/refresh.py --epss-all; then
+    ok "RAG poblado."
+  else
+    warn "El RAG no se pudo poblar (¿red? CISA KEV/EPSS). Reintenta luego: python3 rag/refresh.py --epss-all"
+  fi
 }
 
 # =============================================================================
@@ -183,9 +196,10 @@ setup_rag(){
 setup_bot(){
   step "5/6  Bot de Telegram"
   cd "$REPO_DIR/bot"
-  python3 -m venv .venv
-  ./.venv/bin/pip install --quiet --upgrade pip
-  ./.venv/bin/pip install --quiet -r requirements.txt
+  python3 -m venv .venv || warn "No pude crear bot/.venv (¿falta python3-venv?)."
+  ./.venv/bin/pip install --quiet --upgrade pip 2>/dev/null || true
+  ./.venv/bin/pip install --quiet -r requirements.txt \
+    || warn "Dependencias del bot (textual/SDK/telegram) no instaladas del todo (¿red/PyPI?). Reintenta: bot/.venv/bin/pip install -r bot/requirements.txt"
   if [ ! -f .env ]; then
     info "Configuración del bot (no se guarda en el repo)."
     read -rp "  TELEGRAM_TOKEN: " _tok
@@ -203,7 +217,8 @@ setup_bot(){
 # =============================================================================
 run_verify(){
   step "6/6  Verificación final"
-  bash "${SCRIPT_DIR}/verify.sh" || { err "La verificación encontró problemas (ver arriba)."; return 1; }
+  bash "${SCRIPT_DIR}/verify.sh" \
+    || warn "La verificación reporta faltantes (revisa la tabla de arriba). El despliegue ha CONTINUADO; instala/repara lo señalado y re-ejecuta este script (es idempotente)."
 }
 
 # ── Orquestación ─────────────────────────────────────────────────────────────

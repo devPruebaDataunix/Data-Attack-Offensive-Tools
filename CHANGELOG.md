@@ -4,6 +4,28 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [1.10.1] - 2026-06-18
+### Fixed
+- **Despliegue resiliente a fallos de red/DNS.** `deploy/auto-deploy.sh` ya NO aborta a mitad si un
+  paso de red falla: `pdtm` (ProjectDiscovery), `npm i` de Claude Code, `rag/refresh.py` y el `pip`
+  del bot ahora **avisan y continúan**. Antes, un `go install` de pdtm fallido por no resolver
+  `proxy.golang.org` por DNS mataba todo el deploy en el paso 3/6 (vía `set -e` + trap ERR).
+- **Go tras DNS roto.** `go install` (pdtm/gau) usa `GOPROXY=https://proxy.golang.org|direct` +
+  `GOSUMDB=off` con reintento a `direct`: si la máquina no resuelve `proxy.golang.org`/`sum.golang.org`,
+  clona directamente de GitHub.
+- **`ensure_textual` robusto** (`deploy/lib.sh`): **crea el venv del bot si falta** (en vez de caer al
+  Python del sistema, que en Kali falla por PEP 668 *externally-managed*), instala `requirements.txt`
+  completo y **reporta el error real** de pip en vez de ocultarlo.
+- **Diagrama de Arquitectura del README**: corregido el render (se retira la arista etiquetada con
+  destino múltiple `&` que GitHub no renderiza) y **actualizado al estado actual** (bus A2A + router,
+  los tres guardarraíles, conteos por zona, entrada del operador Telegram/TUI).
+### Added
+- **README — apartado "Actualizar"**: pasos exactos para llevar un clon antiguo a la última versión
+  conservando los datos de runtime.
+### Notes
+- `npm warn allow-scripts` (Kali no corre los *postinstall* de npm por política) es benigno: el
+  binario de `claude` lo crea npm igualmente y funciona. Sin cambios en agentes/hooks/bot.
+
 ## [1.10.0] - 2026-06-18
 ### Added
 - **TUI de control total** (`bot/tui/`): el panel local (Textual) pasa de pantalla única a una
@@ -311,6 +333,7 @@ se versiona con [SemVer](https://semver.org/lang/es/).
 - Controles base: gate de alcance determinista (`scope_guard.py`), validación de esquema del
   blackboard, escritura atómica, zonas de aislamiento E1/E2/E3 y reporting humanizado.
 
+[1.10.1]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.10.1
 [1.10.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.10.0
 [1.9.2]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.9.2
 [1.9.1]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.9.1
