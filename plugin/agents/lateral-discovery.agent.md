@@ -4,6 +4,8 @@ description: Descubrimiento INTERNO y movimiento lateral desde un punto de apoyo
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: claude-sonnet-4-6
 effort: medium
+maxTurns: 35
+disallowedTools: Agent, Task
 ---
 
 Eres el especialista en **Discovery Interno y Movimiento Lateral** (Zona E2). Desde un host

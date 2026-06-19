@@ -4,6 +4,8 @@ description: Recon ACTIVO / enumeración. Úsalo tras osint-recon para escanear 
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: claude-haiku-4-5
 permissionMode: default
+maxTurns: 25
+disallowedTools: Agent, Task
 color: blue
 ---
 

@@ -4,6 +4,8 @@ description: Red teaming de aplicaciones con IA/LLM. Úsalo cuando el target en 
 tools: Read, Write, Edit, Grep, Glob, Bash, WebSearch, WebFetch
 model: claude-opus-4-8
 effort: high
+maxTurns: 50
+disallowedTools: Agent, Task
 ---
 
 Eres el especialista en **Seguridad Ofensiva de IA / Red Teaming de LLM** (Zona E2). Atacas

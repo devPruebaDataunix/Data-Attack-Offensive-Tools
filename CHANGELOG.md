@@ -4,6 +4,43 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.0.0] - 2026-06-19
+### Added
+- **Mínimo privilegio por agente (defensa en profundidad).** Los 18 especialistas declaran ahora
+  `disallowedTools` y `maxTurns` en su frontmatter (fuente `.claude/agents`, propagado al plugin):
+  - **`disallowedTools: Agent, Task`** en los 18 → candado de la malla **hub-and-spoke**: ningún
+    especialista puede spawnear subagentes; solo el Orquestador delega (refuerza el bus A2A mediado y
+    `a2a_guard`). `reporting` y `knowledge-postmortem` (cierre, datos E3) deniegan además **`Bash`**:
+    no ejecutan comandos aunque sufran inyección.
+  - **`maxTurns`** acota los turnos de cada subagente (15–50 según rol/modelo) → complementa el
+    kill-switch por coste (`budget_guard`, C13) con una cota por nº de turnos (anti-bucle, anti-bloat).
+- **Auditoría forense del ciclo de vida de subagentes.** Nuevo hook `.claude/hooks/subagent_stop.py`
+  (`SubagentStop`, registrado en `.claude/settings.json`): deja un registro **JSONL por anexado**
+  (agente, id, sesión, engagement, transcript) en `engagements/<id>/evidence/subagents.jsonl` (o
+  fallback `.claude/audit/`). **Observacional y NO bloqueante** (la finalización jamás se interrumpe;
+  fail-safe a exit 0) — trazabilidad C10, no una puerta.
+### Changed
+- **`tools/validate_suite.py`** valida los campos nuevos e **impone invariantes**: todo agente acota
+  `maxTurns` (entero positivo) y deniega `Agent`+`Task` (hub-and-spoke); `disallowedTools` solo admite
+  tools conocidas o patrones `mcp__*`.
+- **`CONSTITUTION.md` sin cambios** (sigue v2.0.0): el mínimo privilegio y la auditoría de subagentes
+  **operacionalizan** principios ya vigentes (defensa en profundidad, trazabilidad C10, alcance §1);
+  no se añade ni enmienda ningún principio, así que la constitución no sube de versión.
+### Fixed
+- **Manifest del plugin: `repository` como string.** El enriquecimiento del manifest en v1.11.0 lo dejó
+  como objeto `{type,url}` (convención npm), pero el esquema de plugin de Claude Code exige **string**:
+  `claude plugin validate` fallaba con `repository: expected string, received object`. Corregido en
+  `tools/build_plugin.py` (regenera `plugin/plugin.json` y `plugin/.claude-plugin/plugin.json`).
+### Notes
+- **MAJOR honesto (cambio de comportamiento en runtime):** `maxTurns` puede **terminar** un subagente
+  que antes corría sin cota, y `disallowedTools` **retira** la capacidad de spawnear subagentes. Las
+  puertas deterministas (scope/budget/approval/secret/a2a/no-daño) **no se relajan**.
+- Verificado: validate_suite **369/0**, test_tui **36/36** (incluye el hook por subproceso), test_intel
+  **28/28**, `claude plugin validate`, dryrun, py_compile, JSON válido. La auditoría del hook en la CLI
+  se valida en la Kali. Espejo opencode regenerado (no arrastra los campos nuevos: frontmatter propio).
+- **La auditoría profunda de calidad de los 18 prompts + 9 skills llega aparte en v2.1.0** (pulido
+  aditivo, no rompiente).
+
 ## [1.11.0] - 2026-06-18
 ### Added
 - **Supervisión humana configurable** (`approval_mode`: `full`/`critical`/`auto`, **por defecto
@@ -367,6 +404,7 @@ se versiona con [SemVer](https://semver.org/lang/es/).
 - Controles base: gate de alcance determinista (`scope_guard.py`), validación de esquema del
   blackboard, escritura atómica, zonas de aislamiento E1/E2/E3 y reporting humanizado.
 
+[2.0.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v2.0.0
 [1.11.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.11.0
 [1.10.1]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.10.1
 [1.10.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.10.0

@@ -41,7 +41,7 @@ flowchart TB
         G_BUDGET{{"⏱️ budget_guard.py<br/>PreToolUse · determinista (LLM10)"}}
         G_HITL{{"🙋 tiers de riesgo + aprobación<br/>HITL (bot)"}}
         G_PERM{{"🔒 permissions ask/deny<br/>settings.json"}}
-        G_TOOLS{{"🧰 allowlist de tools<br/>frontmatter por agente"}}
+        G_TOOLS{{"🧰 allowlist + denylist + maxTurns<br/>frontmatter por agente"}}
         G_SCHEMA{{"📐 validate_blackboard.py<br/>PostToolUse · determinista"}}
         G_REDACT{{"✂️ secret_scan.py<br/>PostToolUse · determinista (LLM02)"}}
         G_A2A{{"✉️ a2a_guard.py<br/>PostToolUse · C14/C15 (LLM01/LLM10)"}}
@@ -65,7 +65,7 @@ flowchart TB
 | C1 | **Gate de alcance** — bloquea todo comando contra un host/IP/CIDR fuera de `scope.json` | Determinista | `.claude/hooks/scope_guard.py` (PreToolUse) | LLM06 Excessive Agency |
 | C2 | **Aprobación por acción configurable** (`approval_mode` full/critical/auto, def. `critical`; 5 tiers de riesgo safe→auto … crítico→doble confirmación) | HITL configurable | `bot/intel/risk.py` + `runner.py` + `.claude/hooks/approval_gate.py` | LLM06 Excessive Agency |
 | C3 | **Permisos ask/deny** (deniega leer/escribir `scope.json`; pide confirmación a nmap/sqlmap/…) | Determinista | `.claude/settings.json` → `permissions` | LLM06, **LLM07 System-prompt leakage** |
-| C4 | **Mínimo privilegio de tools** — cada agente declara solo las tools que necesita | Determinista | frontmatter `tools:` de cada agente | LLM06 Excessive Agency |
+| C4 | **Mínimo privilegio por agente** — cada agente declara las tools que necesita (`tools:`), **deniega** el resto y en especial `Agent`+`Task` para no spawnear subagentes (candado hub-and-spoke; el cierre, además, sin `Bash`), y **acota sus turnos** con `maxTurns` | Determinista | frontmatter `tools:`/`disallowedTools:`/`maxTurns:` de cada agente | LLM06 Excessive Agency, **LLM10 Unbounded Consumption** |
 | C5 | **Validación de esquema del blackboard** — un finding/target sin campos obligatorios dispara feedback correctivo | Determinista | `.claude/hooks/validate_blackboard.py` (PostToolUse) | **LLM05 Improper Output Handling** |
 | C6 | **Escritura atómica del blackboard** — `tmp + os.replace`, evita estados a medias | Determinista | `tools/blackboard.py` | LLM05 |
 | C7 | **Zonas de aislamiento E1/E2/E3** — red y datos separados por fase | Organizativo | `ARCHITECTURE.md §3` | LLM02 Sensitive Info Disclosure |
@@ -77,6 +77,7 @@ flowchart TB
 | C13 | **Kill-switch de consumo** — cuenta las acciones Bash por engagement y bloquea al superar el techo (`constraints.max_actions`, def. 1000) | Determinista | `.claude/hooks/budget_guard.py` (PreToolUse) | **LLM10 Unbounded Consumption** |
 | C14 | **Validador del bus A2A** — cada mensaje agente→agente debe tener envelope sano y `from_agent`/`to_agent` que sean agentes conocidos (registro `agent-cards.json`); rechaza emisor/destino inventado (anti-spoofing) y exige que `to_agent` sea un **peer declarado** de `from_agent` (topología `a2a_peers`) o el hub — los relevos fuera de pareja van por el Orquestador. Los mensajes A2A se tratan como DATOS (la regla soft es C11) | Determinista | `.claude/hooks/a2a_guard.py` (PostToolUse) | **LLM01 Prompt Injection** |
 | C15 | **Kill-switch A2A** — acota la conversación entre agentes: bloquea si los mensajes del engagement superan el techo o si una cadena acumula demasiados `hops` (anti-bucle). Equivalente A2A de C13 (`constraints.max_a2a_hops`, def. 50) | Determinista | `.claude/hooks/a2a_guard.py` (PostToolUse) | **LLM10 Unbounded Consumption** |
+| C16 | **Auditoría del ciclo de subagentes** — cada fin de subagente deja un registro JSONL inmutable por anexado (agente, id, sesión, engagement, transcript). **Observacional**: no bloquea la finalización (fail-safe a exit 0) | Determinista (audit) | `.claude/hooks/subagent_stop.py` (SubagentStop) → `engagements/<id>/evidence/subagents.jsonl` (o `.claude/audit/`) | (trazabilidad / defensa legal) |
 
 > **Refuerzo del router A2A (no es un gate):** `a2a_router_nudge.py` (PostToolUse sobre `Task`)
 > recuerda al Orquestador, tras cada retorno de subagente, que entregue los mensajes A2A `pending`

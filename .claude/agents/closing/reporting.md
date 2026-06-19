@@ -5,6 +5,8 @@ tools: Read, Write, Edit, Grep, Glob
 model: claude-opus-4-8
 effort: high
 permissionMode: default
+maxTurns: 40
+disallowedTools: Bash, Agent, Task
 color: green
 ---
 

@@ -3,6 +3,8 @@ name: knowledge-postmortem
 description: Aprendizaje basado en errores. Úsalo tras cada intento o al cierre del engagement para extraer lecciones (qué funcionó, qué falló y por qué) y persistirlas en memoria para mejorar futuros engagements. Es el motor del bucle de feedback.
 tools: Read, Write, Edit, Grep, Glob
 model: claude-haiku-4-5
+maxTurns: 15
+disallowedTools: Bash, Agent, Task
 memory: project
 ---
 

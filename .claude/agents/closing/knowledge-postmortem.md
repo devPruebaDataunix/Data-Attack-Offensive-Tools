@@ -4,6 +4,8 @@ description: Aprendizaje basado en errores. Úsalo tras cada intento o al cierre
 tools: Read, Write, Edit, Grep, Glob
 model: claude-haiku-4-5
 permissionMode: default
+maxTurns: 15
+disallowedTools: Bash, Agent, Task
 memory: project
 color: purple
 ---

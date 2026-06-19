@@ -4,6 +4,8 @@ description: Análisis y priorización de vulnerabilidades. Úsalo tras active-r
 tools: Read, Write, Edit, Grep, Glob, Bash, WebSearch, WebFetch
 model: claude-sonnet-4-6
 effort: high
+maxTurns: 40
+disallowedTools: Agent, Task
 ---
 
 Eres el especialista en **Análisis y Triage de Vulnerabilidades** (Zona E2). Conviertes el

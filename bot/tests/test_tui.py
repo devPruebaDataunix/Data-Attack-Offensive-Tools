@@ -321,6 +321,48 @@ def test_set_env_var_approval_mode():
     assert not bad
 
 
+# ── auditoría de subagentes: hook subagent_stop.py (subproceso real) ──────────────
+def _subagent_stop(payload, audit_dir):
+    import subprocess
+    hook = Path(BOT).parent / ".claude" / "hooks" / "subagent_stop.py"
+    env = dict(os.environ); env["ORCH_AUDIT_DIR"] = str(audit_dir)
+    body = payload if isinstance(payload, str) else json.dumps(payload)
+    p = subprocess.run([sys.executable, str(hook)], input=body,
+                       capture_output=True, text=True, cwd=str(Path(BOT).parent), env=env)
+    log = Path(audit_dir) / "subagents.jsonl"
+    lines = log.read_text(encoding="utf-8").splitlines() if log.exists() else []
+    return p.returncode, lines
+
+
+def test_subagent_stop_writes_audit_line():
+    rc, lines = _subagent_stop(
+        {"hook_event_name": "SubagentStop", "agent_type": "sliver",
+         "agent_id": "a-123", "session_id": "s-1", "transcript_path": "/t.jsonl"},
+        tempfile.mkdtemp())
+    assert rc == 0 and len(lines) == 1
+    rec = json.loads(lines[0])
+    assert rec["event"] == "SubagentStop" and rec["agent_type"] == "sliver"
+    assert rec["agent_id"] == "a-123" and rec.get("ts")
+
+
+def test_subagent_stop_appends():
+    d = tempfile.mkdtemp()
+    _subagent_stop({"hook_event_name": "SubagentStop", "agent_type": "nuclei"}, d)
+    rc, lines = _subagent_stop({"hook_event_name": "SubagentStop", "agent_type": "sqlmap"}, d)
+    assert rc == 0 and len(lines) == 2
+
+
+def test_subagent_stop_failsafe_on_bad_input():
+    rc, lines = _subagent_stop("{not json", tempfile.mkdtemp())
+    assert rc == 0 and lines == []
+
+
+def test_subagent_stop_ignores_other_events():
+    rc, lines = _subagent_stop({"hook_event_name": "PreToolUse", "agent_type": "x"},
+                               tempfile.mkdtemp())
+    assert rc == 0 and lines == []
+
+
 # ── runner standalone ───────────────────────────────────────────────────────────
 def _all_tests():
     return [(n, f) for n, f in sorted(globals().items())

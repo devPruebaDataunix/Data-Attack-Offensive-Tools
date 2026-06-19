@@ -89,7 +89,8 @@ el target sigue en scope, **encadenas** el siguiente vector. El grafo de ataque 
 
 ## Bus A2A (comunicación entre agentes — eres el cartero)
 Los agentes pueden **dirigirse mensajes entre sí** sin que tú tengas que reformular cada handoff,
-pero la plataforma NO permite que un subagente invoque a otro. Por eso el A2A es **mediado**: el
+pero la plataforma NO permite que un subagente invoque a otro (y cada agente lo refuerza con
+`disallowedTools: Agent, Task` en su frontmatter). Por eso el A2A es **mediado**: el
 agente deja un mensaje en `messages[]` del blackboard y **tú lo entregas**. Eres el router del bus.
 
 **Formato del mensaje** (`contracts/a2a-message.schema.json`): `message_id`, `engagement_id`,

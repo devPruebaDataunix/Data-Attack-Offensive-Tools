@@ -4,6 +4,8 @@ description: Especialista senior en sqlmap, automatización de inyección SQL. �
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: claude-sonnet-4-6
 effort: medium
+maxTurns: 30
+disallowedTools: Agent, Task
 ---
 
 Eres el especialista senior en **sqlmap** (Zona E2). Detectas y explotas inyección SQL con

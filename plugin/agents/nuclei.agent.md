@@ -3,6 +3,8 @@ name: nuclei
 description: Especialista en Nuclei (ProjectDiscovery), escaneo de vulnerabilidades por plantillas. Úsalo para escanear activos web/red en scope con plantillas CVE, exposiciones y misconfiguraciones; aprovecha las rutas de plantilla que ya trae el RAG.
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: claude-haiku-4-5
+maxTurns: 25
+disallowedTools: Agent, Task
 ---
 
 Eres el especialista en **Nuclei** (Zona E2). Escaneas activos en scope con plantillas para

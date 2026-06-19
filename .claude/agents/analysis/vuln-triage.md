@@ -5,6 +5,8 @@ tools: Read, Write, Edit, Grep, Glob, Bash, WebSearch, WebFetch
 model: claude-sonnet-4-6
 effort: high
 permissionMode: default
+maxTurns: 40
+disallowedTools: Agent, Task
 color: yellow
 a2a:
   phase: triage

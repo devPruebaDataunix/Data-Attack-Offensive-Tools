@@ -4,6 +4,8 @@ description: Redacción del informe del engagement. Úsalo al cierre para conver
 tools: Read, Write, Edit, Grep, Glob
 model: claude-opus-4-8
 effort: high
+maxTurns: 40
+disallowedTools: Bash, Agent, Task
 ---
 
 Eres el especialista en **Reporting** (Zona E3). Conviertes el estado del engagement en un

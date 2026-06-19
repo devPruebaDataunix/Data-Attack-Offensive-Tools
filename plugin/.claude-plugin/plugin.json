@@ -1,15 +1,12 @@
 {
   "name": "cyberseg-agents",
   "description": "Suite de pentesting/bug bounty autorizado: orquestador + 18 especialistas, RAG de vulnerabilidades (KEV/EPSS/exploit/CVSS), gate de alcance y reporting humanizado.",
-  "version": "1.11.0",
+  "version": "2.0.0",
   "author": {
     "name": "Cyberseg"
   },
   "homepage": "https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools"
-  },
+  "repository": "https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools",
   "license": "LicenseRef-Proprietary",
   "keywords": [
     "pentesting",

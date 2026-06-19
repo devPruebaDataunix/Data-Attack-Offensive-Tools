@@ -4,6 +4,8 @@ description: Recon PASIVO. Úsalo al inicio de un engagement para mapear la supe
 tools: Read, Write, Edit, Grep, Glob, WebSearch, WebFetch, Bash
 model: claude-haiku-4-5
 permissionMode: default
+maxTurns: 25
+disallowedTools: Agent, Task
 color: blue
 ---
 

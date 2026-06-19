@@ -103,6 +103,7 @@ hops anti-bucle).
 | 📚 | **RAG KEV+EPSS** | `vuln-triage` prioriza por lo que de verdad se explota (CISA KEV, EPSS, exploit público), sin reentrenar el modelo. |
 | 🛡️ | **Guardián de alcance** | `scope_guard.py` bloquea de forma determinista cualquier acción fuera de `scope.json`. |
 | 🙋 | **Supervisión configurable** | Aprobación humana por acción en modo `full`/`critical`/`auto` (def. `critical`); el alcance y el no-daño **NO** se relajan en ningún modo. |
+| 🔒 | **Mínimo privilegio por agente** | Cada especialista acota sus turnos (`maxTurns`) y no puede spawnear subagentes (`disallowedTools: Agent, Task`, malla hub-and-spoke); el cierre (reporting/postmortem) además sin `Bash`. El fin de cada subagente se audita (`SubagentStop`). |
 | 📱 | **Bot de Telegram** | Control remoto en lenguaje natural, resúmenes en vivo y aprobación por nivel de riesgo. |
 | 🖥️ | **Panel TUI de control total** | Terminal (Textual) por pestañas: estado, **bus A2A**, roster de agentes, **presupuesto/coste**, RAG, evidencia y **acciones** (kill-switch, delegación dirigida, override de fase) — con las mismas puertas que el bot. |
 | 📊 | **Analítica de coste local** | [agentsview](https://github.com/kenn-io/agentsview) (local-first) lee `~/.claude/projects/` → coste y actividad por agente en `127.0.0.1:8080`. Re-medir el gasto sin sacar datos. |
@@ -418,6 +419,9 @@ especificar antes de ejecutar, y auditar la coherencia antes de reportar.
   kill-switch de presupuesto se aplican en todo momento; encima, la **aprobación humana por acción es
   configurable** (`approval_mode`: `full`/`critical`/`auto`, def. `critical`) — ver
   [CONSTITUTION §2](CONSTITUTION.md) y [docs/config-audit.md](docs/config-audit.md).
+- **Mínimo privilegio por agente:** cada especialista acota turnos (`maxTurns`) y no puede spawnear
+  subagentes (`disallowedTools: Agent, Task`, malla hub-and-spoke); los agentes de cierre, además, sin
+  `Bash`. El fin de cada subagente queda auditado (hook `SubagentStop` → `engagements/<id>/evidence/`).
 - **Allowlist de user-id** en el bot; cualquier otro queda rechazado y logueado.
 - **Secretos fuera del repo:** token y user-id en `bot/.env` (ignorado por git).
 - **Regla de evidencia:** sin fuente, no se explota; sin evidencia, no es un hallazgo.

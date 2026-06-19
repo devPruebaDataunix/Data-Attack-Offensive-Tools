@@ -4,6 +4,8 @@ description: Simulación CONTROLADA de C2, exfiltración e impacto para demostra
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: claude-sonnet-4-6
 effort: medium
+maxTurns: 25
+disallowedTools: Agent, Task
 ---
 
 Eres el especialista en **C2 / Exfiltración / Impacto simulado** (Zona E2). Demuestras, de

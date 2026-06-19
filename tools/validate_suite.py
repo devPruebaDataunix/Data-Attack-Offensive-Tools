@@ -86,6 +86,20 @@ def validate_agents():
         tools = [t.strip() for t in fm.get("tools", "").split(",") if t.strip()]
         unknown = [t for t in tools if t not in KNOWN_TOOLS]
         check(not unknown, f"{rel}: tools OK", f"{rel}: tools desconocidas {unknown}", warn=True)
+        # Hardening v2.0.0: cota de turnos (todo agente acotado) + denylist de tools.
+        mt = fm.get("maxTurns")
+        if check(mt is not None, f"{rel}: maxTurns declarado",
+                 f"{rel}: falta maxTurns (todo agente debe acotar turnos)"):
+            check(mt.isdigit() and int(mt) > 0, f"{rel}: maxTurns '{mt}' OK",
+                  f"{rel}: maxTurns inválido '{mt}' (entero positivo)")
+        disallowed = [t.strip() for t in fm.get("disallowedTools", "").split(",") if t.strip()]
+        bad_dis = [t for t in disallowed if t not in KNOWN_TOOLS and not t.startswith("mcp__")]
+        check(not bad_dis, f"{rel}: disallowedTools OK",
+              f"{rel}: disallowedTools desconocidas {bad_dis}", warn=True)
+        # Invariante de arquitectura: ningún especialista puede spawnear subagentes (hub-and-spoke).
+        check("Agent" in disallowed and "Task" in disallowed,
+              f"{rel}: deniega Agent+Task (hub-and-spoke)",
+              f"{rel}: debe denegar Agent y Task en disallowedTools (malla hub-and-spoke)")
         if "memory" in fm:
             check(fm["memory"] in {"user", "project", "local"}, f"{rel}: memory OK",
                   f"{rel}: memory inválida '{fm['memory']}'")

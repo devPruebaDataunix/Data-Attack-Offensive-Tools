@@ -4,6 +4,8 @@ description: Especialista en el toolkit de recon moderno — subfinder, amass, d
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: claude-haiku-4-5
 permissionMode: default
+maxTurns: 30
+disallowedTools: Agent, Task
 color: blue
 ---
 

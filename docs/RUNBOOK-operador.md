@@ -58,7 +58,7 @@ bash deploy/verify.sh              # toolchain + versiones + auth + RAG
 claude plugin validate ./plugin    # debe decir: ✔ Validation passed
 python tools/validate_suite.py     # debe decir: 0 fallos
 python bot/tests/test_intel.py     # 28/28 OK (clasificación / scope / gate de riesgo / modos / A2A)
-python bot/tests/test_tui.py       # 32/32 OK (state/actions de la TUI + hook approval_gate + supervisión)
+python bot/tests/test_tui.py       # 36/36 OK (state/actions TUI + hooks approval_gate/subagent_stop + supervisión)
 python dryrun/run_dryrun.py        # cadena completa SIMULADA (sin atacar): scope+RAG+blackboard
 ```
 
@@ -139,6 +139,13 @@ riesgo), `critical` (solo C2/implantes/`msfvenom`; **por defecto**) o `auto` (na
 modos siguen activos `scope_guard` (alcance) y `budget_guard` (kill-switch) — no se relajan. Cámbialo
 en `scope.json`, por env, o en el panel **Acciones** de la TUI (`./deploy/dash.sh`); el modo activo
 se muestra en la cabecera. Detalle en [config-audit.md](config-audit.md) y CONSTITUTION §2.
+
+**Mínimo privilegio y auditoría de subagentes (v2.0.0).** Cada agente acota sus turnos (`maxTurns`)
+y no puede spawnear subagentes (`disallowedTools: Agent, Task`; el cierre, además, sin `Bash`) — es
+defensa en profundidad sobre el allowlist `tools:`; las puertas deterministas no cambian. El fin de
+cada subagente se registra (hook `SubagentStop` → `engagements/<id>/evidence/subagents.jsonl`, o
+`.claude/audit/` si aún no hay engagement). Para re-tunear los techos de `maxTurns` con datos reales,
+usa `agentsview` (§5c).
 
 **Un modelo da error.** El routing usa IDs completos: `claude-haiku-4-5`, `claude-sonnet-4-6`,
 `claude-opus-4-8`. Si tu plan no sirve alguno, ajusta el `model:` del agente o `ORCH_MODEL` en

@@ -16,6 +16,7 @@ contracts/.action_count
 engagements/
 
 # ─── Generado en runtime ───────────────────────────────────────
+.claude/audit/
 rag/vulns.db
 rag/vulns.db-*
 report/INFORME-*.md

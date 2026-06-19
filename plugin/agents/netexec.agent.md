@@ -4,6 +4,8 @@ description: Especialista en NetExec (nxc, sucesor de CrackMapExec) + Impacket +
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: claude-sonnet-4-6
 effort: medium
+maxTurns: 30
+disallowedTools: Agent, Task
 ---
 
 Eres el especialista en **Active Directory / infraestructura Windows** (Zona E2) con NetExec
