@@ -221,6 +221,106 @@ def test_runner_abort_denies_gate():
     assert res.behavior == "deny"
 
 
+# ── supervisión configurable: resolución de modo (runner, sin SDK) ───────────────
+def test_runner_resolves_approval_mode_default_and_env():
+    from intel.runner import AgentRunner
+
+    async def noop(*a):
+        return True
+
+    d = tempfile.mkdtemp()
+    os.makedirs(os.path.join(d, "contracts"))   # repo sin scope.json -> default
+    prev = os.environ.pop("ORCH_APPROVAL_MODE", None)
+    try:
+        assert AgentRunner(Path(d), noop, noop, noop, noop).approval_mode == "critical"
+        os.environ["ORCH_APPROVAL_MODE"] = "auto"
+        assert AgentRunner(Path(d), noop, noop, noop, noop).approval_mode == "auto"
+        os.environ["ORCH_APPROVAL_MODE"] = "weird"   # inválido -> critical
+        assert AgentRunner(Path(d), noop, noop, noop, noop).approval_mode == "critical"
+        # explícito gana sobre env
+        assert AgentRunner(Path(d), noop, noop, noop, noop, approval_mode="full").approval_mode == "full"
+    finally:
+        os.environ.pop("ORCH_APPROVAL_MODE", None)
+        if prev is not None:
+            os.environ["ORCH_APPROVAL_MODE"] = prev
+
+
+def test_runner_approval_mode_from_scope():
+    from intel.runner import AgentRunner
+
+    async def noop(*a):
+        return True
+
+    d = tempfile.mkdtemp()
+    os.makedirs(os.path.join(d, "contracts"))
+    with open(os.path.join(d, "contracts", "scope.json"), "w", encoding="utf-8") as f:
+        json.dump({"constraints": {"approval_mode": "full"}}, f)
+    prev = os.environ.pop("ORCH_APPROVAL_MODE", None)
+    try:
+        assert AgentRunner(Path(d), noop, noop, noop, noop).approval_mode == "full"
+    finally:
+        if prev is not None:
+            os.environ["ORCH_APPROVAL_MODE"] = prev
+
+
+# ── supervisión configurable: hook approval_gate.py (subproceso real, sin SDK) ────
+def _gate(mode, command, tool="Bash"):
+    import subprocess
+    hook = Path(BOT).parent / ".claude" / "hooks" / "approval_gate.py"
+    env = dict(os.environ); env["ORCH_APPROVAL_MODE"] = mode
+    p = subprocess.run([sys.executable, str(hook)],
+                       input=json.dumps({"tool_name": tool, "tool_input": {"command": command}}),
+                       capture_output=True, text=True, cwd=str(Path(BOT).parent), env=env)
+    out = (p.stdout or "").strip()
+    return json.loads(out)["hookSpecificOutput"]["permissionDecision"] if out else None
+
+
+def test_approval_gate_auto_allows_risky():
+    assert _gate("auto", "nmap -sV 10.0.0.1") == "allow"
+
+
+def test_approval_gate_critical_allows_normal_but_asks_critical():
+    assert _gate("critical", "nmap -sV 10.0.0.1") == "allow"      # normal -> auto-aprobado
+    assert _gate("critical", "sqlmap -u http://x --batch") == "allow"  # sensitive -> auto-aprobado
+    assert _gate("critical", "sliver-server") == "ask"            # crítico -> aprobación
+
+
+def test_approval_gate_full_asks_risky():
+    assert _gate("full", "nmap -sV 10.0.0.1") == "ask"
+    assert _gate("full", "sliver-server") == "ask"
+
+
+def test_approval_gate_safe_always_allows():
+    assert _gate("full", "subfinder -d acme.example") == "allow"
+    assert _gate("critical", "whois acme.example") == "allow"
+
+
+def test_approval_gate_ignores_non_bash():
+    assert _gate("full", "anything", tool="Read") is None
+
+
+def test_state_resolve_approval_mode():
+    assert S.resolve_approval_mode(None) == "critical"
+    assert S.resolve_approval_mode({"constraints": {"approval_mode": "auto"}}) == "auto"
+    assert S.resolve_approval_mode({"constraints": {"approval_mode": "raro"}}) == "critical"
+    # override (p.ej. bot/.env) gana sobre el scope
+    assert S.resolve_approval_mode({"constraints": {"approval_mode": "full"}}, "auto") == "auto"
+
+
+def test_header_line_shows_supervision_mode():
+    out = S.header_line({"engagement_id": "T", "phase": "recon"}, 5, 100, 1.23, "critical")
+    assert "supervisión" in out and "critical" in out
+
+
+def test_set_env_var_approval_mode():
+    d = tempfile.mkdtemp()
+    os.makedirs(os.path.join(d, "bot"))
+    ok, _ = A.set_env_var(Path(d), "ORCH_APPROVAL_MODE", "auto")
+    assert ok
+    bad, _ = A.set_env_var(Path(d), "ORCH_APPROVAL_MODE", "turbo")
+    assert not bad
+
+
 # ── runner standalone ───────────────────────────────────────────────────────────
 def _all_tests():
     return [(n, f) for n, f in sorted(globals().items())

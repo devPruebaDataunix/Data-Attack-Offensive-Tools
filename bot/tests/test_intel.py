@@ -167,8 +167,9 @@ def test_gate_offensive_requires_approval():
             approvals.append(summary)
             return False   # operador deniega
 
+        # modo 'full' = máxima supervisión: hasta el ofensivo de tier 'ask' (nmap) pide aprobación.
         r = AgentRunner(BOT, emit=None, status=None, approve=approve,
-                        on_verdict=None, approval_timeout=5)
+                        on_verdict=None, approval_timeout=5, approval_mode="full")
         # comando ofensivo -> pasa por approve() -> deny
         res_deny = await r._gate("Bash", {"command": "nmap -sV 10.0.0.1"}, None)
         # comando benigno -> allow directo, sin pedir aprobación
@@ -179,6 +180,55 @@ def test_gate_offensive_requires_approval():
     assert len(approvals) == 1, "el comando ofensivo debe pedir aprobación"
     assert res_deny.behavior == "deny"
     assert res_allow.behavior == "allow"
+
+
+# ── runner: modos de supervisión (auto/critical) en el gate ─────────────────────
+def test_gate_critical_mode_autoallows_noncritical():
+    if not SDK_OK:
+        print("    (omitido: Claude Agent SDK no instalado)")
+        return
+    from intel.runner import AgentRunner
+
+    async def _run():
+        calls = []
+
+        async def approve(s):
+            calls.append(s)
+            return True
+
+        # default 'critical': nmap/sqlmap (ask) se auto-aprueban; sliver (dual) pide aprobación.
+        r = AgentRunner(BOT, emit=None, status=None, approve=approve, on_verdict=None,
+                        approval_timeout=5, approval_mode="critical")
+        nmap = await r._gate("Bash", {"command": "nmap -sV 10.0.0.1"}, None)
+        sliver = await r._gate("Bash", {"command": "sliver-server"}, None)
+        return calls, nmap, sliver
+
+    calls, nmap, sliver = asyncio.run(_run())
+    assert nmap.behavior == "allow"
+    assert sliver.behavior == "allow"   # approve devuelve True las 2 veces
+    assert len(calls) == 2, "en 'critical' solo lo crítico (dual) pide aprobación (2 confirmaciones)"
+
+
+def test_gate_auto_mode_allows_everything():
+    if not SDK_OK:
+        print("    (omitido: Claude Agent SDK no instalado)")
+        return
+    from intel.runner import AgentRunner
+
+    async def _run():
+        calls = []
+
+        async def approve(s):
+            calls.append(s)
+            return True
+
+        r = AgentRunner(BOT, emit=None, status=None, approve=approve, on_verdict=None,
+                        approval_mode="auto")
+        sliver = await r._gate("Bash", {"command": "sliver-server"}, None)
+        return calls, sliver
+
+    calls, sliver = asyncio.run(_run())
+    assert sliver.behavior == "allow" and calls == [], "en 'auto' ni lo crítico pide aprobación"
 
 
 # ── risk: tiers de riesgo y política de aprobación ──────────────────────────────

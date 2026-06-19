@@ -70,6 +70,7 @@ class AgentRunner:
         status_min_gap: float = 3.0,
         effort: Optional[str] = "medium",
         max_usd: Optional[float] = None,
+        approval_mode: Optional[str] = None,
     ):
         self.repo = Path(repo)
         self.emit = emit              # mensaje nuevo: hito importante
@@ -81,6 +82,10 @@ class AgentRunner:
         self.status_min_gap = status_min_gap
         self.effort = effort          # effort del Orquestador (coste). None = sin override.
         self.max_usd = max_usd        # techo de coste por run en USD. None = sin techo.
+        # Modo de supervisión humana (full|critical|auto). SOLO afecta a la aprobación humana por
+        # acción de ESTE gate; NO relaja los hooks deterministas (scope_guard/budget_guard), que
+        # siguen denegando por su cuenta. Default 'critical' (solo C2/implantes piden aprobación).
+        self.approval_mode = self._resolve_approval_mode(approval_mode)
 
         self._subagents: dict[str, str] = {}   # tool_use_id (Task) -> subagent_type
         self._seen: dict[str, str] = {}        # finding_id -> último status visto
@@ -99,6 +104,19 @@ class AgentRunner:
         Lo invoca el kill-switch de la TUI; complementa la cancelación del worker Textual."""
         self._aborted = True
 
+    def _resolve_approval_mode(self, explicit: Optional[str]) -> str:
+        """Resuelve el modo de supervisión: explícito > env ORCH_APPROVAL_MODE >
+        scope.json constraints.approval_mode > 'critical'. Valor inválido => 'critical'."""
+        cand = explicit or os.environ.get("ORCH_APPROVAL_MODE")
+        if not cand:
+            try:
+                sc = json.loads((self.repo / "contracts" / "scope.json").read_text(encoding="utf-8"))
+                cand = (sc.get("constraints", {}) or {}).get("approval_mode")
+            except Exception:
+                cand = None
+        cand = str(cand or "critical").strip().lower()
+        return cand if cand in ("full", "critical", "auto") else "critical"
+
     # ---- gate de permiso por acción (por tier de riesgo) ----------------------
     async def _gate(self, tool_name, tool_input, ctx):
         # Kill-switch del operador (TUI): una vez abortada la orden, se deniega TODO.
@@ -110,6 +128,14 @@ class AgentRunner:
         cmd = tool_input.get("command", "")
         tier, policy = R.classify_command(cmd)
         if policy == "auto":                      # safe / benigno -> sin fricción
+            return PermissionResultAllow()
+        # Modo de supervisión humana (config del operador, dentro de un engagement AUTORIZADO):
+        #   auto      -> sin aprobación por acción (scope_guard/budget_guard siguen activos)
+        #   critical  -> solo lo crítico (C2/implantes/msfvenom = policy 'dual') pide aprobación
+        #   full      -> aprueba todo lo de riesgo (ask + dual)  [máxima supervisión]
+        if self.approval_mode == "auto":
+            return PermissionResultAllow()
+        if self.approval_mode == "critical" and policy != "dual":
             return PermissionResultAllow()
         needed = 2 if policy == "dual" else 1     # critical (C2/implantes) = doble confirmación
         for i in range(needed):

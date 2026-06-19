@@ -246,13 +246,16 @@ def rag_render(store: Optional[dict]) -> str:
 
 
 # ── Estado global (cabecera) ─────────────────────────────────────────────────────
-def header_line(eng: dict, count: int, cap: int, cost: Optional[float]) -> str:
+def header_line(eng: dict, count: int, cap: int, cost: Optional[float],
+                approval_mode: str = "critical") -> str:
     cost_txt = f"${cost:.2f}" if isinstance(cost, (int, float)) else "—"
+    mode_color = {"full": "#3FB950", "critical": "#FF6B35", "auto": "#FF4444"}.get(approval_mode, "#FF6B35")
     return (
         f"engagement: [b]{eng.get('engagement_id', '—')}[/]   "
         f"fase: [b]{eng.get('phase', '—')}[/]   "
         f"acciones: {count}/{cap}   "
-        f"coste última orden: {cost_txt}"
+        f"coste: {cost_txt}   "
+        f"supervisión: [{mode_color}]{approval_mode}[/]"
     )
 
 
@@ -266,9 +269,18 @@ class Snapshot:
     key: str = ""
     cap: int = DEFAULT_MAX_ACTIONS
     cost: Optional[float] = None
+    approval_mode: str = "critical"
 
 
-def build_snapshot(repo, cost: Optional[float] = None) -> Snapshot:
+def resolve_approval_mode(scope: Optional[dict], override: Optional[str] = None) -> str:
+    """Modo de supervisión: override (p.ej. bot/.env) > scope.constraints.approval_mode > 'critical'.
+    Valor inválido => 'critical'."""
+    m = override or ((scope or {}).get("constraints", {}) or {}).get("approval_mode")
+    m = str(m or "critical").strip().lower()
+    return m if m in ("full", "critical", "auto") else "critical"
+
+
+def build_snapshot(repo, cost: Optional[float] = None, approval_mode: Optional[str] = None) -> Snapshot:
     """Lee TODO el estado de una vez (el 'lector único'): blackboard, scope, cards y contador.
     Los paneles consumen este Snapshot; ninguno vuelve a tocar disco en el refresco."""
     eng = load_engagement(repo)
@@ -282,4 +294,5 @@ def build_snapshot(repo, cost: Optional[float] = None) -> Snapshot:
         key=key,
         cap=max_actions(scope),
         cost=cost,
+        approval_mode=resolve_approval_mode(scope, approval_mode),
     )

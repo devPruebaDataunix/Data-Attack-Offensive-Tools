@@ -71,6 +71,12 @@ def _read_cfg() -> tuple[str, str, "float | None"]:
     return g("ORCH_MODEL", "claude-opus-4-8"), g("ORCH_EFFORT", "medium"), max_usd
 
 
+def _approval_mode() -> "str | None":
+    """Modo de supervisión de bot/.env (o entorno). None => el runner lo resuelve (scope/critical)."""
+    env = _load_env()
+    return (env.get("ORCH_APPROVAL_MODE") or os.environ.get("ORCH_APPROVAL_MODE") or "").strip() or None
+
+
 class ApprovalModal(ModalScreen[bool]):
     """Aprobación humana por acción — mapea el callback `approve` del runner."""
 
@@ -143,9 +149,10 @@ class DataAttackTUI(App[None]):
 
     # ── refresco global (lector único) ───────────────────────────────────────────
     def refresh_state(self) -> None:
-        snap = S.build_snapshot(REPO_DIR, self._last_cost)
+        snap = S.build_snapshot(REPO_DIR, self._last_cost, _approval_mode())
         grp = C.scan(snap.eng.get("findings", []))
-        self.query_one("#hdr", Static).update(S.header_line(snap.eng, snap.count, snap.cap, snap.cost))
+        self.query_one("#hdr", Static).update(
+            S.header_line(snap.eng, snap.count, snap.cap, snap.cost, snap.approval_mode))
         self._dash.refresh_from(snap, grp, SDK_OK)
         self._a2a.refresh_from(snap)
         self._roster.refresh_from(snap)
@@ -226,6 +233,9 @@ class DataAttackTUI(App[None]):
         elif bid == "act-effort-btn":
             self._do_action(A.set_env_var(REPO_DIR, "ORCH_EFFORT",
                                           self.query_one("#act-effort", Input).value.strip()))
+        elif bid == "act-approval-btn":
+            self._do_action(A.set_env_var(REPO_DIR, "ORCH_APPROVAL_MODE",
+                                          self.query_one("#act-approval", Input).value.strip()))
         elif bid == "rag-refresh":
             self._run_rag_refresh(False)
         elif bid == "rag-refresh-epss":
@@ -314,7 +324,8 @@ class DataAttackTUI(App[None]):
         model, effort, max_usd = _read_cfg()
         self._running = True
         runner = AgentRunner(REPO_DIR, emit, status, approve, on_verdict,
-                             model=model, effort=effort, max_usd=max_usd)
+                             model=model, effort=effort, max_usd=max_usd,
+                             approval_mode=_approval_mode())
         self._runner = runner
         try:
             final = await runner.run(task)

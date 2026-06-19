@@ -31,6 +31,7 @@ from . import state as S  # noqa: E402
 ORCH_MODELS = ["claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-4-5", "claude-fable-5"]
 EFFORTS = ["low", "medium", "high", "xhigh", "max"]
 A2A_STATUSES = ["pending", "delivered", "done", "blocked"]
+APPROVAL_MODES = ["full", "critical", "auto"]   # supervisión humana (ver CONSTITUTION §2)
 
 
 def _now_iso() -> str:
@@ -83,6 +84,8 @@ def set_env_var(repo: Path, key: str, value: str) -> tuple[bool, str]:
         return False, f"Modelo desconocido: {value!r}."
     if key == "ORCH_EFFORT" and value not in EFFORTS:
         return False, f"Effort desconocido: {value!r}."
+    if key == "ORCH_APPROVAL_MODE" and value not in APPROVAL_MODES:
+        return False, f"Modo de supervisión desconocido: {value!r} (full/critical/auto)."
     env = Path(repo) / "bot" / ".env"
     lines = env.read_text(encoding="utf-8").splitlines() if env.exists() else []
     out, found = [], False

@@ -57,7 +57,8 @@ adivinar.
 bash deploy/verify.sh              # toolchain + versiones + auth + RAG
 claude plugin validate ./plugin    # debe decir: ✔ Validation passed
 python tools/validate_suite.py     # debe decir: 0 fallos
-python bot/tests/test_intel.py     # 26/26 OK (clasificación / scope / gate / A2A)
+python bot/tests/test_intel.py     # 28/28 OK (clasificación / scope / gate de riesgo / modos / A2A)
+python bot/tests/test_tui.py       # 32/32 OK (state/actions de la TUI + hook approval_gate + supervisión)
 python dryrun/run_dryrun.py        # cadena completa SIMULADA (sin atacar): scope+RAG+blackboard
 ```
 
@@ -131,6 +132,13 @@ Environment=PATH=/usr/local/bin:/usr/bin:/bin
 Restart=on-failure
 ```
 `systemctl daemon-reload && systemctl enable --now data-attack-bot`.
+
+**Modo de supervisión (aprobación humana).** `constraints.approval_mode` en `scope.json` (o la
+variable `ORCH_APPROVAL_MODE`) fija cuánto aprueba el operador por acción: `full` (todo lo de
+riesgo), `critical` (solo C2/implantes/`msfvenom`; **por defecto**) o `auto` (nada). En TODOS los
+modos siguen activos `scope_guard` (alcance) y `budget_guard` (kill-switch) — no se relajan. Cámbialo
+en `scope.json`, por env, o en el panel **Acciones** de la TUI (`./deploy/dash.sh`); el modo activo
+se muestra en la cabecera. Detalle en [config-audit.md](config-audit.md) y CONSTITUTION §2.
 
 **Un modelo da error.** El routing usa IDs completos: `claude-haiku-4-5`, `claude-sonnet-4-6`,
 `claude-opus-4-8`. Si tu plan no sirve alguno, ajusta el `model:` del agente o `ORCH_MODEL` en

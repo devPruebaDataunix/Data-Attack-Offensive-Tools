@@ -1,6 +1,5 @@
 {
-  "$comment": "Config de Claude Code para la suite Cyberseg Agents. El hook scope_guard es la barrera dura de alcance.",
-  "$comment_modelos": "Sin CLAUDE_CODE_SUBAGENT_MODEL a propósito: cada agente usa su propio 'model' (tier de coste, v1.4.0: 4 opus-4-8 / 8 sonnet / 6 haiku, sin fable). opus-4-8 SOLO en web-exploit, post-exploit, ai-security y reporting (donde rompe la box / calidad del informe); sonnet en tool-drivers con juicio; haiku en recon/parseo mecánico (sin 'effort': Haiku da 400). El Orquestador (bot, ORCH_MODEL) corre opus-4-8 a effort 'medium' (ORCH_EFFORT) con techo USD opcional (ORCH_MAX_USD).",
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "defaultMode": "default",
     "ask": [
@@ -9,7 +8,12 @@
       "Bash(sqlmap:*)",
       "Bash(metasploit:*)",
       "Bash(msfconsole:*)",
+      "Bash(msfvenom:*)",
       "Bash(hydra:*)",
+      "Bash(netexec:*)",
+      "Bash(nxc:*)",
+      "Bash(secretsdump:*)",
+      "Bash(sliver:*)",
       "Bash(curl:*)",
       "Bash(ffuf:*)"
     ],
@@ -25,11 +29,15 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/scope_guard.py"
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/scope_guard.py"
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/budget_guard.py"
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/budget_guard.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/approval_gate.py"
           }
         ]
       }
@@ -40,7 +48,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python tools/gen_arch_diagram.py --hook"
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/tools/gen_arch_diagram.py --hook"
           }
         ]
       },
@@ -49,15 +57,15 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/validate_blackboard.py"
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/validate_blackboard.py"
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/secret_scan.py"
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/secret_scan.py"
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/a2a_guard.py"
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/a2a_guard.py"
           }
         ]
       },
@@ -66,7 +74,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/a2a_router_nudge.py"
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/a2a_router_nudge.py"
           }
         ]
       }

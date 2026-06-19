@@ -168,3 +168,8 @@ class ActionsPanel(VerticalScroll):
         yield Button("Fijar modelo", id="act-model-btn")
         yield Input(placeholder="ORCH_EFFORT (low/medium/high/xhigh/max)", id="act-effort")
         yield Button("Fijar effort", id="act-effort-btn")
+
+        yield Label("[b #FF6B35]Supervisión humana[/] (full/critical/auto) — CONSTITUTION §2; "
+                    "scope/budget NO se relajan en ningún modo")
+        yield Input(placeholder="ORCH_APPROVAL_MODE (full / critical / auto)", id="act-approval")
+        yield Button("Fijar supervisión", id="act-approval-btn")

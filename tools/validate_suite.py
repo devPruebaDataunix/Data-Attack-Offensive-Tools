@@ -120,11 +120,15 @@ def validate_hooks(settings):
             for h in matcher.get("hooks", []):
                 cmds.append(h.get("command", ""))
     for c in cmds:
-        m = re.search(r"([\w./\\]+\.py)", c)
+        # Normaliza la variable de Claude Code (${CLAUDE_PROJECT_DIR}) antes de localizar el script,
+        # para aceptar tanto `python .claude/hooks/x.py` como `python3 ${CLAUDE_PROJECT_DIR}/.../x.py`.
+        c_norm = c.replace("${CLAUDE_PROJECT_DIR}", "").replace("$CLAUDE_PROJECT_DIR", "")
+        m = re.search(r"([\w./\\-]+\.py)", c_norm)
         if m:
-            p = os.path.join(ROOT, m.group(1))
-            check(os.path.isfile(p), f"hook -> {m.group(1)} existe",
-                  f"hook apunta a script inexistente: {m.group(1)}")
+            rel = m.group(1).lstrip("/\\")
+            p = os.path.join(ROOT, rel)
+            check(os.path.isfile(p), f"hook -> {rel} existe",
+                  f"hook apunta a script inexistente: {rel}")
 
 
 def validate_refs():

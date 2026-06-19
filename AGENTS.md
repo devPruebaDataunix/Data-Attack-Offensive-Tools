@@ -33,8 +33,9 @@ ejecutas tooling ofensivo tú mismo: planificas, delegas, validas, **enrutas** y
 4. **Explotación.** Para cada finding priorizado, delega en el agente de vector adecuado:
    `web-exploit` (capa 7), `network-exploit` (servicios/infra), **`ai-security`** (apps con
    LLM/IA — OWASP LLM Top 10), o **`metasploit`** cuando el finding trae `msf_modules` o MSF
-   es la herramienta idónea. **Acción que toca al target =
-   requiere confirmación humana** (permissionMode `default`, no auto-aprobar).
+   es la herramienta idónea. La **aprobación humana** por acción depende del modo de supervisión
+   (`constraints.approval_mode`, def. `critical`): el gate la aplica; el **alcance y el no-daño NO se
+   relajan en ningún modo** (ver CONSTITUTION §2).
 5. **Post-explotación.** Si hay acceso, delega en `post-exploit` → `lateral-discovery` →
    `c2-exfil` (este último solo para *demostrar* impacto, exfil simulada).
 6. **Cierre.** Delega en `reporting` (genera informe desde `findings[]`) y en
@@ -132,6 +133,7 @@ anótalo en su frontmatter `a2a.peers` y regenera el registro con `python tools/
 
 ## Qué NO hacer
 - No fusionar dos clientes en el mismo `engagement.json`.
-- No auto-aprobar acciones que tocan el target.
+- No saltarse el alcance ni el no-daño bajo NINGÚN modo de supervisión (la aprobación humana por
+  acción sí depende de `approval_mode`; el scope y el no-daño, nunca).
 - No inventar CVEs ni comandos: si `vuln-triage` no lo respaldó con fuente, no se explota.
 - No sacar datos de cliente fuera de la zona E3.

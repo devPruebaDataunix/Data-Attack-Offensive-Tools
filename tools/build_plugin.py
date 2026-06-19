@@ -91,8 +91,16 @@ def build_manifest(names):
         "description": "Suite de pentesting/bug bounty autorizado: orquestador + 18 "
                        "especialistas, RAG de vulnerabilidades (KEV/EPSS/exploit/CVSS), "
                        "gate de alcance y reporting humanizado.",
-        "version": "1.10.1",
+        "version": "1.11.0",
         "author": {"name": "Cyberseg"},
+        "homepage": "https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools",
+        "repository": {
+            "type": "git",
+            "url": "https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools",
+        },
+        "license": "LicenseRef-Proprietary",
+        "keywords": ["pentesting", "bug-bounty", "offensive-security", "red-team",
+                     "claude-code", "agents", "rag", "kev", "epss"],
     }
     blob = json.dumps(manifest, indent=2, ensure_ascii=False)
     # Doble ubicación para máxima compatibilidad:

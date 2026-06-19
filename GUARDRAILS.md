@@ -9,7 +9,9 @@ Distinguimos tres clases de control, porque no todos valen lo mismo:
 
 - **Determinista (código):** lo aplica un hook o un script, no depende del criterio de ningún
   LLM. Es el control fuerte.
-- **Humano en el bucle (HITL):** una persona aprueba antes de actuar.
+- **Humano en el bucle (HITL):** aprobación humana por acción, **configurable** por el operador
+  (`approval_mode`: `full`/`critical`/`auto`, def. `critical`). Las puertas DETERMINISTAS
+  (alcance/presupuesto) no se relajan en ningún modo. Ver CONSTITUTION §2.
 - **Mediado por LLM (soft):** una instrucción del prompt que el modelo *debería* seguir. Útil,
   pero no es una barrera.
 
@@ -61,7 +63,7 @@ flowchart TB
 | # | Control | Clase | Dónde | OWASP LLM 2025 |
 | :--- | :--- | :--- | :--- | :--- |
 | C1 | **Gate de alcance** — bloquea todo comando contra un host/IP/CIDR fuera de `scope.json` | Determinista | `.claude/hooks/scope_guard.py` (PreToolUse) | LLM06 Excessive Agency |
-| C2 | **Aprobación por acción con 5 tiers de riesgo** (safe→auto … C2/crítico→doble confirmación) | HITL | `bot/intel/risk.py` + `runner.py` | LLM06 Excessive Agency |
+| C2 | **Aprobación por acción configurable** (`approval_mode` full/critical/auto, def. `critical`; 5 tiers de riesgo safe→auto … crítico→doble confirmación) | HITL configurable | `bot/intel/risk.py` + `runner.py` + `.claude/hooks/approval_gate.py` | LLM06 Excessive Agency |
 | C3 | **Permisos ask/deny** (deniega leer/escribir `scope.json`; pide confirmación a nmap/sqlmap/…) | Determinista | `.claude/settings.json` → `permissions` | LLM06, **LLM07 System-prompt leakage** |
 | C4 | **Mínimo privilegio de tools** — cada agente declara solo las tools que necesita | Determinista | frontmatter `tools:` de cada agente | LLM06 Excessive Agency |
 | C5 | **Validación de esquema del blackboard** — un finding/target sin campos obligatorios dispara feedback correctivo | Determinista | `.claude/hooks/validate_blackboard.py` (PostToolUse) | **LLM05 Improper Output Handling** |

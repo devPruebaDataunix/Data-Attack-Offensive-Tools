@@ -22,12 +22,14 @@ bot cae a `claude -p` (modo degradado, sin streaming) automáticamente.
    🔴 **EVIDENCIA REAL** con resumen claro para humano; candidato con respaldo fuerte
    (exploit/MSF/KEV) → 🟠 vigilar; hit de escáner sin respaldo o falso positivo → 🔇 se cuenta y
    se calla. Solo lo real dispara alerta. (`bot/intel/classify.py`)
-5. **Aprobación por acción, por nivel de riesgo.** Cada comando se clasifica en un tier
-   (`bot/intel/risk.py`): el **recon pasivo** (subfinder/amass/whois…) se auto-aprueba sin
-   fricción; el escaneo/explotación (nmap, nuclei, sqlmap…) te manda **✅ Autorizar / ⛔ Denegar**;
-   lo **destructivo** (netexec, secretsdump, mimikatz…) siempre pregunta; y el **C2/implantes**
-   (sliver…) exige **doble confirmación**. Timeout → denegado. El gate determinista
-   `scope_guard.py` sigue aplicando debajo.
+5. **Aprobación por acción, configurable** (`approval_mode`: `full`/`critical`/`auto`, def.
+   `critical` — ver CONSTITUTION §2). Cada comando se clasifica en un tier (`bot/intel/risk.py`).
+   En **`full`** (máxima supervisión): el recon pasivo (subfinder/amass/whois…) se auto-aprueba; el
+   escaneo/explotación (nmap, nuclei, sqlmap…) y lo destructivo (netexec, secretsdump, mimikatz…) te
+   mandan **✅ Autorizar / ⛔ Denegar**; el **C2/implantes** (sliver…) exige **doble confirmación**.
+   En **`critical`** (def.) solo el C2/implantes pide aprobación; en **`auto`**, nada. Timeout →
+   denegado. Las puertas deterministas (`scope_guard`, `budget_guard`) siguen aplicando **en todos
+   los modos**.
 
 ## Seguridad (diseño)
 - **Allowlist dura de user-id** (`ALLOWED_USER_ID`): cualquier otro queda rechazado y logueado.

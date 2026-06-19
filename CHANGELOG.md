@@ -4,6 +4,40 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [1.11.0] - 2026-06-18
+### Added
+- **Supervisión humana configurable** (`approval_mode`: `full`/`critical`/`auto`, **por defecto
+  `critical`**). Quién aprueba por acción lo decide el operador autorizado vía
+  `scope.json` `constraints.approval_mode` o la variable `ORCH_APPROVAL_MODE`:
+  - `full` pide aprobación para todo lo de riesgo · `critical` solo para lo crítico
+    (C2/implantes/`msfvenom`) · `auto` para nada.
+  - Un solo toggle gobierna CLI **y** bot/TUI: nuevo hook `.claude/hooks/approval_gate.py`
+    (PreToolUse·Bash; reusa los tiers de `bot/intel/risk.py`) + `bot/intel/runner.py` `_gate`.
+  - **Las puertas DETERMINISTAS NO se relajan en ningún modo**: `scope_guard` (alcance),
+    `budget_guard` (kill-switch), `secret_scan`, `a2a_guard` y el no-daño siguen activos (un `deny`
+    gana sobre cualquier auto-aprobación). El modo se ve en la cabecera de la TUI y se cambia desde
+    el panel **Acciones** (o por env/scope).
+- **`CONSTITUTION.md` → v2.0.0**: enmienda del **§2** (supervisión humana obligatoria → configurable;
+  alcance/no-daño/presupuesto siguen **innegociables**). MAJOR de la constitución (su versionado propio).
+- **`docs/config-audit.md`**: resultado de la auditoría + referencia de los modos de supervisión.
+### Changed
+- **Auditoría de configuración** contra la spec oficial (Claude Code 2.1.x): la config es **válida y
+  vigente**. Fixes: `.claude/settings.json` añade `$schema` y **quita las claves `$comment*`** (los
+  settings de proyecto son estrictos y se rechazan enteros si no validan); hooks con
+  `${CLAUDE_PROJECT_DIR}` + `python3`; manifest del plugin enriquecido
+  (`homepage`/`repository`/`license`/`keywords`).
+- `contracts/scope.example.json`: documenta `constraints.approval_mode`/`max_actions`/`max_a2a_hops`.
+- Docs alineados: `CONSTITUTION.md`, `AGENTS.md`, `GUARDRAILS.md` (C2), `README.md`,
+  `docs/RUNBOOK-operador.md`.
+### Notes
+- **Cambio de comportamiento por defecto del bot/TUI**: con `critical`, el recon/escaneo/explotación
+  de tier `ask` (nmap/sqlmap/nxc/secretsdump…) **se auto-aprueba**; solo lo crítico (C2/implantes)
+  pide confirmación. Para la supervisión máxima anterior, fija `approval_mode: full`. El alcance y el
+  no-daño se aplican igual en todos los modos.
+- No rompiente a nivel de software (repo **v1.11.0**, minor). Verificado: test_tui 32/32, test_intel
+  28/28, py_compile, validate_suite, JSON válido, bash -n. La UI Textual y el flujo del hook en la
+  CLI se validan en la Kali.
+
 ## [1.10.1] - 2026-06-18
 ### Fixed
 - **Despliegue resiliente a fallos de red/DNS.** `deploy/auto-deploy.sh` ya NO aborta a mitad si un
@@ -333,6 +367,7 @@ se versiona con [SemVer](https://semver.org/lang/es/).
 - Controles base: gate de alcance determinista (`scope_guard.py`), validación de esquema del
   blackboard, escritura atómica, zonas de aislamiento E1/E2/E3 y reporting humanizado.
 
+[1.11.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.11.0
 [1.10.1]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.10.1
 [1.10.0]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.10.0
 [1.9.2]: https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases/tag/v1.9.2

@@ -67,6 +67,8 @@ try:
     ORCH_MAX_USD = float(_max_usd_raw) if _max_usd_raw else None
 except ValueError:
     ORCH_MAX_USD = None
+# Modo de supervisión humana (full|critical|auto). None => el runner lo resuelve (scope/critical).
+ORCH_APPROVAL_MODE = ENV.get("ORCH_APPROVAL_MODE") or os.environ.get("ORCH_APPROVAL_MODE") or None
 PY = sys.executable or "python3"
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s",
@@ -373,7 +375,7 @@ async def _execute(ctx, chat_id, task):
         await _alert(ctx, chat_id, v)
 
     runner = AgentRunner(REPO_DIR, emit, status_upd, approve, on_verdict, model=ORCH_MODEL,
-                         effort=ORCH_EFFORT, max_usd=ORCH_MAX_USD)
+                         effort=ORCH_EFFORT, max_usd=ORCH_MAX_USD, approval_mode=ORCH_APPROVAL_MODE)
     try:
         final = await runner.run(task)
     except Exception as e:  # noqa: BLE001

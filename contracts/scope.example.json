@@ -25,6 +25,9 @@
     "no_social_engineering": true,
     "no_data_exfiltration_real": true,
     "testing_window": "00:00-06:00 UTC",
-    "max_scan_rate": "moderate"
+    "max_scan_rate": "moderate",
+    "approval_mode": "critical",
+    "max_actions": 1000,
+    "max_a2a_hops": 50
   }
 }
