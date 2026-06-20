@@ -375,7 +375,10 @@ Cada comando se clasifica en un tier (`bot/intel/risk.py`) y se aplica una polí
 | **destructive** | netexec, secretsdump, mimikatz | pide ✅/⛔ |
 | **critical** | sliver, msfvenom, C2 | **doble confirmación** |
 
-El timeout cuenta como denegación. Por debajo, el hook `scope_guard.py` sigue aplicando.
+Esta tabla es la política en modo **`full`** (supervisión máxima). Con el `approval_mode` por
+defecto (**`critical`**) solo el tier *critical* pide confirmación y el resto se auto-aprueba; en
+`auto`, nada. Las puertas deterministas (`scope_guard`, `budget_guard`) se aplican en **todos** los
+modos. El timeout cuenta como denegación.
 
 </details>
 
@@ -426,7 +429,7 @@ especificar antes de ejecutar, y auditar la coherencia antes de reportar.
 - **Secretos fuera del repo:** token y user-id en `bot/.env` (ignorado por git).
 - **Regla de evidencia:** sin fuente, no se explota; sin evidencia, no es un hallazgo.
 - **Gobierno por [CONSTITUTION.md](CONSTITUTION.md)** y auditoría de coherencia previa al informe.
-- **Capa de guardarraíles deterministas** (gate de alcance, validación del blackboard, anti-inyección, detector de secretos, kill-switch de consumo y **validador del bus A2A** —emisor/destino conocidos + topología de pares + techo de hops) mapeada a OWASP LLM Top 10 — ver [GUARDRAILS.md](GUARDRAILS.md).
+- **Capa de guardarraíles deterministas** (gate de alcance, validación del blackboard, anti-inyección en 16 agentes, detector de secretos, kill-switch de consumo, **validador del bus A2A** —emisor/destino conocidos + topología de pares + techo de hops— y **auditoría de subagentes**) mapeada a OWASP LLM Top 10 — ver [GUARDRAILS.md](GUARDRAILS.md).
 - **Historial de versiones** en [CHANGELOG.md](CHANGELOG.md) (SemVer) y en las [releases](https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases).
 
 ## Referencia de comandos
@@ -507,7 +510,7 @@ cyberseg-agents/
 ├── bot/            → bot de Telegram (Claude Agent SDK) + clasificador de riesgo
 ├── deploy/         → auto-deploy y verificación del toolchain en Kali (+ Docker: Dockerfile/compose)
 ├── dryrun/         → prueba end-to-end segura (sin atacar)
-├── .claude/        → settings, hooks (alcance, presupuesto, blackboard, secretos, A2A) y los 18 subagentes
+├── .claude/        → settings, hooks (alcance, presupuesto, supervisión, blackboard, secretos, A2A, auditoría de subagentes) y los 18 subagentes
 └── .opencode/      → espejo de los agentes para opencode
 ```
 

@@ -25,7 +25,10 @@ fuera de scope.
 
 ## Proceso (escalado, de menos a más invasivo)
 1. **Detección** — guarda la petición (`-r request.txt`) o usa `-u` con `-p <param>`. Empieza suave —
-   `--batch --level 1 --risk 1 --technique=BEUSTQ` ajustado; sube nivel/riesgo solo si hace falta.
+   `--batch --level 1 --risk 1`. `--level` (1–5) amplía **dónde** inyecta (de parámetros a cabeceras,
+   cookies, User-Agent); `--risk` (1–3) habilita payloads **más agresivos** (el 3 incluye `OR`-based,
+   que puede modificar datos) → **sube nivel/riesgo solo si la detección suave falla**, y acota con
+   `--technique=BEUSTQ`.
 2. **Confirmación** — `--dbs` o `--current-db`/`--current-user` para probar acceso, **sin** volcar datos.
 3. **Demostración de impacto** — `--tables` del esquema relevante y, si hay que probar lectura,
    un `--dump` **acotado** (`-T <tabla> -C <col> --start 1 --stop 1`) con datos marcados/mínimos.

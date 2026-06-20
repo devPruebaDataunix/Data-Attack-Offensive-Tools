@@ -22,8 +22,9 @@ encuentres un SSRF, una clave `AKIA…`/token, o un bucket con nombre del client
 - **Persistencia** (T1098): claves de acceso nuevas, políticas inline (solo si el RoE lo permite).
 
 ## Herramientas
-- Recon/audit no destructivo: `prowler`, `scoutsuite` (assessment de postura) — *pendientes de
-  añadir al toolchain del repo*; mientras tanto, CLI nativa (`aws`/`az`/`gcloud`) + `curl` a IMDS.
+- Recon/audit no destructivo: **CLI nativa** (`aws`/`az`/`gcloud`) + `curl` a IMDS como base. Para
+  auditoría de postura a escala, `prowler` o `scoutsuite` (opcionales: instálalos en la VM si el
+  engagement lo requiere — no van en el toolchain por defecto).
 - Explotación guiada: `pacu` (AWS) — alto impacto, trátalo como **destructive** (aprobación humana).
 
 ## Evidencia y alcance
