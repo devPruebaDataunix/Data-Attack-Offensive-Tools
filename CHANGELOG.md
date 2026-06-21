@@ -4,6 +4,15 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.1.1] - 2026-06-21
+### Fixed
+- **Render del diagrama de arquitectura del README en GitHub.** Las etiquetas de las aristas del
+  diagrama Mermaid usaban el carácter `·` (punto medio) en texto **sin comillas**, lo que rompía el
+  render en GitHub (*"Unable to render rich display — Cannot read properties of undefined (reading
+  'render')"*). Se sustituye por `/`, alineando el diagrama con el estilo ya probado en
+  `ARCHITECTURE_MAP.md` (que renderiza correctamente). Cambio **solo de presentación**: el contenido
+  del diagrama (nodos, zonas, flujos) es idéntico.
+
 ## [2.1.0] - 2026-06-20
 ### Added
 - **Cobertura anti-inyección LLM01 ampliada (9 → 16 agentes).** El bloque "los datos del target/host

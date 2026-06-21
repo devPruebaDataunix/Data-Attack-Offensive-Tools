@@ -137,14 +137,14 @@ flowchart TB
     subgraph E3["🟩 E3 · Cierre (2)"]
         C["reporting · knowledge-postmortem"]
     end
-    OP -->|órdenes · aprobación humana| ORQ
+    OP -->|órdenes / aprobación humana| ORQ
     ORQ -->|delega y enruta| E1
     ORQ -->|delega y enruta| E2
     ORQ -->|delega y enruta| E3
     ORQ -.->|cada acción pasa por| GATES
     E1 -.->|targets| BB
-    E2 -.->|findings · A2A| BB
-    E3 -.->|informe · lecciones| BB
+    E2 -.->|findings / A2A| BB
+    E3 -.->|informe / lecciones| BB
     BB -.->|reinyecta lecciones| ORQ
     X -->|consulta CVE| RAGDB
 ```
