@@ -91,7 +91,7 @@ def build_manifest(names):
         "description": "Suite de pentesting/bug bounty autorizado: orquestador + 18 "
                        "especialistas, RAG de vulnerabilidades (KEV/EPSS/exploit/CVSS), "
                        "gate de alcance y reporting humanizado.",
-        "version": "2.1.1",
+        "version": "2.1.2",
         "author": {"name": "Cyberseg"},
         "homepage": "https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools",
         "repository": "https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools",

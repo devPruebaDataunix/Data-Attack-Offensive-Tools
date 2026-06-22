@@ -74,7 +74,8 @@ def main():
     if not cves:
         print("[CVE5] Nada que enriquecer.")
         return
-    print(f"[CVE5] Enriqueciendo CVSS/SSVC de {len(cves)} CVE desde CVE 5.0 ...")
+    print(f"[CVE5] Enriqueciendo CVSS/SSVC de {len(cves)} CVE desde CVE 5.0 "
+          f"(uno a uno; puede tardar varios minutos) ...", flush=True)
 
     now = datetime.now(timezone.utc).isoformat()
     got_cvss = got_ssvc = 0
@@ -102,7 +103,7 @@ def main():
         )
         if i % 50 == 0:
             conn.commit()
-            print(f"[CVE5]  {i}/{len(cves)} (cvss={got_cvss}, ssvc={got_ssvc})")
+            print(f"[CVE5]  {i}/{len(cves)} (cvss={got_cvss}, ssvc={got_ssvc})", flush=True)
         time.sleep(0.15)  # cortesía con el servicio público
     db.set_meta(conn, "cve5_last_sync", now)
     conn.commit()

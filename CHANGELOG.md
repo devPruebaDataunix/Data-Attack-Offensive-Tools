@@ -4,6 +4,20 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.1.2] - 2026-06-22
+### Fixed
+- **La fase de poblado del RAG en `auto-deploy.sh` (4/6) parecía colgarse.** El instalador canaliza
+  su salida por `tee`; ante un *pipe*, Python usa **buffering por bloques**, así que el progreso de la
+  ingesta/enriquecimiento (`[CVE5] N/total`, …) no aparecía y el paso daba sensación de cuelgue (en
+  realidad enriquecía ~1.6k CVE uno a uno). Soluciones:
+  - **`PYTHONUNBUFFERED=1`** en `auto-deploy.sh` → progreso de los subprocesos Python **en vivo**.
+  - **Poblado del RAG idempotente**: si `rag/vulns.db` ya está poblado y no se pasa `--update`, se
+    **omite** el refresco completo (evita re-descargar varios minutos al re-ejecutar); `--update` lo fuerza.
+  - **`rag/enrich_cve5.py`**: progreso con `flush` + aviso de que el enriquecimiento tarda varios minutos.
+### Notes
+- Cambio **no funcional** del store: misma ingesta (CISA KEV) y mismo enriquecimiento (CVSS vía CVE 5.0,
+  EPSS, ExploitDB, Metasploit, Nuclei). Verificado: `bash -n` ✓, `py_compile` ✓, `validate_suite` 369/0 ✓.
+
 ## [2.1.1] - 2026-06-21
 ### Fixed
 - **Render del diagrama de arquitectura del README en GitHub.** Las etiquetas de las aristas del

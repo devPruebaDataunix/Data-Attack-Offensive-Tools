@@ -14,6 +14,10 @@
 # =============================================================================
 set -Eeuo pipefail
 
+# Salida de Python SIN buffer: este script canaliza todo por 'tee' (ver más abajo). Ante un pipe,
+# Python usa buffering por bloques y los pasos largos (RAG) no muestran progreso -> PARECE colgado.
+export PYTHONUNBUFFERED=1
+
 # ── Rutas ────────────────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -183,10 +187,22 @@ install_tools(){
 setup_rag(){
   step "4/6  RAG de vulnerabilidades"
   cd "$REPO_DIR"
+  # Idempotencia: si el store ya está poblado y no se fuerza --update, NO re-descargues ~1.6k CVE
+  # (el refresco completo tarda varios minutos). Acelera re-ejecuciones y respeta un vulns.db restaurado.
+  local _n=0
+  [ -f rag/vulns.db ] && _n="$(python3 -c 'import sqlite3
+try: print(sqlite3.connect("rag/vulns.db").execute("SELECT COUNT(*) FROM vulns").fetchone()[0])
+except Exception: print(0)' 2>/dev/null || echo 0)"
+  if [ "$UPDATE" -eq 0 ] && [ "${_n:-0}" -gt 0 ]; then
+    ok "RAG ya poblado (${_n} CVE) — omito el refresco (fuerza con --update)."
+    return 0
+  fi
+  info "Poblando el RAG desde fuentes públicas (CISA KEV · CVE 5.0 · ExploitDB · Metasploit · Nuclei · EPSS)."
+  info "Enriquece ~1.6k CVE uno a uno: puede tardar VARIOS MINUTOS — verás progreso '[CVE5] N/total'. (Sáltalo con --no-rag.)"
   if python3 rag/refresh.py --epss-all; then
     ok "RAG poblado."
   else
-    warn "El RAG no se pudo poblar (¿red? CISA KEV/EPSS). Reintenta luego: python3 rag/refresh.py --epss-all"
+    warn "El RAG no se pudo poblar del todo (¿red? CISA KEV/EPSS/MITRE). Reintenta luego: python3 rag/refresh.py --epss-all"
   fi
 }
 
