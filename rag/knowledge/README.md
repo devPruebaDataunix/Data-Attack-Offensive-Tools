@@ -71,6 +71,13 @@ python rag/knowledge/query_kb.py --semantic "kerberoasting y abuso de SPN" --pla
 
 > `kb_vec.db` está gitignored — se reconstruye con `refresh_kb.py --semantic`.
 
+## Verificar cobertura (`--stats`)
+```bash
+python rag/knowledge/query_kb.py --stats          # Capa 1 (fuente/plataforma/categoría) + Capa 2 (fuente)
+```
+Confirma que la población funcionó (sobre todo la **Capa 2 entera en Kali**). No carga sqlite-vec ni el
+embedder (lee la tabla `chunks` directamente) y avisa si la Capa 2 es solo el subset de prueba.
+
 ## Integración con los agentes
 El Orquestador inyecta la técnica relevante en la delegación (como hace con `lessons[]`); los agentes
 (`post-exploit`, `web-exploit`, `lateral-discovery`, `netexec`…) llaman a `query_kb.py`. El modelo sigue

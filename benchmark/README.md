@@ -20,8 +20,21 @@ python benchmark/run_eval.py --eval dockerlabs-injection --engagement contracts/
 servidor Linux crítico** = capacidad verificada. Hasta lograrlo, el resto de trabajo (p.ej. el trailer)
 permanece supeditado a este resultado.
 
+## Auto-lanzar el GATE (`run_gate.py`)
+`run_gate.py` **LANZA** el engagement end-to-end contra un **lab** y lo gradúa (antes había que lanzarlo a
+mano): escribe un `scope.json` acotado (`approval_mode=auto`), crea `engagements/GATE-<id>/`, arranca el
+Orquestador headless y gradúa con pass@k. **LAB-ONLY** (rechaza targets que no sean de laboratorio);
+respalda y restaura tu `scope.json`.
+
+```bash
+python benchmark/run_gate.py --eval dockerlabs-injection             # target del propio eval
+python benchmark/run_gate.py --eval linux-hard-gate --target 10.10.11.20 --record
+python benchmark/run_gate.py --eval dockerlabs-injection --dry-run   # enseña el plan, no lanza
+```
+`--dry-run` no toca nada; `--yolo` añade `--dangerously-skip-permissions` (lab desatendido). Verifica la
+cobertura del RAG de técnicas antes de un run con `python rag/knowledge/query_kb.py --stats`.
+
 ## Pendiente de cableado
-- Auto-lanzar el engagement desde el harness (hoy gradúa lo ya ejecutado).
 - Graders adicionales: cobertura de fases, tiempo-a-root, coste, model-grader de calidad del informe.
 - Suite "gauntlet": fácil → medio → difícil, con pass@k por máquina.
 

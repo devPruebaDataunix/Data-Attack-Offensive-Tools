@@ -80,6 +80,58 @@ def semantic_query(args):
     sys.exit(0)
 
 
+def stats(args):
+    """Cobertura de AMBOS RAG de conocimiento. Para VERIFICAR la población (sobre todo la Capa 2 entera
+    en Kali). No carga sqlite-vec ni el embedder: la tabla `chunks` es SQLite normal."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    rep = {"capa1_kb": {}, "capa2_kb_vec": {}}
+
+    conn = kb.connect()
+    grp = lambda q: {(r[0] if r[0] not in (None, "") else "?"): r[1] for r in conn.execute(q).fetchall()}
+    rep["capa1_kb"]["total"] = conn.execute("SELECT COUNT(*) FROM techniques").fetchone()[0]
+    rep["capa1_kb"]["by_source"] = grp("SELECT source, COUNT(*) FROM techniques GROUP BY source ORDER BY 2 DESC")
+    rep["capa1_kb"]["by_platform"] = grp("SELECT platform, COUNT(*) FROM techniques GROUP BY platform ORDER BY 2 DESC")
+    rep["capa1_kb"]["by_category"] = grp("SELECT category, COUNT(*) FROM techniques GROUP BY category ORDER BY 2 DESC")
+
+    import sqlite3
+    vdb = os.path.join(here, "kb_vec.db")
+    if os.path.isfile(vdb):
+        try:
+            c = sqlite3.connect(vdb)
+            rep["capa2_kb_vec"]["total"] = c.execute("SELECT COUNT(*) FROM chunks").fetchone()[0]
+            rep["capa2_kb_vec"]["by_source"] = {r[0]: r[1] for r in c.execute(
+                "SELECT source, COUNT(*) FROM chunks GROUP BY source ORDER BY 2 DESC").fetchall()}
+            try:
+                m = c.execute("SELECT value FROM meta WHERE key='embed_model'").fetchone()
+                rep["capa2_kb_vec"]["embed_model"] = m[0] if m else None
+            except sqlite3.Error:
+                pass
+            c.close()
+        except sqlite3.Error as e:
+            rep["capa2_kb_vec"] = {"error": f"kb_vec.db presente pero ilegible: {e}"}
+    else:
+        rep["capa2_kb_vec"] = {"status": "no poblada (kb_vec.db no existe) — corre rag/knowledge/refresh_kb.py --semantic"}
+
+    if args.json:
+        print(json.dumps(rep, indent=2, ensure_ascii=False))
+    else:
+        c1 = rep["capa1_kb"]
+        print("RAG de conocimiento — cobertura\n")
+        print(f"Capa 1 (kb.db): {c1['total']} técnicas")
+        print(f"  por fuente:    {c1['by_source']}")
+        print(f"  por plataforma:{c1['by_platform']}")
+        print(f"  por categoría: {c1['by_category']}")
+        c2 = rep["capa2_kb_vec"]
+        if "total" in c2:
+            print(f"Capa 2 (kb_vec.db): {c2['total']} trozos  (modelo {c2.get('embed_model')})")
+            print(f"  por fuente:    {c2['by_source']}")
+            if c2["total"] < 2000:
+                print("  ⚠️  pocas entradas: parece el SUBSET de prueba. Repoblar entero: refresh_kb.py --semantic")
+        else:
+            print(f"Capa 2 (kb_vec.db): {c2.get('status') or c2.get('error')}")
+    sys.exit(0)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--query", "-q", default="", help="binario/servicio/keywords")
@@ -90,9 +142,12 @@ def main():
     ap.add_argument("--limit", type=int, default=15)
     ap.add_argument("--semantic", default=None, help="consulta SEMÁNTICA en prosa (Capa 2, embeddings)")
     ap.add_argument("--k", type=int, default=8, help="nº de trozos a devolver en modo --semantic")
+    ap.add_argument("--stats", action="store_true", help="cobertura de ambos RAG (verificar población)")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
 
+    if args.stats:
+        return stats(args)
     if args.semantic:
         return semantic_query(args)
 

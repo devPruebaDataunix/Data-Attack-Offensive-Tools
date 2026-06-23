@@ -4,6 +4,24 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.3.0] - 2026-06-23
+### Added
+- **Auto-lanzador del GATE — `benchmark/run_gate.py`.** Cierra el cableado que faltaba: además de graduar
+  (`run_eval.py`), ahora LANZA el engagement end-to-end contra un lab (escribe un `scope.json` acotado en
+  `approval_mode=auto`, crea `engagements/GATE-<id>/`, arranca el Orquestador headless `claude -p` y gradúa
+  con pass@k). **LAB-ONLY**: rechaza cualquier target que no sea de laboratorio (IP privada/loopback o dominio
+  .htb/.thm/.dockerlabs/…) y respalda/restaura el `scope.json` previo. `--dry-run` enseña el plan sin tocar
+  nada; `--yolo` añade `--dangerously-skip-permissions` (lab desatendido).
+- **Cobertura de los RAG de conocimiento — `query_kb.py --stats`.** Reporta el volumen de la Capa 1 (`kb.db`,
+  por fuente/plataforma/categoría) y la Capa 2 (`kb_vec.db`, por fuente) **sin cargar sqlite-vec ni el
+  embedder**; avisa si la Capa 2 parece el subset de prueba → verifica la población completa (sobre todo en Kali).
+- **Recomendador de `maxTurns` — `tools/tune_maxturns.py`.** Cruza la auditoría de SubagentStop
+  (`subagents.jsonl`) con los transcripts y calcula los turnos REALES por agente (p50/p95/máx); compara con el
+  `maxTurns` declarado y sugiere subir (si topa el techo) o bajar (si sobra holgura), con margen. Sin datos sale 0.
+### Notes
+- Las tres piezas **habilitan y miden** el trabajo que se EJECUTA en Kali (correr el GATE de capacidad, poblar
+  la Capa 2 entera, re-tunear `maxTurns` con datos reales). Sin cambios funcionales en agentes/hooks; `validate_suite` verde.
+
 ## [2.2.0] - 2026-06-23
 ### Added
 - **RAG de conocimiento (técnicas ofensivas) — `rag/knowledge/`.** Segundo RAG local, complementario al de

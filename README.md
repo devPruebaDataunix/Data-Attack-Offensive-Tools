@@ -417,6 +417,7 @@ python rag/knowledge/refresh_kb.py              # Capa 1 (ligera)
 python rag/knowledge/refresh_kb.py --semantic   # + Capa 2 (pesada: embeddings)
 python rag/knowledge/query_kb.py --query "env" --category privesc --platform linux
 python rag/knowledge/query_kb.py --semantic "privesc cuando sudo permite tar" --k 6
+python rag/knowledge/query_kb.py --stats        # cobertura de ambas capas (verificar población)
 ```
 
 Detalle de ambos en [rag/README.md](rag/README.md) y [rag/knowledge/README.md](rag/knowledge/README.md)
@@ -511,6 +512,9 @@ Chuleta de todo lo ejecutable, por categoría. Salvo que se indique otra cosa, l
 | `python rag/knowledge/refresh_kb.py --semantic` | + Capa 2 semántica (HackTricks/PaTT/PEASS/feeds; pesado). |
 | `python rag/knowledge/query_kb.py --query "<bin>" --category privesc` | Técnica accionable (Capa 1). |
 | `python rag/knowledge/query_kb.py --semantic "<pregunta>" --k 6` | Recuperación por significado (Capa 2). |
+| `python rag/knowledge/query_kb.py --stats` | Cobertura de ambos RAG de conocimiento (verificar población). |
+| `python benchmark/run_gate.py --eval <id> --target <lab>` | Lanza + gradúa el GATE contra un lab (LAB-only). |
+| `python tools/tune_maxturns.py` | Recomienda `maxTurns` por agente según los turnos reales usados. |
 
 ### 🐳 Docker (alternativa al despliegue de host)
 | Comando | Qué hace |
