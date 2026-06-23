@@ -26,8 +26,9 @@ se versiona con [SemVer](https://semver.org/lang/es/).
   operador (vulnerabilidades a diario, conocimiento semanal; log en `rag/.refresh.log`), idempotente y con
   `--no-cron` para omitirlo. Mantiene ambos RAG al día sin intervención.
 ### Changed
-- Diagramas de arquitectura (`README.md`, `ARCHITECTURE_MAP.md` + su generador) y docs: reflejan los **dos
-  RAG**. `validate_suite` 383/0/0.
+- Diagramas de arquitectura (`README.md`, `ARCHITECTURE_MAP.md` + su generador) y docs (incl.
+  `docs/references.md`, que ya cataloga las fuentes de **ambos** RAG: conocimiento Capa 1/2 + frescura de
+  CVE): reflejan los **dos RAG**. `validate_suite` 383/0/0.
 
 ## [2.1.2] - 2026-06-22
 ### Fixed
