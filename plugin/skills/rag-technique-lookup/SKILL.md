@@ -37,6 +37,20 @@ Si el store está vacío, puéblalo primero:
 python rag/knowledge/refresh_kb.py
 ```
 
+### Capa 2 — búsqueda SEMÁNTICA (metodología/prosa)
+Cuando NO sabes el binario/técnica exactos y necesitas **razonamiento/metodología** ("estoy en esta
+situación, ¿qué camino sigo?"), usa la búsqueda semántica sobre prosa (HackTricks, PayloadsAllTheThings,
+PEASS, feeds de intel). Recupera por SIGNIFICADO, no por palabra exacta:
+
+```bash
+python rag/knowledge/query_kb.py --semantic "privesc cuando sudo permite tar" --k 6 --json
+# opcionales: --platform linux|windows   --source hacktricks|payloads|peass|0dayfans|hackernews
+```
+
+Devuelve trozos rankeados (`score`, `title > heading`, `text`, `url`). Si responde que la Capa 2 no está
+poblada: `python rag/knowledge/refresh_kb.py --semantic` (pesado; embeddings locales). **Flujo recomendado:**
+primero Capa 2 para la metodología → luego Capa 1 para el comando exacto de la técnica que elijas.
+
 ## Cómo interpretar la salida
 Cada resultado trae: `source` (gtfobins/lolbas/atomic/attack), `platform` (linux/windows/multi),
 `category` (privesc/credential-access/…), `mitre_id`, `name`, `subtype` (p.ej. suid/sudo/uac-bypass o el

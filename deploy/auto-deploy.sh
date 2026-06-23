@@ -10,6 +10,7 @@
 #    sudo ./deploy/auto-deploy.sh --update        # actualiza todo a lo último
 #    ./deploy/auto-deploy.sh --skip-tools         # sin toolchain ofensivo
 #    ./deploy/auto-deploy.sh --no-bot --no-rag    # solo base + claude
+#    ./deploy/auto-deploy.sh --semantic-rag       # + RAG Capa 2 semantica (pesado: torch + embeddings)
 #    ./deploy/auto-deploy.sh -h
 # =============================================================================
 set -Eeuo pipefail
@@ -28,12 +29,13 @@ LOG="${SCRIPT_DIR}/deploy-$(date +%Y%m%d-%H%M%S).log"
 . "${SCRIPT_DIR}/banner.sh" 2>/dev/null || true
 
 # ── Flags ────────────────────────────────────────────────────────────────────
-DO_TOOLS=1; DO_RAG=1; DO_BOT=1; UPDATE=0
+DO_TOOLS=1; DO_RAG=1; DO_BOT=1; UPDATE=0; DO_SEMANTIC=0
 for a in "$@"; do case "$a" in
-  --skip-tools) DO_TOOLS=0 ;;
-  --no-rag)     DO_RAG=0 ;;
-  --no-bot)     DO_BOT=0 ;;
-  --update)     UPDATE=1 ;;
+  --skip-tools)   DO_TOOLS=0 ;;
+  --no-rag)       DO_RAG=0 ;;
+  --no-bot)       DO_BOT=0 ;;
+  --update)       UPDATE=1 ;;
+  --semantic-rag) DO_SEMANTIC=1 ;;
   -h|--help)    grep -E '^#( |$)' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
   *) echo "Flag desconocido: $a"; exit 2 ;;
 esac; done
@@ -220,6 +222,22 @@ except Exception: print(0)' 2>/dev/null || echo 0)"
     else
       warn "El RAG de conocimiento no se pobló del todo (¿red/git?). Reintenta luego: python3 rag/knowledge/refresh_kb.py"
     fi
+  fi
+
+  # --- Capa 2 SEMÁNTICA (HackTricks · PayloadsAllTheThings · PEASS · feeds) — OPT-IN (--semantic-rag) ---
+  # Pesada: deps (torch ~cientos de MB) + embeddings locales de un corpus grande (TARDA bastante).
+  # Las deps van al python3 del sistema (Kali, caja dedicada) para que los agentes consulten en runtime.
+  if [ "$DO_SEMANTIC" -eq 1 ]; then
+    info "Capa 2 (semántica): instalando deps y poblando embeddings locales. Esto TARDA (corpus grande)."
+    python3 -m pip install --quiet --break-system-packages sqlite-vec sentence-transformers \
+      || warn "No pude instalar deps de Capa 2 (sqlite-vec/sentence-transformers); revisa pip/red."
+    if python3 rag/knowledge/refresh_kb.py --semantic-only; then
+      ok "Capa 2 (semántica) poblada."
+    else
+      warn "Capa 2 no se pobló del todo. Reintenta: python3 rag/knowledge/refresh_kb.py --semantic-only"
+    fi
+  else
+    info "Capa 2 (semántica) omitida (actívala con --semantic-rag; requiere torch + tiempo de embeddings)."
   fi
 }
 

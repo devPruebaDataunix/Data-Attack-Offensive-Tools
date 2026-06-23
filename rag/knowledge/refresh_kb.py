@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """
-refresh_kb.py — Puebla/actualiza el RAG de CONOCIMIENTO (Capa 1, estructurada). Análogo a rag/refresh.py.
+refresh_kb.py — Puebla/actualiza el RAG de CONOCIMIENTO. Análogo a rag/refresh.py.
 
-Clona/actualiza las fuentes a `.cache/` y corre los ingesters. La Capa 2 (semántica/embeddings sobre
-HackTricks/PEASS/feeds como 0dayfans) se construye aparte.
+Clona/actualiza las fuentes a `.cache/` y corre los ingesters.
+- Capa 1 (estructurada, kb.db): GTFOBins + LOLBAS + Atomic + ATT&CK. SIEMPRE (ligero, stdlib).
+- Capa 2 (semántica, kb_vec.db): HackTricks + PayloadsAllTheThings + PEASS + feeds (0dayfans/HN).
+  Solo con --semantic (PESADO: clona repos grandes + embeddings locales; tarda).
 
 Uso:
-    python rag/knowledge/refresh_kb.py
+    python rag/knowledge/refresh_kb.py                 # solo Capa 1
+    python rag/knowledge/refresh_kb.py --semantic      # Capa 1 + Capa 2
+    python rag/knowledge/refresh_kb.py --semantic-only # solo Capa 2
 """
 import os
 import runpy
@@ -22,6 +26,12 @@ SOURCES = {
 }
 STIX_URL = ("https://raw.githubusercontent.com/mitre-attack/attack-stix-data/"
             "master/enterprise-attack/enterprise-attack.json")
+# Capa 2 — corpus de prosa (label -> (git_url, slug GitHub para construir URLs de referencia)).
+CORPUS = {
+    "hacktricks": ("https://github.com/HackTricks-wiki/hacktricks.git", "HackTricks-wiki/hacktricks"),
+    "payloads": ("https://github.com/swisskyrepo/PayloadsAllTheThings.git", "swisskyrepo/PayloadsAllTheThings"),
+    "peass": ("https://github.com/carlospolop/PEASS-ng.git", "carlospolop/PEASS-ng"),
+}
 
 
 def clone_or_pull(name, url):
@@ -61,8 +71,8 @@ def download(url, dst):
     return dst
 
 
-def main():
-    print("=== Refresco RAG de conocimiento (Capa 1) ===")
+def refresh_layer1():
+    print("=== Refresco RAG de conocimiento — Capa 1 (estructurada) ===")
     gtfo = clone_or_pull("gtfobins", SOURCES["gtfobins"])
     run("ingest_gtfobins.py", ["--src", gtfo])
 
@@ -77,6 +87,30 @@ def main():
         run("ingest_attack.py", ["--src", stix])  # sin --platform => Linux+Windows
     else:
         print("[ATT&CK] (omitido) no hay enterprise-attack.json en rag/knowledge/.cache/.")
+
+
+def refresh_layer2():
+    print("=== Refresco RAG de conocimiento — Capa 2 (semántica/embeddings) ===")
+    try:
+        import sqlite_vec  # noqa: F401
+        import sentence_transformers  # noqa: F401
+    except ImportError as e:
+        print(f"[Capa 2] OMITIDA: falta dependencia ({e}). Instala: pip install sqlite-vec sentence-transformers")
+        return
+    for label, (url, slug) in CORPUS.items():
+        path = clone_or_pull(label, url)
+        run("ingest_corpus.py", ["--source", label, "--src", path, "--repo", slug])
+    run("ingest_feeds.py", [])  # 0dayfans + Hacker News
+
+
+def main():
+    argv = sys.argv[1:]
+    do_l1 = "--semantic-only" not in argv
+    do_l2 = ("--semantic" in argv) or ("--semantic-only" in argv)
+    if do_l1:
+        refresh_layer1()
+    if do_l2:
+        refresh_layer2()
     print("=== Hecho ===")
 
 

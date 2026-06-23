@@ -21,6 +21,8 @@ rag/vulns.db
 rag/vulns.db-*
 rag/knowledge/kb.db
 rag/knowledge/kb.db-*
+rag/knowledge/kb_vec.db
+rag/knowledge/kb_vec.db-*
 rag/knowledge/.cache/
 benchmark/results.jsonl
 report/INFORME-*.md

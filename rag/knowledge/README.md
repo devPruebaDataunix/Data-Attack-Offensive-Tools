@@ -39,10 +39,37 @@ python rag/knowledge/query_kb.py --mitre T1003.001                              
 python rag/knowledge/query_kb.py --platform windows --category privesc --source lolbas  # UAC bypass
 ```
 
-## Capa 2 — semántica (pendiente)
-Embeddings sobre prosa (HackTricks, PEASS, writeups, feed **0dayfans**) → recuperación por significado
-(`query_kb.py --semantic`). Embeddings: Voyage AI (calidad) o sentence-transformers (offline). Store:
-sqlite-vss / FAISS. Ingesta con anti-inyección (todo el contenido externo = DATO).
+## Capa 2 — semántica (`kb_vec.db`, SQLite + sqlite-vec)
+Recuperación por **significado** sobre PROSA larga (metodología), para cuando no sabes el binario/técnica
+exactos: *"estoy en esta situación, ¿qué camino sigo?"*.
+
+| Pieza | Qué hace |
+| :-- | :-- |
+| `kb_vec.py` | store vectorial (sqlite-vec): tabla `chunks` + `vec_chunks` (KNN); dedup por hash |
+| `embed.py` | embeddings **locales** (sentence-transformers, def. `BAAI/bge-small-en-v1.5`, 384d, offline) |
+| `ingest_corpus.py` | trocea Markdown por encabezados y lo indexa: **HackTricks · PayloadsAllTheThings · PEASS** |
+| `ingest_feeds.py` | intel actual: **0dayfans** (RSS) + **Hacker News** (API Algolia por keywords) |
+| `query_kb.py --semantic` | recuperación KNN para los agentes |
+
+- **Embeddings locales** (no nube): ni el corpus ni las consultas (que pueden llevar contexto del target)
+  salen de la zona — coherente con el CVE RAG y la Capa 1. Modelo configurable: `KB_EMBED_MODEL`.
+- **Incremental**: solo se embebe lo nuevo (dedup por hash antes de embeber) → refrescos rápidos.
+- **Anti-inyección**: todo el corpus es DATO; se trocea e indexa como texto inerte, nunca se ejecuta.
+
+### Poblar (PESADO — clona repos grandes + embeddings)
+```bash
+python rag/knowledge/refresh_kb.py --semantic        # Capa 1 + Capa 2
+python rag/knowledge/refresh_kb.py --semantic-only    # solo Capa 2
+pip install sqlite-vec sentence-transformers          # (en Kali: el deploy lo gestiona)
+```
+
+### Consultar (semántica)
+```bash
+python rag/knowledge/query_kb.py --semantic "privesc cuando sudo permite tar" --k 6 --json
+python rag/knowledge/query_kb.py --semantic "kerberoasting y abuso de SPN" --platform windows
+```
+
+> `kb_vec.db` está gitignored — se reconstruye con `refresh_kb.py --semantic`.
 
 ## Integración con los agentes
 El Orquestador inyecta la técnica relevante en la delegación (como hace con `lessons[]`); los agentes
