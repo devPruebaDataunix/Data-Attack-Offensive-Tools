@@ -153,7 +153,7 @@ def validate_refs():
         "contracts/target.schema.json", "contracts/engagement.schema.json",
         "contracts/scope.example.json", "rag/query_vulns.py", "rag/refresh.py",
         ".claude/hooks/scope_guard.py", ".claude/hooks/a2a_guard.py",
-        ".claude/hooks/a2a_router_nudge.py", "CLAUDE.md",
+        ".claude/hooks/a2a_router_nudge.py", ".claude/hooks/memory_guard.py", "CLAUDE.md",
         "contracts/a2a-message.schema.json", "contracts/agent-card.schema.json",
         "contracts/agent-cards.json", "tools/build_agent_cards.py",
         # Despliegue en contenedores (v1.6.0)

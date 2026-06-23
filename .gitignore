@@ -17,6 +17,10 @@ engagements/
 
 # ─── Generado en runtime ───────────────────────────────────────
 .claude/audit/
+# Memoria de aprendizaje por agente. La `local` es per-operador y NUNCA se versiona (datos que
+# podrían filtrar entre clientes). La `project` (.claude/agent-memory/) SÍ se comparte por git a
+# propósito, pero el hook memory_guard.py la sanea para que solo contenga técnica generalizada.
+.claude/agent-memory-local/
 rag/vulns.db
 rag/vulns.db-*
 rag/knowledge/kb.db

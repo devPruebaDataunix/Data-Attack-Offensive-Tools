@@ -35,6 +35,16 @@ persistente (`memory: project`) y en `lessons[]` del blackboard. Tú eres ese me
 - Escribe/actualiza `lessons[]` en `engagement.json` con esquema validado.
 - Persiste las lecciones generales en tu memoria de proyecto para futuros engagements.
 
+## Meta-curaduría de la memoria por agente (cierre)
+Los especialistas de explotación/triage tienen su propia **memoria local** (`memory: local`, en
+`.claude/agent-memory-local/<agente>/`). Al cierre, además de tus `lessons[]`:
+- Revisa la memoria de cada agente y **consolida** lo sólido (deduplica, fusiona variantes, sube
+  `times_observed`), **poda** lo anecdótico o ya superado y **cura el tamaño** de cada `MEMORY.md`.
+- Vela por que solo contenga **técnica generalizada**. El hook `memory_guard.py` ya bloquea de forma
+  determinista escribir datos de cliente ahí; tú eres la última pasada de calidad (si ves un residuo,
+  redáctalo).
+- No mezcles memorias entre agentes: cada uno mantiene su propio oficio.
+
 ## Criterio de done
 Lecciones del engagement extraídas, deduplicadas y persistidas. Devuelve al Orquestador un
 resumen de lo aprendido para reinyectar en la próxima fase de explotación.

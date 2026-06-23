@@ -3,7 +3,7 @@
 
 # 🗺️ Mapa de Arquitectura — Cyberseg Agents
 
-> **Generado:** 2026-06-23 01:01:16 UTC · **Refleja el estado real** del proyecto en ese momento.
+> **Generado:** 2026-06-23 09:31:59 UTC · **Refleja el estado real** del proyecto en ese momento.
 > Regenerar a mano: `python tools/gen_arch_diagram.py`
 
 ## Qué es esto (para reconstruir contexto si se pierde)
@@ -75,25 +75,25 @@ flowchart TB
 | **osint-recon** | E1 | claude-haiku-4-5 | default | — | Read, Write, Edit, Grep, Glob, WebSearc… | Recon PASIVO. Úsalo al inicio de un engagement para mapear la superfi… |
 | **recon-suite** | E1 | claude-haiku-4-5 | default | — | Read, Write, Edit, Grep, Glob, Bash | Especialista en el toolkit de recon moderno — subfinder, amass, dnsx,… |
 | **nuclei** | E2 | claude-haiku-4-5 | default | — | Read, Write, Edit, Grep, Glob, Bash | Especialista en Nuclei (ProjectDiscovery), escaneo de vulnerabilidade… |
-| **vuln-triage** | E2 | claude-sonnet-4-6 | default | — | Read, Write, Edit, Grep, Glob, Bash, We… | Análisis y priorización de vulnerabilidades. Úsalo tras active-recon … |
-| **ai-security** | E2 | claude-opus-4-8 | default | — | Read, Write, Edit, Grep, Glob, Bash, We… | Red teaming de aplicaciones con IA/LLM. Úsalo cuando el target en sco… |
+| **vuln-triage** | E2 | claude-sonnet-4-6 | default | local | Read, Write, Edit, Grep, Glob, Bash, We… | Análisis y priorización de vulnerabilidades. Úsalo tras active-recon … |
+| **ai-security** | E2 | claude-opus-4-8 | default | local | Read, Write, Edit, Grep, Glob, Bash, We… | Red teaming de aplicaciones con IA/LLM. Úsalo cuando el target en sco… |
 | **c2-exfil** | E2 | claude-sonnet-4-6 | default | — | Read, Write, Edit, Grep, Glob, Bash | Simulación CONTROLADA de C2, exfiltración e impacto para demostrar el… |
-| **lateral-discovery** | E2 | claude-sonnet-4-6 | default | — | Read, Write, Edit, Grep, Glob, Bash | Descubrimiento INTERNO y movimiento lateral desde un punto de apoyo c… |
-| **metasploit** | E2 | claude-sonnet-4-6 | default | — | Read, Write, Edit, Grep, Glob, Bash | Operador SENIOR de Metasploit Framework. Úsalo cuando un finding trae… |
-| **netexec** | E2 | claude-sonnet-4-6 | default | — | Read, Write, Edit, Grep, Glob, Bash | Especialista en NetExec (nxc, sucesor de CrackMapExec) + Impacket + r… |
-| **network-exploit** | E2 | claude-sonnet-4-6 | default | — | Read, Write, Edit, Grep, Glob, Bash | Explotación de servicios de red e infraestructura (no-HTTP). Úsalo pa… |
-| **post-exploit** | E2 | claude-opus-4-8 | default | — | Read, Write, Edit, Grep, Glob, Bash | Post-explotación en un host ya comprometido EN SCOPE. Úsalo para esca… |
+| **lateral-discovery** | E2 | claude-sonnet-4-6 | default | local | Read, Write, Edit, Grep, Glob, Bash | Descubrimiento INTERNO y movimiento lateral desde un punto de apoyo c… |
+| **metasploit** | E2 | claude-sonnet-4-6 | default | local | Read, Write, Edit, Grep, Glob, Bash | Operador SENIOR de Metasploit Framework. Úsalo cuando un finding trae… |
+| **netexec** | E2 | claude-sonnet-4-6 | default | local | Read, Write, Edit, Grep, Glob, Bash | Especialista en NetExec (nxc, sucesor de CrackMapExec) + Impacket + r… |
+| **network-exploit** | E2 | claude-sonnet-4-6 | default | local | Read, Write, Edit, Grep, Glob, Bash | Explotación de servicios de red e infraestructura (no-HTTP). Úsalo pa… |
+| **post-exploit** | E2 | claude-opus-4-8 | default | local | Read, Write, Edit, Grep, Glob, Bash | Post-explotación en un host ya comprometido EN SCOPE. Úsalo para esca… |
 | **sliver** | E2 | claude-sonnet-4-6 | default | — | Read, Write, Edit, Grep, Glob, Bash | Operador de Sliver C2 (open source) para post-explotación y simulació… |
-| **sqlmap** | E2 | claude-sonnet-4-6 | default | — | Read, Write, Edit, Grep, Glob, Bash | Especialista senior en sqlmap, automatización de inyección SQL. Úsalo… |
-| **web-exploit** | E2 | claude-opus-4-8 | default | — | Read, Write, Edit, Grep, Glob, Bash, We… | Explotación de aplicaciones web (capa 7 HTTP/S). Úsalo para verificar… |
-| **web-fuzzing** | E2 | claude-haiku-4-5 | default | — | Read, Write, Edit, Grep, Glob, Bash | Especialista en descubrimiento de contenido y fuzzing web — ffuf y fe… |
+| **sqlmap** | E2 | claude-sonnet-4-6 | default | local | Read, Write, Edit, Grep, Glob, Bash | Especialista senior en sqlmap, automatización de inyección SQL. Úsalo… |
+| **web-exploit** | E2 | claude-opus-4-8 | default | local | Read, Write, Edit, Grep, Glob, Bash, We… | Explotación de aplicaciones web (capa 7 HTTP/S). Úsalo para verificar… |
+| **web-fuzzing** | E2 | claude-haiku-4-5 | default | local | Read, Write, Edit, Grep, Glob, Bash | Especialista en descubrimiento de contenido y fuzzing web — ffuf y fe… |
 | **knowledge-postmortem** | E3 | claude-haiku-4-5 | default | project | Read, Write, Edit, Grep, Glob | Aprendizaje basado en errores. Úsalo tras cada intento o al cierre de… |
 | **reporting** | E3 | claude-opus-4-8 | default | — | Read, Write, Edit, Grep, Glob | Redacción del informe del engagement. Úsalo al cierre para convertir … |
 
 ## Componentes de soporte (estado real)
 
 - **Orquestador (hub):** `AGENTS.md` — sesión principal, no es un subagente.
-- **Hook de alcance:** a2a_guard.py, a2a_router_nudge.py, approval_gate.py, budget_guard.py, scope_guard.py, secret_scan.py, subagent_stop.py, validate_blackboard.py (PreToolUse, bloquea fuera de scope).
+- **Hook de alcance:** a2a_guard.py, a2a_router_nudge.py, approval_gate.py, budget_guard.py, memory_guard.py, scope_guard.py, secret_scan.py, subagent_stop.py, validate_blackboard.py (PreToolUse, bloquea fuera de scope).
 - **Blackboard / contratos:** a2a-message.schema.json, agent-card.schema.json, agent-cards.json, engagement.json, engagement.schema.json, examples, finding.schema.json, scope.example.json, scope.json, target.schema.json.
 - **RAG de vulnerabilidades:** db.py, enrich_cve5.py, enrich_epss.py, enrich_exploits.py, enrich_msf.py, enrich_nuclei.py, ingest_kev.py, ingest_recent.py, query_vulns.py, refresh.py (KEV+EPSS+CVE recientes, alimenta a vuln-triage).
 - **RAG de conocimiento (técnicas):** embed.py, ingest_atomics.py, ingest_attack.py, ingest_corpus.py, ingest_feeds.py, ingest_gtfobins.py, ingest_lolbas.py, kb.py, kb_vec.py, query_kb.py, refresh_kb.py (Capa 1 estructurada GTFOBins/LOLBAS/Atomic/ATT&CK + Capa 2 semántica HackTricks/PaTT/PEASS/feeds; lo consultan los agentes de explotación vía la skill `rag-technique-lookup`).

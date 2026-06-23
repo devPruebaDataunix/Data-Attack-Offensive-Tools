@@ -40,6 +40,15 @@
             "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/approval_gate.py"
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/memory_guard.py"
+          }
+        ]
       }
     ],
     "PostToolUse": [

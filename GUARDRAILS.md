@@ -34,6 +34,7 @@ flowchart TB
     AGENT -->|comando contra target| G_SCOPE
     AGENT -->|comando ofensivo| G_HITL
     AGENT -->|mensaje A2A a otro agente| G_A2A
+    AGENT -->|escribe en su memoria de aprendizaje| G_MEMORY
 
     subgraph GATES["Guardarraíles"]
         G_INJECT{{"🧱 datos ≠ instrucciones<br/>anti-inyección · prompt (LLM01)"}}
@@ -45,6 +46,7 @@ flowchart TB
         G_SCHEMA{{"📐 validate_blackboard.py<br/>PostToolUse · determinista"}}
         G_REDACT{{"✂️ secret_scan.py<br/>PostToolUse · determinista (LLM02)"}}
         G_A2A{{"✉️ a2a_guard.py<br/>PostToolUse · C14/C15 (LLM01/LLM10)"}}
+        G_MEMORY{{"🧠 memory_guard.py<br/>PreToolUse · determinista (LLM02)"}}
     end
 
     G_SCOPE -->|en scope| TARGET
@@ -56,6 +58,8 @@ flowchart TB
     G_REDACT -.->|secreto del operador| FIX
     G_A2A -->|emisor/destino válidos, sin bucle| BB
     G_A2A -.->|spoofing / techo de hops| FIX
+    G_MEMORY -->|técnica limpia| MEM["🧠 memoria de agente<br/>.claude/agent-memory*/"]
+    G_MEMORY -.->|datos de cliente| FIX
 ```
 
 ## Inventario de controles (estado real)
@@ -78,6 +82,7 @@ flowchart TB
 | C14 | **Validador del bus A2A** — cada mensaje agente→agente debe tener envelope sano y `from_agent`/`to_agent` que sean agentes conocidos (registro `agent-cards.json`); rechaza emisor/destino inventado (anti-spoofing) y exige que `to_agent` sea un **peer declarado** de `from_agent` (topología `a2a_peers`) o el hub — los relevos fuera de pareja van por el Orquestador. Los mensajes A2A se tratan como DATOS (la regla soft es C11) | Determinista | `.claude/hooks/a2a_guard.py` (PostToolUse) | **LLM01 Prompt Injection** |
 | C15 | **Kill-switch A2A** — acota la conversación entre agentes: bloquea si los mensajes del engagement superan el techo o si una cadena acumula demasiados `hops` (anti-bucle). Equivalente A2A de C13 (`constraints.max_a2a_hops`, def. 50) | Determinista | `.claude/hooks/a2a_guard.py` (PostToolUse) | **LLM10 Unbounded Consumption** |
 | C16 | **Auditoría del ciclo de subagentes** — cada fin de subagente deja un registro JSONL inmutable por anexado (agente, id, sesión, engagement, transcript). **Observacional**: no bloquea la finalización (fail-safe a exit 0) | Determinista (audit) | `.claude/hooks/subagent_stop.py` (SubagentStop) → `engagements/<id>/evidence/subagents.jsonl` (o `.claude/audit/`) | (trazabilidad / defensa legal) |
+| C17 | **Guard de sanitización de la memoria de aprendizaje** — antes de escribir en la memoria persistente de un agente (`.claude/agent-memory*/`: `local` per-operador **y** `project` compartida por git) **bloquea** si el contenido trae secretos, identificadores del scope (IPs/dominios in/out), IPs públicas enrutables o loot (hashes). Convierte "sin datos de cliente en memoria" en garantía de código (aislamiento de cliente, CONSTITUTION §1) | Determinista | `.claude/hooks/memory_guard.py` (PreToolUse) + `tools/redactor.py` + helpers de `scope_guard` | **LLM02 Sensitive Info Disclosure** |
 
 > **Refuerzo del router A2A (no es un gate):** `a2a_router_nudge.py` (PostToolUse sobre `Task`)
 > recuerda al Orquestador, tras cada retorno de subagente, que entregue los mensajes A2A `pending`

@@ -110,7 +110,7 @@ hops anti-bucle).
 | 📱 | **Bot de Telegram** | Control remoto en lenguaje natural, resúmenes en vivo y aprobación por nivel de riesgo. |
 | 🖥️ | **Panel TUI de control total** | Terminal (Textual) por pestañas: estado, **bus A2A**, roster de agentes, **presupuesto/coste**, RAG, evidencia y **acciones** (kill-switch, delegación dirigida, override de fase) — con las mismas puertas que el bot. |
 | 📊 | **Analítica de coste local** | [agentsview](https://github.com/kenn-io/agentsview) (local-first) lee `~/.claude/projects/` → coste y actividad por agente en `127.0.0.1:8080`. Re-medir el gasto sin sacar datos. |
-| 🧠 | **Aprendizaje por errores** | `knowledge-postmortem` guarda lecciones de cada intento en memoria persistente y en el blackboard. |
+| 🧠 | **Aprendizaje por agente** | Cada especialista de explotación/triage acumula su propia memoria local de **técnica** (`memory: local`, per-operador), saneada de forma **determinista** por `memory_guard.py` (sin datos de cliente); `knowledge-postmortem` la consolida al cierre y guarda lecciones en el blackboard. |
 | 🧩 | **Multiplataforma** | Claude Code (CLI + extensión de VS Code) y espejo para opencode. |
 
 ## Arquitectura

@@ -25,6 +25,18 @@ se versiona con [SemVer](https://semver.org/lang/es/).
 - **Ingesta pasiva (cron).** `auto-deploy.sh` programa el refresco de los RAG en el crontab del usuario
   operador (vulnerabilidades a diario, conocimiento semanal; log en `rag/.refresh.log`), idempotente y con
   `--no-cron` para omitirlo. Mantiene ambos RAG al día sin intervención.
+- **Memoria de aprendizaje por agente (`memory: local`) + guard de sanitización (nuevo control C17).**
+  Los 10 agentes de explotación/triage (web-exploit, sqlmap, network-exploit, metasploit, netexec,
+  ai-security, web-fuzzing, lateral-discovery, post-exploit, vuln-triage) acumulan su propia memoria de
+  **técnica generalizada** per-operador (`.claude/agent-memory-local/`, gitignored), con sección
+  "Memoria de aprendizaje" en su prompt (anti-sobreajuste `times_observed ≥ 3`, dedup, cura de tamaño).
+  - **`memory_guard.py`** (PreToolUse, determinista) **bloquea** escribir secretos, identificadores del
+    scope (IPs/dominios in/out), IPs públicas enrutables o loot (hashes) en `.claude/agent-memory*/` —
+    cubre la memoria `local` **y** la `project` (que se comparte por git): convierte "sin datos de
+    cliente en memoria" en **garantía de código** (aislamiento de cliente, CONSTITUTION §1). Reutiliza
+    `tools/redactor.py` y los helpers de `scope_guard`.
+  - `knowledge-postmortem` pasa a **meta-curador**: consolida/poda la memoria de cada agente al cierre.
+  - Pruebas: `tests/test_memory_guard.py` (20/0). Espejo opencode regenerado. `validate_suite` 396/0/0.
 ### Changed
 - Diagramas de arquitectura (`README.md`, `ARCHITECTURE_MAP.md` + su generador) y docs (incl.
   `docs/references.md`, que ya cataloga las fuentes de **ambos** RAG: conocimiento Capa 1/2 + frescura de
