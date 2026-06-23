@@ -36,6 +36,7 @@ def main():
     epss_all = "--epss-all" in sys.argv
     print("=== Refresco RAG de vulnerabilidades (híbrido) ===")
     run("ingest_kev.py", [])                              # 1. KEV (explotación confirmada)
+    run("ingest_recent.py", [])                           # 1.5 CVE recientes (CVEDetector + OpenCVE si hay claves)
     run("enrich_cve5.py", [])                             # 2. CVSS + SSVC (CVE 5.0, no NVD)
     run("enrich_exploits.py", [])                         # 3. Exploit público (ExploitDB + eip opt)
     run("enrich_msf.py", [])                              # 4. Módulos Metasploit (rapid7)

@@ -54,11 +54,27 @@ severity, in_kev, epss, cwe, source_refs...), más metadatos de frescura del sto
 | :--- | :--- |
 | `db.py` | Esquema SQLite + migración + helpers (store `vulns.db`) |
 | `ingest_kev.py` | Descarga el catálogo CISA KEV y lo upserta |
+| `ingest_recent.py` | **Frescura**: CVE recién publicados (CVEDetector + OpenCVE) que aún no están en KEV |
 | `enrich_cve5.py` | CVSS + SSVC desde CVE 5.0 (CNA + CISA-ADP), **no NVD** |
 | `enrich_exploits.py` | Exploit público: ExploitDB (offline) + eip-mcp (opcional) |
 | `enrich_epss.py` | Añade scores EPSS (lotes de 50, con reintentos) |
 | `query_vulns.py` | Retrieval híbrido rankeado (lo llama el agente) |
-| `refresh.py` | Orquesta KEV + CVE5 + exploits + EPSS para cron/Task Scheduler |
+| `refresh.py` | Orquesta KEV + recientes + CVE5 + exploits + MSF + Nuclei + EPSS para cron/Task Scheduler |
+
+### Frescura: CVE recién publicados (`ingest_recent.py`)
+KEV va con meses de retraso respecto a la publicación. `ingest_recent.py` añade los CVE **recientes** que
+aún no tenemos, desde feeds de frescura, y los marca con `source_feed`/`published_date` (in_kev=0). Luego
+los enrichers les ponen CVSS/EPSS/exploit en el mismo refresco. Corre dentro de `refresh.py` (constante).
+- **CVEDetector** (canal Telegram, preview web público `t.me/s/CVEDetector`): sin auth. Su lado prosa
+  también va al RAG semántico (Capa 2, `rag/knowledge/ingest_feeds.py`).
+- **OpenCVE** (API v2 de `app.opencve.io`): **requiere credenciales** → `OPENCVE_USERNAME`/`OPENCVE_PASSWORD`
+  (nunca en el repo). Sin ellas se omite con aviso.
+- **Anti-inyección**: todo el contenido remoto es DATO inerte; nunca se ejecuta.
+
+```bash
+python rag/ingest_recent.py                    # CVEDetector (+ OpenCVE si hay credenciales)
+OPENCVE_USERNAME=u OPENCVE_PASSWORD=p python rag/ingest_recent.py --opencve-pages 3
+```
 
 `vulns.db` se genera; **no** se versiona ni se incluye en el paquete (caduca). Ejecuta
 `refresh.py` para crearlo.
@@ -133,6 +149,8 @@ búsqueda semántica). Patrón equivalente a tu Market Bot:
 
 ## Fuentes
 - CISA KEV: https://www.cisa.gov/known-exploited-vulnerabilities-catalog
+- CVEDetector (Telegram, frescura): https://t.me/s/CVEDetector
+- OpenCVE (API v2, frescura, requiere cuenta): https://app.opencve.io/cve/ · https://docs.opencve.io/api/
 - EPSS API: https://www.first.org/epss/api
 - CVE 5.0 (MITRE CVE Services): https://cveawg.mitre.org/api/cve/{CVE-ID}
 - CISA Vulnrichment (SSVC): https://github.com/cisagov/vulnrichment

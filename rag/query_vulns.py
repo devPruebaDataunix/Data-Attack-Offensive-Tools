@@ -146,6 +146,8 @@ def main():
             "vendor": r["vendor"],
             "product": r["product"],
             "severity": tier(r),
+            "published_date": r["published_date"],
+            "source_feed": json.loads(r["source_feed"] or "[]"),
             "in_kev": bool(r["in_kev"]),
             "kev_ransomware": bool(r["ransomware"]),
             "kev_due_date": r["due_date"],

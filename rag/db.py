@@ -55,6 +55,8 @@ MIGRATIONS = {
     "exploit_maturity": "TEXT", "vulncheck_kev": "INTEGER",
     "msf_modules": "TEXT",       # JSON: módulos Metasploit (fullname/type/rank)
     "nuclei_templates": "TEXT",  # JSON: rutas de plantillas Nuclei
+    "published_date": "TEXT",    # fecha de publicación del CVE (de feeds recientes: CVEDetector/OpenCVE)
+    "source_feed": "TEXT",       # JSON: feeds que surfacearon el CVE (kev/cvedetector/opencve)
 }
 
 
