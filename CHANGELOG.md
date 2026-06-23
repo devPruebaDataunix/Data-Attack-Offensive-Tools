@@ -4,8 +4,7 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
-## [Sin publicar]
-> Trabajo en `master` aún **no publicado** (el push de release lleva verificación anti-alucinación + bump de versión).
+## [2.2.0] - 2026-06-23
 ### Added
 - **RAG de conocimiento (técnicas ofensivas) — `rag/knowledge/`.** Segundo RAG local, complementario al de
   CVEs, para el *"cómo explotar/escalar"*. Lo consultan los agentes de explotación vía la skill
