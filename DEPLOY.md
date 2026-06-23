@@ -19,7 +19,7 @@ cd bot && ./.venv/bin/python bot.py
 | 1 Base | git, curl, jq, python3+pipx+`python-is-python3`, golang, **Node LTS** (NodeSource) |
 | 2 Claude | `@anthropic-ai/claude-code` (npm) + aviso de login Pro |
 | 3 Toolchain | apt (nmap, sqlmap, metasploit, ffuf, feroxbuster, seclists, **netexec**, gobuster, john, hashcat, amass) · **pdtm** (subfinder, httpx, nuclei, naabu, katana, dnsx) · impacket · bloodhound.py · **Sliver** |
-| 4 RAG | `rag/refresh.py --epss-all` (KEV+CVE5+ExploitDB+MSF+Nuclei+EPSS) |
+| 4 RAG | `rag/refresh.py --epss-all` (KEV + **CVE recientes** CVEDetector/cvelistV5 + CVE5 + ExploitDB + MSF + Nuclei + EPSS) + **RAG de conocimiento** Capa 1 (`rag/knowledge/refresh_kb.py`; Capa 2 semántica opt-in con `--semantic-rag`) |
 | 5 Bot | venv + dependencias + crea `bot/.env` (te pregunta token y user-id) |
 | 6 Verify | `deploy/verify.sh` — presencia + versión de cada herramienta, validadores, RAG, auth |
 

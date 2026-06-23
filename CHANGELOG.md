@@ -4,6 +4,28 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [Sin publicar]
+> Trabajo en `master` aún **no publicado** (el push de release lleva verificación anti-alucinación + bump de versión).
+### Added
+- **RAG de conocimiento (técnicas ofensivas) — `rag/knowledge/`.** Segundo RAG local, complementario al de
+  CVEs, para el *"cómo explotar/escalar"*. Lo consultan los agentes de explotación vía la skill
+  `rag-technique-lookup`.
+  - **Capa 1 (estructurada, `kb.db`, stdlib):** ingesters de **GTFOBins · LOLBAS · Atomic Red Team ·
+    MITRE ATT&CK (STIX)**; `query_kb.py` devuelve la técnica/comando accionable (privesc/credenciales/…).
+  - **Capa 2 (semántica, `kb_vec.db`):** embeddings **locales** (sentence-transformers) + **sqlite-vec**
+    sobre **HackTricks · PayloadsAllTheThings · PEASS** + feeds (**0dayfans · Hacker News · CVEDetector**);
+    `query_kb.py --semantic`. Ingesta incremental y con anti-inyección (todo el corpus = DATO).
+  - Cableado en `post-exploit` y `web-exploit`; `auto-deploy.sh` puebla la Capa 1 (Capa 2 opt-in con
+    `--semantic-rag`).
+- **Frescura del RAG de vulnerabilidades.** El store estaba anclado a KEV (meses de retraso); `rag/ingest_recent.py`
+  añade los **CVE recién publicados** desde **CVEDetector** (Telegram, sin auth) y **MITRE cvelistV5**
+  (`deltaLog`, sin auth; **OpenCVE** opcional con credenciales). `enrich_cve5.py` rellena además
+  nombre/descripción/producto; nuevas columnas `published_date`/`source_feed`; corre dentro de `rag/refresh.py`.
+- **Eval-harness / GATE — `benchmark/`** (EDD + pass@k) para medir el cierre autónomo.
+### Changed
+- Diagramas de arquitectura (`README.md`, `ARCHITECTURE_MAP.md` + su generador) y docs: reflejan los **dos
+  RAG**. `validate_suite` 383/0/0.
+
 ## [2.1.2] - 2026-06-22
 ### Fixed
 - **La fase de poblado del RAG en `auto-deploy.sh` (4/6) parecía colgarse.** El instalador canaliza

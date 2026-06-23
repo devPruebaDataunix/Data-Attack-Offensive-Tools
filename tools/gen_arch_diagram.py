@@ -83,7 +83,8 @@ def build_mermaid(agents):
     L.append('    ORQ["🧭 Orquestador · AGENTS.md<br/>sesión principal (hub) · opus-4-8"]')
     L.append('    SG{{"🛡️ scope_guard.py<br/>hook PreToolUse · barrera de alcance"}}')
     L.append('    BB[("🗒️ Blackboard<br/>contracts/engagement.json")]')
-    L.append('    RAGDB[("📚 RAG KEV+EPSS<br/>rag/")]')
+    L.append('    RAGDB[("📚 RAG vulnerabilidades<br/>rag/ · KEV+EPSS+recientes")]')
+    L.append('    RAGKB[("🧠 RAG conocimiento<br/>rag/knowledge · técnicas (Capa 1+2)")]')
     for z in ZONE_ORDER:
         zin = [a for a in agents if a["zone"] == z]
         if not zin:
@@ -102,6 +103,9 @@ def build_mermaid(agents):
     L.append("    BB -.->|reinyecta lecciones| ORQ")
     if any(a["name"] == "vuln-triage" for a in agents):
         L.append("    vuln_triage ==>|consulta CVE| RAGDB")
+    for an, nidname in (("post-exploit", "post_exploit"), ("web-exploit", "web_exploit")):
+        if any(a["name"] == an for a in agents):
+            L.append(f"    {nidname} ==>|consulta técnica| RAGKB")
     L.append("    SG -.->|valida cada comando| E2")
     L.append("    ORQ -.->|lee alcance| SG")
     L.append("```")
@@ -112,6 +116,7 @@ def build_doc(agents):
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     contracts = sorted(os.path.basename(p) for p in glob.glob(os.path.join(ROOT, "contracts", "*")))
     rag = sorted(os.path.basename(p) for p in glob.glob(os.path.join(ROOT, "rag", "*.py")))
+    rag_kb = sorted(os.path.basename(p) for p in glob.glob(os.path.join(ROOT, "rag", "knowledge", "*.py")))
     hooks = sorted(os.path.basename(p) for p in glob.glob(os.path.join(ROOT, ".claude", "hooks", "*.py")))
     n_by_zone = {z: len([a for a in agents if a["zone"] == z]) for z in ZONE_ORDER}
 
@@ -128,12 +133,14 @@ def build_doc(agents):
     doc.append("")
     doc.append("Suite de agentes para **pentesting / bug bounty autorizado**. Un **Orquestador** "
                "(sesión principal, `AGENTS.md`) coordina a los agentes especialistas mediante "
-               "**hub-and-spoke**: él es el único que delega y recoge resultados; los agentes "
-               "**no se hablan entre sí**, se comunican a través del **blackboard** "
-               "(`contracts/engagement.json`). Un **hook de alcance** (`scope_guard.py`) bloquea "
-               "de forma determinista cualquier comando contra un target fuera de "
-               "`contracts/scope.json`. El agente `vuln-triage` consulta el **RAG de "
-               "vulnerabilidades** (`rag/`, KEV+EPSS) para priorizar por explotación real.")
+               "**hub-and-spoke**: él delega, recoge resultados y hace de **router de un bus A2A "
+               "mediado** (los agentes se dirigen mensajes entre sí dejándolos en el **blackboard**, "
+               "`contracts/engagement.json`; no hay malla directa). Un **hook de alcance** "
+               "(`scope_guard.py`) bloquea de forma determinista cualquier comando contra un target "
+               "fuera de `contracts/scope.json`. Dos RAG locales (SQLite): el de **vulnerabilidades** "
+               "(`rag/`, KEV+EPSS+CVE recientes) que consulta `vuln-triage`, y el de **conocimiento** "
+               "(`rag/knowledge/`, técnicas — Capa 1 estructurada + Capa 2 semántica) que consultan los "
+               "agentes de explotación.")
     doc.append("")
     doc.append(f"**Estado actual:** {len(agents)} agentes especialistas "
                f"(E1={n_by_zone['E1']}, E2={n_by_zone['E2']}, E3={n_by_zone['E3']}) "
@@ -165,7 +172,10 @@ def build_doc(agents):
     doc.append(f"- **Orquestador (hub):** `AGENTS.md` — sesión principal, no es un subagente.")
     doc.append(f"- **Hook de alcance:** {', '.join(hooks) or '—'} (PreToolUse, bloquea fuera de scope).")
     doc.append(f"- **Blackboard / contratos:** {', '.join(contracts) or '—'}.")
-    doc.append(f"- **RAG de vulnerabilidades:** {', '.join(rag) or '—'} (KEV+EPSS, alimenta a vuln-triage).")
+    doc.append(f"- **RAG de vulnerabilidades:** {', '.join(rag) or '—'} (KEV+EPSS+CVE recientes, alimenta a vuln-triage).")
+    doc.append(f"- **RAG de conocimiento (técnicas):** {', '.join(rag_kb) or '—'} (Capa 1 estructurada "
+               f"GTFOBins/LOLBAS/Atomic/ATT&CK + Capa 2 semántica HackTricks/PaTT/PEASS/feeds; lo "
+               f"consultan los agentes de explotación vía la skill `rag-technique-lookup`).")
     doc.append(f"- **Gobierno / coherencia:** `CONSTITUTION.md` (principios innegociables) · "
                f"`tools/analyze_engagement.py` (auditoría de coherencia, `/analyze` adaptado).")
     doc.append("")

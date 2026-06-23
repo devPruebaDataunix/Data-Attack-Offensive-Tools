@@ -8,7 +8,8 @@
 <p align="center">
   <b>Suite de 18 agentes especialistas para pentesting y bug bounty autorizado.</b><br>
   Orquestación hub-and-spoke con bus A2A mediado sobre los subagentes nativos de Claude Code,
-  con guardián de alcance determinista, RAG de vulnerabilidades y control remoto por Telegram.
+  con guardián de alcance determinista, doble RAG (vulnerabilidades + conocimiento ofensivo) y
+  control remoto por Telegram.
 </p>
 
 <!-- BADGES — actividad del repo -->
@@ -34,7 +35,8 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Agentes-18_especialistas-00D4FF?style=flat-square&labelColor=0D1117" alt="18 agentes">
   <img src="https://img.shields.io/badge/Orquestaci%C3%B3n-Hub--and--Spoke_%2B_A2A-00D4FF?style=flat-square&labelColor=0D1117" alt="Hub-and-spoke + A2A">
-  <img src="https://img.shields.io/badge/Vulns-KEV%2BEPSS-00D4FF?style=flat-square&labelColor=0D1117" alt="RAG KEV+EPSS">
+  <img src="https://img.shields.io/badge/RAG_vulns-KEV%2BEPSS%2Brecientes-00D4FF?style=flat-square&labelColor=0D1117" alt="RAG vulnerabilidades">
+  <img src="https://img.shields.io/badge/RAG_t%C3%A9cnicas-GTFOBins%2FATT%26CK%2BHackTricks-00D4FF?style=flat-square&labelColor=0D1117" alt="RAG de conocimiento">
   <img src="https://img.shields.io/badge/Alcance-scope--guarded-3FB950?style=flat-square&labelColor=0D1117" alt="Scope guarded">
   <img src="https://img.shields.io/badge/Control-humano_en_el_bucle-3FB950?style=flat-square&labelColor=0D1117" alt="Humano en el bucle">
   <img src="https://img.shields.io/badge/Guardarra%C3%ADles-OWASP_LLM_Top_10-3FB950?style=flat-square&labelColor=0D1117" alt="Guardarraíles OWASP LLM Top 10">
@@ -67,7 +69,7 @@
 - [Instalación rápida (Claude Code)](#instalación-rápida-claude-code)
 - [Los 18 agentes](#los-18-agentes)
 - [Bot de Telegram](#bot-de-telegram)
-- [RAG de vulnerabilidades](#rag-de-vulnerabilidades-kevepss)
+- [Los dos RAG locales](#los-dos-rag-locales)
 - [Flujo engagement-driven](#flujo-engagement-driven)
 - [Las tres zonas de aislamiento](#las-tres-zonas-de-aislamiento)
 - [Seguridad](#seguridad)
@@ -80,8 +82,8 @@
 ## Qué es Data Attack
 
 Data Attack es una suite de **18 agentes especialistas** (de fase y de herramienta), un **orquestador**, un
-**guardián de alcance** (hook determinista), un **RAG de vulnerabilidades** KEV+EPSS y un
-**bot de Telegram** para conducir todo desde el móvil. Cubre las fases de un engagement
+**guardián de alcance** (hook determinista), **dos RAG locales** (vulnerabilidades KEV+EPSS+CVE recientes y
+conocimiento de técnicas ofensivas) y un **bot de Telegram** para conducir todo desde el móvil. Cubre las fases de un engagement
 ofensivo —recon, análisis, explotación y cierre— sobre el sistema nativo de **subagentes de
 Claude Code**, con un espejo equivalente para **opencode**.
 
@@ -100,7 +102,8 @@ hops anti-bucle).
 | :---: | :--- | :--- |
 | 🧭 | **Hub-and-spoke + bus A2A** | Un orquestador delega por fases y enruta; los agentes se dirigen mensajes A2A entre sí por el blackboard (mediado, auditado y con techo de hops), sin malla directa. |
 | 🤖 | **18 agentes especialistas** | Recon, triage, explotación web/red/AD, C2 simulado, red team de IA/LLM, informe y postmortem. |
-| 📚 | **RAG KEV+EPSS** | `vuln-triage` prioriza por lo que de verdad se explota (CISA KEV, EPSS, exploit público), sin reentrenar el modelo. |
+| 📚 | **RAG de vulnerabilidades** | `vuln-triage` prioriza por lo que de verdad se explota (CISA KEV, EPSS, exploit público) **y se mantiene fresco con CVE recién publicados** (CVEDetector + MITRE cvelistV5), sin reentrenar el modelo. |
+| 🧠 | **RAG de conocimiento** | Catálogo local de **técnicas** ofensivas (GTFOBins/LOLBAS/Atomic/ATT&CK + HackTricks/PEASS semánticos) que los agentes de explotación consultan para el *cómo* (privesc, payloads, cadenas); skill `rag-technique-lookup`. |
 | 🛡️ | **Guardián de alcance** | `scope_guard.py` bloquea de forma determinista cualquier acción fuera de `scope.json`. |
 | 🙋 | **Supervisión configurable** | Aprobación humana por acción en modo `full`/`critical`/`auto` (def. `critical`); el alcance y el no-daño **NO** se relajan en ningún modo. |
 | 🔒 | **Mínimo privilegio por agente** | Cada especialista acota sus turnos (`maxTurns`) y no puede spawnear subagentes (`disallowedTools: Agent, Task`, malla hub-and-spoke); el cierre (reporting/postmortem) además sin `Bash`. El fin de cada subagente se audita (`SubagentStop`). |
@@ -127,7 +130,8 @@ flowchart TB
         AG["a2a_guard"]
     end
     BB[("🗒️ Blackboard · engagement.json<br/>targets · findings · mensajes A2A · evidencia")]
-    RAGDB[("📚 RAG KEV+EPSS<br/>SQLite")]
+    RAGDB[("📚 RAG vulnerabilidades<br/>KEV+EPSS+recientes")]
+    RAGKB[("🧠 RAG conocimiento<br/>técnicas · Capa 1+2")]
     subgraph E1["🟦 E1 · Recon (3)"]
         R["osint-recon · active-recon · recon-suite"]
     end
@@ -147,6 +151,7 @@ flowchart TB
     E3 -.->|informe / lecciones| BB
     BB -.->|reinyecta lecciones| ORQ
     X -->|consulta CVE| RAGDB
+    X -->|consulta técnica| RAGKB
 ```
 
 > El mapa completo y siempre al día vive en [ARCHITECTURE_MAP.md](ARCHITECTURE_MAP.md) — se
@@ -183,7 +188,7 @@ chmod +x deploy/*.sh
 sudo ./deploy/auto-deploy.sh
 ```
 Instala y verifica el toolchain ofensivo (nmap, sqlmap, Metasploit, NetExec, Sliver,
-ProjectDiscovery…), Claude Code, el RAG de vulnerabilidades y el bot. El instalador es
+ProjectDiscovery…), Claude Code, los RAG (vulnerabilidades + conocimiento Capa 1) y el bot. El instalador es
 **idempotente** —puedes relanzarlo sin riesgo si se interrumpe— y solicita el **token de Telegram**
 y tu **ID** durante la ejecución. Finaliza con `✔ Despliegue completado`.
 
@@ -382,17 +387,40 @@ modos. El timeout cuenta como denegación.
 
 </details>
 
-## RAG de vulnerabilidades (KEV+EPSS)
+## Los dos RAG locales
 
-`vuln-triage` se apoya en un RAG local que mantiene la prioridad real de explotación, sin
-reentrenar el modelo. Store en **SQLite** (`rag/vulns.db`), sin dependencias externas (solo
-Python stdlib). Refresco diario:
+El conocimiento de los agentes se actualiza **sin reentrenar el modelo**, vía dos RAG locales en
+**SQLite** (sin dependencias externas en la consulta; aptos para la zona E2 aislada):
+
+### 1) RAG de vulnerabilidades — *"qué es vulnerable"* (`rag/vulns.db`)
+Lo consulta `vuln-triage` para priorizar por explotación **real** (CISA KEV → exploit público → EPSS →
+CVSS de CVE 5.0, no NVD). Ya no solo KEV: **se mantiene fresco con los CVE recién publicados** —
+`rag/ingest_recent.py` añade los que aún no están en KEV desde **CVEDetector** (canal Telegram, sin auth)
+y **MITRE cvelistV5** (`deltaLog`, sin auth; opcional **OpenCVE** con credenciales).
 
 ```bash
-python rag/refresh.py --epss-all     # descarga CISA KEV + scores EPSS
+python rag/refresh.py --epss-all     # KEV + CVE recientes + CVSS/EPSS/exploit/MSF/Nuclei
+python rag/query_vulns.py --query "fortinet fortios" --json
 ```
 
-Incluye ruta de producción a Supabase + n8n para equipo (ver [rag/README.md](rag/README.md)).
+### 2) RAG de conocimiento — *"cómo explotar/escalar"* (`rag/knowledge/`)
+Lo consultan los agentes de explotación (`post-exploit`, `web-exploit`…) para el **cómo**: técnicas
+accionables. Dos capas, con la skill `rag-technique-lookup`:
+- **Capa 1 — estructurada** (`kb.db`): GTFOBins · LOLBAS · Atomic Red Team · MITRE ATT&CK → el comando
+  concreto de privesc/credenciales/persistencia (determinista, stdlib).
+- **Capa 2 — semántica** (`kb_vec.db`): HackTricks · PayloadsAllTheThings · PEASS + feeds (0dayfans/HN/
+  CVEDetector) con **embeddings locales** (sentence-transformers) + **sqlite-vec** → recuperación por
+  significado para metodología/razonamiento.
+
+```bash
+python rag/knowledge/refresh_kb.py              # Capa 1 (ligera)
+python rag/knowledge/refresh_kb.py --semantic   # + Capa 2 (pesada: embeddings)
+python rag/knowledge/query_kb.py --query "env" --category privesc --platform linux
+python rag/knowledge/query_kb.py --semantic "privesc cuando sudo permite tar" --k 6
+```
+
+Detalle de ambos en [rag/README.md](rag/README.md) y [rag/knowledge/README.md](rag/knowledge/README.md)
+(incluye ruta de producción a Supabase + n8n para equipo).
 
 ## Flujo engagement-driven
 
@@ -470,8 +498,18 @@ Chuleta de todo lo ejecutable, por categoría. Salvo que se indique otra cosa, l
 ### 📚 RAG de vulnerabilidades
 | Comando | Qué hace |
 | :--- | :--- |
-| `python rag/refresh.py` | Refresca la base (CISA KEV + EPSS + exploits + plantillas). |
-| `python rag/refresh.py --epss-all` | Re-calcula los scores EPSS de todo (cambian a diario). |
+| `python rag/refresh.py` | Refresca la base (CISA KEV + **CVE recientes** + EPSS + exploits + MSF + Nuclei). |
+| `python rag/refresh.py --epss-all` | Igual, recalculando los scores EPSS de todo (cambian a diario). |
+| `python rag/ingest_recent.py` | Solo la frescura: CVE recién publicados (CVEDetector + cvelistV5). |
+| `python rag/query_vulns.py --query "<producto>" --json` | Consulta priorizada (lo que hace `vuln-triage`). |
+
+### 🧠 RAG de conocimiento (técnicas)
+| Comando | Qué hace |
+| :--- | :--- |
+| `python rag/knowledge/refresh_kb.py` | Puebla la Capa 1 (GTFOBins/LOLBAS/Atomic/ATT&CK). |
+| `python rag/knowledge/refresh_kb.py --semantic` | + Capa 2 semántica (HackTricks/PaTT/PEASS/feeds; pesado). |
+| `python rag/knowledge/query_kb.py --query "<bin>" --category privesc` | Técnica accionable (Capa 1). |
+| `python rag/knowledge/query_kb.py --semantic "<pregunta>" --k 6` | Recuperación por significado (Capa 2). |
 
 ### 🐳 Docker (alternativa al despliegue de host)
 | Comando | Qué hace |
@@ -506,7 +544,9 @@ cyberseg-agents/
 │   └── assets/     → banner y guía de estilo visual
 ├── templates/      → plantilla de informe + brief del engagement
 ├── tools/          → análisis de coherencia + generador del mapa de arquitectura
-├── rag/            → RAG de vulnerabilidades KEV+EPSS (SQLite)
+├── rag/            → RAG de vulnerabilidades KEV+EPSS+recientes (SQLite)
+│   └── knowledge/  → RAG de conocimiento: técnicas (Capa 1 estructurada + Capa 2 semántica)
+├── benchmark/      → eval-harness (EDD + pass@k): mide la capacidad de cierre autónomo
 ├── bot/            → bot de Telegram (Claude Agent SDK) + clasificador de riesgo
 ├── deploy/         → auto-deploy y verificación del toolchain en Kali (+ Docker: Dockerfile/compose)
 ├── dryrun/         → prueba end-to-end segura (sin atacar)

@@ -3,12 +3,12 @@
 
 # 🗺️ Mapa de Arquitectura — Cyberseg Agents
 
-> **Generado:** 2026-06-17 21:53:50 UTC · **Refleja el estado real** del proyecto en ese momento.
+> **Generado:** 2026-06-23 01:01:16 UTC · **Refleja el estado real** del proyecto en ese momento.
 > Regenerar a mano: `python tools/gen_arch_diagram.py`
 
 ## Qué es esto (para reconstruir contexto si se pierde)
 
-Suite de agentes para **pentesting / bug bounty autorizado**. Un **Orquestador** (sesión principal, `AGENTS.md`) coordina a los agentes especialistas mediante **hub-and-spoke**: él es el único que delega y recoge resultados; los agentes **no se hablan entre sí**, se comunican a través del **blackboard** (`contracts/engagement.json`). Un **hook de alcance** (`scope_guard.py`) bloquea de forma determinista cualquier comando contra un target fuera de `contracts/scope.json`. El agente `vuln-triage` consulta el **RAG de vulnerabilidades** (`rag/`, KEV+EPSS) para priorizar por explotación real.
+Suite de agentes para **pentesting / bug bounty autorizado**. Un **Orquestador** (sesión principal, `AGENTS.md`) coordina a los agentes especialistas mediante **hub-and-spoke**: él delega, recoge resultados y hace de **router de un bus A2A mediado** (los agentes se dirigen mensajes entre sí dejándolos en el **blackboard**, `contracts/engagement.json`; no hay malla directa). Un **hook de alcance** (`scope_guard.py`) bloquea de forma determinista cualquier comando contra un target fuera de `contracts/scope.json`. Dos RAG locales (SQLite): el de **vulnerabilidades** (`rag/`, KEV+EPSS+CVE recientes) que consulta `vuln-triage`, y el de **conocimiento** (`rag/knowledge/`, técnicas — Capa 1 estructurada + Capa 2 semántica) que consultan los agentes de explotación.
 
 **Estado actual:** 18 agentes especialistas (E1=3, E2=13, E3=2) + Orquestador + hook de alcance.
 
@@ -19,7 +19,8 @@ flowchart TB
     ORQ["🧭 Orquestador · AGENTS.md<br/>sesión principal (hub) · opus-4-8"]
     SG{{"🛡️ scope_guard.py<br/>hook PreToolUse · barrera de alcance"}}
     BB[("🗒️ Blackboard<br/>contracts/engagement.json")]
-    RAGDB[("📚 RAG KEV+EPSS<br/>rag/")]
+    RAGDB[("📚 RAG vulnerabilidades<br/>rag/ · KEV+EPSS+recientes")]
+    RAGKB[("🧠 RAG conocimiento<br/>rag/knowledge · técnicas (Capa 1+2)")]
     subgraph E1["🟦 Zona E1 · Recon (perfil de red abierto, sin datos de cliente)"]
         active_recon["active-recon<br/><i>claude-haiku-4-5</i>"]
         osint_recon["osint-recon<br/><i>claude-haiku-4-5</i>"]
@@ -52,6 +53,8 @@ flowchart TB
     E3 -.->|escribe lecciones/informe| BB
     BB -.->|reinyecta lecciones| ORQ
     vuln_triage ==>|consulta CVE| RAGDB
+    post_exploit ==>|consulta técnica| RAGKB
+    web_exploit ==>|consulta técnica| RAGKB
     SG -.->|valida cada comando| E2
     ORQ -.->|lee alcance| SG
 ```
@@ -90,9 +93,10 @@ flowchart TB
 ## Componentes de soporte (estado real)
 
 - **Orquestador (hub):** `AGENTS.md` — sesión principal, no es un subagente.
-- **Hook de alcance:** a2a_guard.py, a2a_router_nudge.py, budget_guard.py, scope_guard.py, secret_scan.py, validate_blackboard.py (PreToolUse, bloquea fuera de scope).
+- **Hook de alcance:** a2a_guard.py, a2a_router_nudge.py, approval_gate.py, budget_guard.py, scope_guard.py, secret_scan.py, subagent_stop.py, validate_blackboard.py (PreToolUse, bloquea fuera de scope).
 - **Blackboard / contratos:** a2a-message.schema.json, agent-card.schema.json, agent-cards.json, engagement.json, engagement.schema.json, examples, finding.schema.json, scope.example.json, scope.json, target.schema.json.
-- **RAG de vulnerabilidades:** db.py, enrich_cve5.py, enrich_epss.py, enrich_exploits.py, enrich_msf.py, enrich_nuclei.py, ingest_kev.py, query_vulns.py, refresh.py (KEV+EPSS, alimenta a vuln-triage).
+- **RAG de vulnerabilidades:** db.py, enrich_cve5.py, enrich_epss.py, enrich_exploits.py, enrich_msf.py, enrich_nuclei.py, ingest_kev.py, ingest_recent.py, query_vulns.py, refresh.py (KEV+EPSS+CVE recientes, alimenta a vuln-triage).
+- **RAG de conocimiento (técnicas):** embed.py, ingest_atomics.py, ingest_attack.py, ingest_corpus.py, ingest_feeds.py, ingest_gtfobins.py, ingest_lolbas.py, kb.py, kb_vec.py, query_kb.py, refresh_kb.py (Capa 1 estructurada GTFOBins/LOLBAS/Atomic/ATT&CK + Capa 2 semántica HackTricks/PaTT/PEASS/feeds; lo consultan los agentes de explotación vía la skill `rag-technique-lookup`).
 - **Gobierno / coherencia:** `CONSTITUTION.md` (principios innegociables) · `tools/analyze_engagement.py` (auditoría de coherencia, `/analyze` adaptado).
 
 ## Flujo de un engagement (resumen)
