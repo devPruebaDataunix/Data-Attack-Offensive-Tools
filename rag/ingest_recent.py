@@ -5,6 +5,8 @@ ingest_recent.py — Siembra el store con los CVE MÁS RECIENTES desde feeds de 
 El resto del RAG está anclado a KEV (explotación confirmada), que va con MESES de retraso respecto a la
 publicación. Este ingester añade los CVE recién publicados que aún NO tenemos, desde:
   · CVEDetector  — canal Telegram (preview web público t.me/s/CVEDetector); posts JSON con CVE ID/desc.
+  · cvelistV5    — repo oficial MITRE (cves/deltaLog.json), SIN auth; la fuente que OpenCVE agrega por
+                   debajo. Cobertura amplia de recientes; enrich_cve5 les rellena nombre/desc/producto.
   · OpenCVE      — API v2 de app.opencve.io (REQUIERE credenciales: OPENCVE_USERNAME/OPENCVE_PASSWORD);
                    si no están, se omite con aviso (no rompe el refresco).
 Inserta filas nuevas (in_kev=0) y, en las existentes, solo anota el feed de procedencia (sin pisar KEV).
@@ -32,6 +34,9 @@ import db
 
 CVEDETECTOR_URL = "https://t.me/s/CVEDetector"
 OPENCVE_API = "https://app.opencve.io/api/cve"
+# Feed de frescura SIN auth: el repo oficial cvelistV5 de MITRE (la fuente que OpenCVE agrega por debajo).
+# delta.json = última ventana (pequeña); deltaLog.json = log de muchas ventanas (cobertura amplia reciente).
+CVELIST_DELTALOG = "https://raw.githubusercontent.com/CVEProject/cvelistV5/main/cves/deltaLog.json"
 CVE_RE = re.compile(r"CVE-\d{4}-\d{4,7}")
 UA = {"User-Agent": "Mozilla/5.0 (cyberseg-agents recent-cve ingester)"}
 
@@ -75,6 +80,32 @@ def cvedetector_entries():
             "description": (desc.group(1).strip() if desc else text)[:2000],
             "published": (pub.group(1).strip() if pub else None),
         })
+    return out
+
+
+def cvelistv5_entries(limit=400, include_updated=False):
+    """CVE recientes desde el deltaLog de MITRE cvelistV5 (sin auth). Recorre snapshots (más reciente
+    primero) y junta cveId hasta `limit`. name/description quedan vacíos: los rellena enrich_cve5 desde
+    el mismo registro CVE 5.0 que ya descarga (evita doble fetch)."""
+    out, seen = [], set()
+    try:
+        log = json.loads(_get(CVELIST_DELTALOG, timeout=60))
+    except Exception as e:  # noqa: BLE001 — feed caído no aborta el refresco
+        print(f"[recent:cvelistv5] no pude leer el deltaLog: {e}", file=sys.stderr)
+        return out
+    for snap in (log if isinstance(log, list) else []):
+        bucket = list(snap.get("new", []))
+        if include_updated:
+            bucket += list(snap.get("updated", []))
+        for e in bucket:
+            cve = (e.get("cveId") or "").upper()
+            if not CVE_RE.fullmatch(cve) or cve in seen:
+                continue
+            seen.add(cve)
+            out.append({"cve_id": cve, "name": None, "description": None,
+                        "published": e.get("dateUpdated")})
+            if len(out) >= limit:
+                return out
     return out
 
 
@@ -137,6 +168,8 @@ def upsert(conn, entries, feed, now):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-cvedetector", action="store_true")
+    ap.add_argument("--no-cvelistv5", action="store_true")
+    ap.add_argument("--cvelistv5-limit", type=int, default=400, help="máx CVE recientes de cvelistV5")
     ap.add_argument("--no-opencve", action="store_true")
     ap.add_argument("--opencve-pages", type=int, default=2)
     args = ap.parse_args()
@@ -151,6 +184,12 @@ def main():
         total_seen += len(ents)
         total_new += n
         print(f"[recent:cvedetector] {len(ents)} CVE en el canal, {n} nuevos al store.")
+    if not args.no_cvelistv5:
+        ents = cvelistv5_entries(args.cvelistv5_limit)
+        n = upsert(conn, ents, "cvelistv5", now)
+        total_seen += len(ents)
+        total_new += n
+        print(f"[recent:cvelistv5] {len(ents)} CVE recientes (deltaLog MITRE), {n} nuevos al store.")
     if not args.no_opencve:
         ents = opencve_entries(args.opencve_pages)
         n = upsert(conn, ents, "opencve", now)

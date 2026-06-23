@@ -67,12 +67,16 @@ aún no tenemos, desde feeds de frescura, y los marca con `source_feed`/`publish
 los enrichers les ponen CVSS/EPSS/exploit en el mismo refresco. Corre dentro de `refresh.py` (constante).
 - **CVEDetector** (canal Telegram, preview web público `t.me/s/CVEDetector`): sin auth. Su lado prosa
   también va al RAG semántico (Capa 2, `rag/knowledge/ingest_feeds.py`).
+- **cvelistV5** (repo oficial **MITRE**, `deltaLog.json`): **sin auth**, cobertura amplia de CVE recién
+  publicados (es la fuente que OpenCVE agrega por debajo). `enrich_cve5` les rellena nombre/descripción/
+  producto desde el mismo registro CVE 5.0 que ya descarga (sin doble fetch).
 - **OpenCVE** (API v2 de `app.opencve.io`): **requiere credenciales** → `OPENCVE_USERNAME`/`OPENCVE_PASSWORD`
   (nunca en el repo). Sin ellas se omite con aviso.
 - **Anti-inyección**: todo el contenido remoto es DATO inerte; nunca se ejecuta.
 
 ```bash
-python rag/ingest_recent.py                    # CVEDetector (+ OpenCVE si hay credenciales)
+python rag/ingest_recent.py                          # CVEDetector + cvelistV5 (+ OpenCVE si hay claves)
+python rag/ingest_recent.py --cvelistv5-limit 800    # más cobertura reciente de MITRE
 OPENCVE_USERNAME=u OPENCVE_PASSWORD=p python rag/ingest_recent.py --opencve-pages 3
 ```
 
@@ -150,6 +154,7 @@ búsqueda semántica). Patrón equivalente a tu Market Bot:
 ## Fuentes
 - CISA KEV: https://www.cisa.gov/known-exploited-vulnerabilities-catalog
 - CVEDetector (Telegram, frescura): https://t.me/s/CVEDetector
+- MITRE cvelistV5 (frescura, sin auth): https://github.com/CVEProject/cvelistV5 (cves/deltaLog.json)
 - OpenCVE (API v2, frescura, requiere cuenta): https://app.opencve.io/cve/ · https://docs.opencve.io/api/
 - EPSS API: https://www.first.org/epss/api
 - CVE 5.0 (MITRE CVE Services): https://cveawg.mitre.org/api/cve/{CVE-ID}

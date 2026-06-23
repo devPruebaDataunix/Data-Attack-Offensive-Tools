@@ -63,6 +63,31 @@ def extract_adp(containers):
     return cvss, ssvc, vc_kev
 
 
+def extract_cna_meta(cna):
+    """Saca title/description/vendor/product del contenedor CNA (para rellenar CVE recientes que llegan
+    vacíos desde los feeds de frescura). Devuelve strings o None."""
+    title = (cna.get("title") or "").strip() or None
+    desc = None
+    for d in cna.get("descriptions", []) or []:
+        if (d.get("lang") or "").lower().startswith("en") and d.get("value"):
+            desc = d["value"].strip()
+            break
+    if desc is None:
+        ds = cna.get("descriptions") or []
+        if ds and ds[0].get("value"):
+            desc = ds[0]["value"].strip()
+    vendor = product = None
+    for a in cna.get("affected", []) or []:
+        v, p = (a.get("vendor") or "").strip(), (a.get("product") or "").strip()
+        if v and v.lower() not in ("n/a", "unknown") and not vendor:
+            vendor = v
+        if p and p.lower() not in ("n/a", "unknown") and not product:
+            product = p
+        if vendor and product:
+            break
+    return title, (desc[:1000] if desc else None), vendor, product
+
+
 def main():
     refresh_all = "--all" in sys.argv
     conn = db.connect()
@@ -95,11 +120,20 @@ def main():
             got_cvss += 1
         if ssvc_json:
             got_ssvc += 1
+        # Rellena metadatos solo si faltan (COALESCE+NULLIF): no pisa los datos curados de KEV; sí
+        # completa los CVE recientes (cvelistV5/feeds) que llegaron sin nombre/descripcion/producto.
+        title, desc_txt, vendor, product = extract_cna_meta(containers.get("cna", {}))
+        name_val = title or cve
         conn.execute(
             "UPDATE vulns SET cvss=?, cvss_severity=?, cvss_vector=?, cvss_source=?, "
-            "ssvc=COALESCE(?, ssvc), updated_at=? WHERE cve_id=?",
+            "ssvc=COALESCE(?, ssvc), "
+            "name=COALESCE(NULLIF(name,''), ?), "
+            "description=COALESCE(NULLIF(description,''), ?), "
+            "vendor=COALESCE(NULLIF(vendor,''), ?), "
+            "product=COALESCE(NULLIF(product,''), ?), "
+            "updated_at=? WHERE cve_id=?",
             (score, sev, vec, ("cvelistV5" if score is not None else None),
-             ssvc_json, now, cve),
+             ssvc_json, name_val, desc_txt, vendor, product, now, cve),
         )
         if i % 50 == 0:
             conn.commit()
