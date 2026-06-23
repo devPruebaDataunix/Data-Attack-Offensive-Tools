@@ -470,7 +470,8 @@ Chuleta de todo lo ejecutable, por categoría. Salvo que se indique otra cosa, l
 | :--- | :--- |
 | `sudo ./deploy/auto-deploy.sh` | Instala y verifica **todo** en una Kali desde cero (toolchain + Claude Code + RAG + bot). |
 | `sudo ./deploy/auto-deploy.sh --update` | Lo mismo, actualizando todo a su última versión. |
-| `./deploy/auto-deploy.sh --skip-tools` · `--no-rag` · `--no-bot` | Despliegue parcial (omite toolchain / RAG / bot). |
+| `./deploy/auto-deploy.sh --skip-tools` · `--no-rag` · `--no-bot` · `--no-cron` | Despliegue parcial (omite toolchain / RAG / bot / cron de ingesta pasiva). |
+| `./deploy/auto-deploy.sh --semantic-rag` | Además puebla el RAG de conocimiento Capa 2 (semántica; pesado: torch + embeddings). |
 | `./deploy/setup.sh` | Asistente interactivo (menús): despliegue, `bot/.env`, `scope.json` y verificación. |
 
 ### ✅ Verificar y mantener

@@ -24,6 +24,7 @@ rag/knowledge/kb.db-*
 rag/knowledge/kb_vec.db
 rag/knowledge/kb_vec.db-*
 rag/knowledge/.cache/
+rag/.refresh.log
 benchmark/results.jsonl
 report/INFORME-*.md
 report/findings-summary.csv

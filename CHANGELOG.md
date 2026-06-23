@@ -22,6 +22,9 @@ se versiona con [SemVer](https://semver.org/lang/es/).
   (`deltaLog`, sin auth; **OpenCVE** opcional con credenciales). `enrich_cve5.py` rellena además
   nombre/descripción/producto; nuevas columnas `published_date`/`source_feed`; corre dentro de `rag/refresh.py`.
 - **Eval-harness / GATE — `benchmark/`** (EDD + pass@k) para medir el cierre autónomo.
+- **Ingesta pasiva (cron).** `auto-deploy.sh` programa el refresco de los RAG en el crontab del usuario
+  operador (vulnerabilidades a diario, conocimiento semanal; log en `rag/.refresh.log`), idempotente y con
+  `--no-cron` para omitirlo. Mantiene ambos RAG al día sin intervención.
 ### Changed
 - Diagramas de arquitectura (`README.md`, `ARCHITECTURE_MAP.md` + su generador) y docs: reflejan los **dos
   RAG**. `validate_suite` 383/0/0.

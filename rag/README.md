@@ -83,14 +83,23 @@ OPENCVE_USERNAME=u OPENCVE_PASSWORD=p python rag/ingest_recent.py --opencve-page
 `vulns.db` se genera; **no** se versiona ni se incluye en el paquete (caduca). Ejecuta
 `refresh.py` para crearlo.
 
-## Programación (mantenerlo al día solo)
+## Programación · ingesta pasiva (mantenerlo al día solo)
 
+> **En Kali ya queda automático:** `auto-deploy.sh` **instala el cron de ingesta pasiva** en el crontab del
+> usuario operador (vulnerabilidades a diario 06:00 — incluye CVE recientes; conocimiento los domingos 04:00;
+> log en `rag/.refresh.log`). Idempotente (no duplica). Omítelo con `--no-cron`; con `--semantic-rag` el cron
+> semanal usa `refresh_kb.py --semantic`. Para programarlo a mano:
+
+**Linux/macOS (cron):**
+```
+0 6 * * 0-6 cd /ruta/data-attack && python rag/refresh.py --epss-all        # vulns a diario
+0 4 * * 0   cd /ruta/data-attack && python rag/knowledge/refresh_kb.py      # conocimiento semanal
+```
 **Windows (Task Scheduler):**
 ```
 schtasks /Create /SC DAILY /ST 06:00 /TN "cyberseg-rag-refresh" ^
   /TR "python C:\ruta\cyberseg-agents\rag\refresh.py --epss-all"
 ```
-**Linux/macOS (cron):** `0 6 * * * cd /ruta/cyberseg-agents && python rag/refresh.py --epss-all`
 
 ## Capa híbrida de enriquecimiento (eip-mcp self-hosted) — opcional
 

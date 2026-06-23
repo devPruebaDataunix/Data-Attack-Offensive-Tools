@@ -11,6 +11,7 @@
 #    ./deploy/auto-deploy.sh --skip-tools         # sin toolchain ofensivo
 #    ./deploy/auto-deploy.sh --no-bot --no-rag    # solo base + claude
 #    ./deploy/auto-deploy.sh --semantic-rag       # + RAG Capa 2 semantica (pesado: torch + embeddings)
+#    ./deploy/auto-deploy.sh --no-cron            # no programar la ingesta pasiva (cron)
 #    ./deploy/auto-deploy.sh -h
 # =============================================================================
 set -Eeuo pipefail
@@ -29,13 +30,14 @@ LOG="${SCRIPT_DIR}/deploy-$(date +%Y%m%d-%H%M%S).log"
 . "${SCRIPT_DIR}/banner.sh" 2>/dev/null || true
 
 # ── Flags ────────────────────────────────────────────────────────────────────
-DO_TOOLS=1; DO_RAG=1; DO_BOT=1; UPDATE=0; DO_SEMANTIC=0
+DO_TOOLS=1; DO_RAG=1; DO_BOT=1; UPDATE=0; DO_SEMANTIC=0; DO_CRON=1
 for a in "$@"; do case "$a" in
   --skip-tools)   DO_TOOLS=0 ;;
   --no-rag)       DO_RAG=0 ;;
   --no-bot)       DO_BOT=0 ;;
   --update)       UPDATE=1 ;;
   --semantic-rag) DO_SEMANTIC=1 ;;
+  --no-cron)      DO_CRON=0 ;;
   -h|--help)    grep -E '^#( |$)' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
   *) echo "Flag desconocido: $a"; exit 2 ;;
 esac; done
@@ -238,6 +240,39 @@ except Exception: print(0)' 2>/dev/null || echo 0)"
     fi
   else
     info "Capa 2 (semántica) omitida (actívala con --semantic-rag; requiere torch + tiempo de embeddings)."
+  fi
+
+  # --- INGESTA PASIVA: programa el refresco con cron (idempotente) ------------------------------
+  # Mantiene los RAG al día solos: vulnerabilidades a diario (incluye CVE recientes) y conocimiento
+  # semanal. Se instala en el crontab del usuario OPERADOR (no root), con un marcador para no duplicar.
+  if [ "$DO_CRON" -eq 1 ]; then
+    if command -v crontab >/dev/null 2>&1; then
+      local _uarg="" _cuser
+      if [ "$(id -u)" -eq 0 ] && [ -n "${SUDO_USER:-}" ]; then
+        _uarg="-u ${SUDO_USER}"; _cuser="${SUDO_USER}"
+      else
+        _cuser="$(id -un)"
+      fi
+      local _py _mark _log _kb _daily _weekly _cur
+      _py="$(command -v python3 || echo python3)"
+      _mark="# data-attack-rag"
+      _log="${REPO_DIR}/rag/.refresh.log"
+      _kb="rag/knowledge/refresh_kb.py"
+      [ "$DO_SEMANTIC" -eq 1 ] && _kb="rag/knowledge/refresh_kb.py --semantic"
+      _daily="0 6 * * * cd ${REPO_DIR} && ${_py} rag/refresh.py --epss-all >> ${_log} 2>&1 ${_mark}"
+      _weekly="0 4 * * 0 cd ${REPO_DIR} && ${_py} ${_kb} >> ${_log} 2>&1 ${_mark}"
+      # Idempotente: descarta las líneas gestionadas previas (por marcador) y reescribe.
+      _cur="$( (crontab ${_uarg} -l 2>/dev/null || true) | grep -vF "${_mark}" || true )"
+      if printf '%s\n%s\n%s\n' "${_cur}" "${_daily}" "${_weekly}" | sed '/^[[:space:]]*$/d' | crontab ${_uarg} - 2>/dev/null; then
+        ok "Ingesta pasiva programada (cron de '${_cuser}'): vulns diario 06:00, conocimiento domingos 04:00. Log: ${_log}"
+      else
+        warn "No pude instalar el cron para '${_cuser}'. Prográmalo a mano (ver rag/README.md → Programación)."
+      fi
+    else
+      warn "crontab no disponible; omito la ingesta pasiva. Prográmala a mano (ver rag/README.md → Programación)."
+    fi
+  else
+    info "Ingesta pasiva (cron) omitida (--no-cron). Prográmala a mano si la quieres (ver rag/README.md)."
   fi
 }
 
