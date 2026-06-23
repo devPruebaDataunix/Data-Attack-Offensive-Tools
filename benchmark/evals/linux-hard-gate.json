@@ -1,0 +1,13 @@
+{
+  "id": "linux-hard-gate",
+  "platform": "linux",
+  "difficulty": "dificil",
+  "target": "RELLENAR: maquina DockerLabs 'Dificil' de servidor Linux critico",
+  "success_criteria": {
+    "type": "root",
+    "evidence_regex": "uid=0\\(root\\)|^root:[^:]*:0:0|flag\\{",
+    "min_findings": 2
+  },
+  "expected_phases": ["recon", "triage", "exploitation", "privesc", "lateral", "reporting"],
+  "notes": "ESTE es el GATE del trailer: PASS autonomo end-to-end aqui = capacidad verificada para retomar el montaje."
+}

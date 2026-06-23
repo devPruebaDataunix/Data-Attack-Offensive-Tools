@@ -96,7 +96,7 @@ install_base(){
   apt_retry update -y
   apt_retry install -y --no-install-recommends \
     git curl wget jq ca-certificates gnupg build-essential \
-    python3 python3-pip python3-venv pipx python-is-python3 \
+    python3 python3-pip python3-venv pipx python-is-python3 python3-yaml \
     golang-go dnsutils
   pipx ensurepath >/dev/null 2>&1 || true
   # Node.js (≥18) para Claude Code. Prefiere el de Kali; NodeSource solo si hace falta
@@ -185,7 +185,7 @@ install_tools(){
 # 4) RAG — poblar el store de vulnerabilidades
 # =============================================================================
 setup_rag(){
-  step "4/6  RAG de vulnerabilidades"
+  step "4/6  RAG (vulnerabilidades + conocimiento)"
   cd "$REPO_DIR"
   # Idempotencia: si el store ya está poblado y no se fuerza --update, NO re-descargues ~1.6k CVE
   # (el refresco completo tarda varios minutos). Acelera re-ejecuciones y respeta un vulns.db restaurado.
@@ -203,6 +203,23 @@ except Exception: print(0)' 2>/dev/null || echo 0)"
     ok "RAG poblado."
   else
     warn "El RAG no se pudo poblar del todo (¿red? CISA KEV/EPSS/MITRE). Reintenta luego: python3 rag/refresh.py --epss-all"
+  fi
+
+  # --- RAG de CONOCIMIENTO (técnicas: GTFOBins · LOLBAS · Atomic Red Team · MITRE ATT&CK) ---
+  # Lo consultan los agentes (post-exploit/web-exploit) vía rag/knowledge/query_kb.py. Idempotente.
+  local _k=0
+  [ -f rag/knowledge/kb.db ] && _k="$(python3 -c 'import sqlite3
+try: print(sqlite3.connect("rag/knowledge/kb.db").execute("SELECT COUNT(*) FROM techniques").fetchone()[0])
+except Exception: print(0)' 2>/dev/null || echo 0)"
+  if [ "$UPDATE" -eq 0 ] && [ "${_k:-0}" -gt 0 ]; then
+    ok "RAG de conocimiento ya poblado (${_k} técnicas) — omito (fuerza con --update)."
+  else
+    info "Poblando el RAG de conocimiento (clona GTFOBins/LOLBAS/Atomic + baja el STIX de ATT&CK; puede tardar)."
+    if python3 rag/knowledge/refresh_kb.py; then
+      ok "RAG de conocimiento poblado."
+    else
+      warn "El RAG de conocimiento no se pobló del todo (¿red/git?). Reintenta luego: python3 rag/knowledge/refresh_kb.py"
+    fi
   fi
 }
 
