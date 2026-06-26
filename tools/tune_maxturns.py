@@ -64,8 +64,9 @@ def audit_files(audit_arg):
 
 
 def audit_records(files):
-    """[(agent_type, transcript_path)] de todos los subagents.jsonl."""
-    recs = []
+    """[(agent_type, transcript_path)] de todos los subagents.jsonl, DEDUPLICADO por transcript_path
+    (un mismo run puede aparecer en engagements/** y en .claude/audit/ a la vez → no contarlo dos veces)."""
+    recs, seen = [], set()
     for fp in files:
         try:
             for line in open(fp, encoding="utf-8", errors="replace"):
@@ -77,8 +78,14 @@ def audit_records(files):
                 except ValueError:
                     continue
                 at = r.get("agent_type")
-                if at:
-                    recs.append((at, r.get("transcript_path")))
+                if not at:
+                    continue
+                tp = r.get("transcript_path")
+                if tp:
+                    if tp in seen:
+                        continue
+                    seen.add(tp)
+                recs.append((at, tp))
         except OSError:
             continue
     return recs

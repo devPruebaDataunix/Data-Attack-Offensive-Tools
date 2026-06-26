@@ -4,6 +4,30 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.3.1] - 2026-06-26
+### Fixed
+- **Fuga potencial de scope de cliente (repo PÚBLICO).** El backup que `benchmark/run_gate.py` hace de
+  `contracts/scope.json` antes de lanzar (`scope.json.pre-gate-*.bak`) NO estaba en `.gitignore`: un `git add`
+  despistado podía subir nombre de cliente + IPs/dominios in-scope. Ahora `contracts/*.bak` está gitignored y
+  el backup se **elimina** tras restaurar (no queda `.bak` con datos de cliente en el árbol de trabajo).
+### Changed
+- **`run_gate.py` endurecido.** (a) Escritura **atómica** de `scope.json` (temp + `os.replace`): nunca un
+  scope a medias si el proceso muere a mitad. (b) `LAB_SUFFIXES` reducido a labs inequívocos
+  (`htb/thm/vulnhub/dockerlabs/lab`): se quitan `internal/local/test/example`, que son TLDs de
+  infraestructura interna REAL y un guard LAB-only no debe aceptarlos. (c) El prompt del Orquestador ya no
+  siembra el ejemplo literal `uid=0` (el grader hace grep de `uid=0(root)`; sembrarlo permitía un PASS por
+  eco) — ahora pide la PRUEBA REAL capturada del target. (d) `--yolo` documenta EXPLÍCITAMENTE que añade
+  `--dangerously-skip-permissions` y con ello DESACTIVA `scope_guard.py` (única contención de alcance en
+  runtime) → solo lab privado/aislado.
+- **`tune_maxturns.py`:** deduplica por `transcript_path` para no contar dos veces un run que aparezca en
+  `engagements/**` y en `.claude/audit/` a la vez. (El conteo por mensajes `assistant` se mantiene: en los
+  transcripts de Claude Code cada respuesta del asistente es una línea ≈ un turno; es el proxy correcto.)
+- **`build_plugin.py`** lee la versión de `VERSION` (como `build_agent_cards.py`) en vez de hardcodearla,
+  evitando regresiones del manifiesto del plugin en futuros bumps.
+### Notes
+- Arreglos surgidos de la revisión (claude-council local, 4 roles) del diff de v2.3.0. Sin cambios
+  funcionales en agentes/hooks; `validate_suite` verde.
+
 ## [2.3.0] - 2026-06-23
 ### Added
 - **Auto-lanzador del GATE — `benchmark/run_gate.py`.** Cierra el cableado que faltaba: además de graduar

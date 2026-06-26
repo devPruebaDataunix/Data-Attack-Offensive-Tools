@@ -19,6 +19,17 @@ import shutil
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PLUGIN = os.path.join(ROOT, "plugin")
 AGENTS_SRC = os.path.join(ROOT, ".claude", "agents")
+VERSION_FILE = os.path.join(ROOT, "VERSION")
+
+
+def repo_version():
+    """Versión = fichero VERSION (fuente única, igual que build_agent_cards.py): evita hardcodear y
+    que el manifiesto del plugin se quede atrás (o regrese) en cada bump."""
+    try:
+        with open(VERSION_FILE, encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return "0.0.0"
 
 
 def parse_fm(text):
@@ -91,7 +102,7 @@ def build_manifest(names):
         "description": "Suite de pentesting/bug bounty autorizado: orquestador + 18 "
                        "especialistas, RAG de vulnerabilidades (KEV/EPSS/exploit/CVSS), "
                        "gate de alcance y reporting humanizado.",
-        "version": "2.1.2",
+        "version": repo_version(),
         "author": {"name": "Cyberseg"},
         "homepage": "https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools",
         "repository": "https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools",
