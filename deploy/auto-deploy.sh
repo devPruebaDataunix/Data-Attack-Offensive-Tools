@@ -52,6 +52,12 @@ err(){  echo -e "$(c 1)[ERR]$(r) $*" >&2; }
 step(){ echo; echo -e "$(c 6)══════ $* ══════$(r)"; }
 trap 'err "Fallo en la línea $LINENO. Revisa el log: $LOG"' ERR
 
+# Helpers de instalación COMPARTIDOS con verify.sh (ensure_pd/ensure_rustscan/ensure_chisel/
+# ensure_sliver/ensure_go…). Se cargan ANTES de redefinir SUDO/have/apt_retry abajo, para que ganen
+# las versiones con color de este script. Evita duplicar la lógica de instalación entre los dos scripts.
+# shellcheck source=deploy/lib.sh
+. "${SCRIPT_DIR}/lib.sh"
+
 SUDO=""; [ "$(id -u)" -ne 0 ] && SUDO="sudo"
 have(){ command -v "$1" >/dev/null 2>&1; }
 # Reintenta apt ante el lock del auto-update de primer arranque o mirrors intermitentes.
@@ -145,30 +151,25 @@ install_claude(){
 # =============================================================================
 install_tools(){
   step "3/6  Toolchain ofensivo"
-  info "Paquetes de los repos de Kali…"
-  $SUDO apt-get install -y \
-    nmap rustscan sqlmap metasploit-framework ffuf feroxbuster seclists \
-    netexec gobuster john hashcat amass chisel proxychains4 || warn "Algún paquete apt no estaba disponible (revisar)."
+  info "Paquetes de los repos de Kali (uno a uno: un paquete ausente no bloquea al resto)…"
+  apt_retry update -y || true
+  # Las PD tools subfinder/naabu/katana/dnsx van por APT: en Kali es la vía fiable. Antes dependían solo
+  # de pdtm/go install y fallaban por DNS a proxy.golang.org -> aparecían "NO INSTALADO". httpx NO se mete
+  # por apt (su paquete colisiona con la lib python 'httpx'): viene en Kali de base / lo completa ensure_pd.
+  # naabu necesita libpcap-dev. rustscan NO está en apt (binario Rust) -> se instala aparte (ensure_rustscan).
+  for p in nmap sqlmap metasploit-framework ffuf feroxbuster seclists \
+           netexec gobuster john hashcat amass proxychains4 \
+           subfinder naabu katana dnsx libpcap-dev jq unzip; do
+    apt_retry install -y "$p" || warn "'$p' no disponible vía apt (se intentará por otra vía si aplica)."
+  done
 
-  # ProjectDiscovery via pdtm (subfinder, httpx, nuclei, naabu, katana, dnsx…)
-  export PATH="$PATH:$(go env GOPATH)/bin"
-  # `go install` resuelve por proxy.golang.org/sum.golang.org; si la VM no los resuelve por DNS,
-  # caemos a 'direct' (clona de github, cuyo DNS sí resuelve) y desactivamos la checksum DB.
-  # El '|direct' ya reintenta solo; el segundo intento explícito es cinturón y tirantes. NO fatal.
-  export GOPROXY="${GOPROXY:-https://proxy.golang.org|direct}" GOSUMDB="${GOSUMDB:-off}"
-  if ! have pdtm; then
-    info "Instalando pdtm (ProjectDiscovery Tool Manager)…"
-    go install github.com/projectdiscovery/pdtm/cmd/pdtm@latest \
-      || GOPROXY=direct go install github.com/projectdiscovery/pdtm/cmd/pdtm@latest \
-      || warn "pdtm no se pudo instalar (¿DNS/red?): faltarán subfinder/httpx/nuclei/naabu/katana/dnsx. Reintenta: GOPROXY=direct GOSUMDB=off go install github.com/projectdiscovery/pdtm/cmd/pdtm@latest"
-  fi
-  # pdtm NO tiene -silent (daba "flag provided but not defined"); los flags quietos son
-  # -duc (no comprobar updates de pdtm) y -nc (sin color, mejor para el log).
-  if [ "$UPDATE" -eq 1 ]; then pdtm -ua -duc -nc || true; else pdtm -ia -duc -nc || true; fi
+  info "rustscan (no está en apt: .deb del último release oficial)…"; ensure_rustscan || true
+  ensure_chisel || true
+  ensure_httpx || true   # httpx-toolkit (apt) + symlink 'httpx' (los agentes invocan 'httpx')
+  # Completa por pdtm/go SOLO las PD tools que apt no dejara (no-Kali / repos sin ellas), + gau (no apt).
+  info "ProjectDiscovery: completando lo que falte (pdtm/go) + gau…"; ensure_pd || true
+  [ "$UPDATE" -eq 1 ] && have pdtm && { pdtm -ua -duc -nc || true; }
   have nuclei && { info "Actualizando plantillas de Nuclei…"; nuclei -update-templates -silent || true; }
-
-  # gau
-  have gau || go install github.com/lc/gau/v2/cmd/gau@latest || true
 
   # Impacket (pipx)
   if ! have secretsdump.py; then info "Instalando Impacket…"; pipx install impacket || true; fi
@@ -177,11 +178,8 @@ install_tools(){
   # BloodHound.py collector (la GUI CE es opcional vía Docker, ver DEPLOY.md)
   have bloodhound-python || pipx install bloodhound || true
 
-  # Sliver C2 (script oficial)
-  if ! have sliver-server; then
-    info "Instalando Sliver C2 (script oficial)…"
-    curl -fsSL https://sliver.sh/install | $SUDO bash || warn "Instalación de Sliver falló; instálalo manualmente (ver DEPLOY.md)."
-  fi
+  # Sliver C2 — instalador oficial con fallback a los binarios del release (ver lib.sh)
+  info "Sliver C2…"; ensure_sliver || true
   ok "Toolchain instalado."
 }
 

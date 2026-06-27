@@ -18,7 +18,7 @@ cd bot && ./.venv/bin/python bot.py
 | 0 Preflight | comprueba Kali/Debian, sudo, internet, disco ≥15GB, RAM ≥4GB |
 | 1 Base | git, curl, jq, python3+pipx+`python-is-python3`, golang, **Node LTS** (NodeSource) |
 | 2 Claude | `@anthropic-ai/claude-code` (npm) + aviso de login Pro |
-| 3 Toolchain | apt (nmap, sqlmap, metasploit, ffuf, feroxbuster, seclists, **netexec**, gobuster, john, hashcat, amass) · **pdtm** (subfinder, httpx, nuclei, naabu, katana, dnsx) · impacket · bloodhound.py · **Sliver** |
+| 3 Toolchain | apt **por-paquete** (nmap, sqlmap, metasploit, ffuf, feroxbuster, seclists, **netexec**, gobuster, john, hashcat, amass, proxychains4, **subfinder/naabu/katana/dnsx**, libpcap-dev, jq, unzip) · **rustscan** (.deb del release) · **chisel** · **httpx** (`httpx-toolkit`+symlink) · **pdtm** como *fallback* de las PD tools · impacket · bloodhound.py · **Sliver** (instalador oficial + fallback a binarios del release) |
 | 4 RAG | `rag/refresh.py --epss-all` (KEV + **CVE recientes** CVEDetector/cvelistV5 + CVE5 + ExploitDB + MSF + Nuclei + EPSS) + **RAG de conocimiento** Capa 1 (`rag/knowledge/refresh_kb.py`; Capa 2 semántica opt-in con `--semantic-rag`) |
 | 5 Bot | venv + dependencias + crea `bot/.env` (te pregunta token y user-id) |
 | 6 Verify | `deploy/verify.sh` — presencia + versión de cada herramienta, validadores, RAG, auth |
@@ -26,6 +26,12 @@ cd bot && ./.venv/bin/python bot.py
 > El paso 3 instala además **agentsview** (analítica local de coste, binario fijado + SHA256). Se
 > instala con el toolchain pero **no se arranca**: el daemon se levanta a propósito con
 > `./deploy/agentsview.sh up`. Ver "Analítica de coste/actividad" más abajo.
+
+> **rustscan / chisel / sliver** se bajan de sus **releases oficiales por HTTPS** cuando no están en apt
+> (con `apt` como primer intento). A diferencia de agentsview, **no se pinea checksum**: decisión consciente
+> por robustez frente a renombrados de asset upstream (que ya rompieron una iteración previa de este deploy);
+> el modelo de amenaza es lab/E2 y la descarga es HTTPS desde el repo oficial. Si rustscan/chisel no se
+> pueden instalar, los agentes degradan solos a `nmap -sS -p-` / `proxychains`.
 
 Flags: `--update` (todo a lo último), `--skip-tools`, `--no-rag`, `--no-bot`.
 

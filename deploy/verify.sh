@@ -45,6 +45,7 @@ command -v da_banner >/dev/null 2>&1 && da_banner || true
 echo; echo -e "$(c 6)── Herramientas críticas ──$(r)"
 chk "claude"      claude --version
 chk "nmap"        nmap --version
+chk "rustscan"    rustscan --version
 chk "metasploit"  msfconsole --version
 chk "sqlmap"      sqlmap --version
 chk "nuclei"      nuclei -version
@@ -59,6 +60,8 @@ chk "netexec"     netexec --version
 chk "impacket"    secretsdump.py -h
 chk "bloodhound"  bloodhound-python --help
 chk "sliver"      sliver-server version
+chk "chisel"      chisel --version
+chk "proxychains" proxychains4
 chk "amass"       amass -version
 chk "gobuster"    gobuster version
 chk "hashcat"     hashcat --version

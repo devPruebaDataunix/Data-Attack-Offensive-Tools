@@ -4,6 +4,29 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.5.1] - 2026-06-27
+### Fixed
+- **Despliegue: herramientas que no se instalaban (subfinder/naabu/katana/dnsx/sliver) + regresión de
+  rustscan de v2.5.0.** Las ProjectDiscovery tools dependían solo de `pdtm`/`go install` (frágil: fallaba por
+  DNS a proxy.golang.org y por el PATH del go-bin) → ahora **subfinder/naabu/katana/dnsx por apt de Kali**
+  (vía fiable, binarios en `/usr/bin`); `pdtm`/go queda como fallback. **httpx**: en Kali el paquete es
+  `httpx-toolkit` (y su binario) → `ensure_httpx` lo instala y crea el symlink `httpx` que invocan los
+  agentes. **rustscan** se había metido en v2.5.0 en la línea apt masiva — como no está en los repos de
+  Debian/Kali, **rompía toda la línea** (no instalaba ni nmap): ahora en `ensure_rustscan` (1 intento apt →
+  el release publica el `.deb` dentro de un `.zip`, `rustscan.deb.zip` → descarga + `unzip` + `dpkg`).
+  **Sliver**: instalador oficial → fallback a los binarios del release con el **nombre real**
+  `sliver-server_linux-amd64`/`-client` (amd64/arm64). **chisel**: apt → `.gz` del release. La línea apt pasa
+  a **bucle por-paquete** (un paquete ausente no bloquea al resto) + `libpcap-dev` (naabu), `jq`, `unzip`.
+  `auto-deploy.sh` ahora **carga `lib.sh`** (una sola implementación, sin duplicar).
+- **`verify.sh`** comprueba ahora **rustscan**, **chisel** y **proxychains**.
+### Notes
+- Los nombres de asset de los releases se verificaron contra la API de GitHub **en vivo** (un council de 4
+  roles cazó que los parsers iniciales no casaban los assets reales: `rustscan.deb.zip`, `sliver-server_linux-amd64`).
+- Degradación segura: si rustscan no se instala, los agentes de recon caen a `nmap -sS -p-` (skill
+  `stealth-recon`); si falta chisel, el pivoting usa proxychains/ligolo.
+- Los instaladores de release bajan por HTTPS desde el repo oficial **sin pin de checksum** (decisión
+  consciente: robustez frente a renombrados de asset upstream; modelo de amenaza de lab/E2). Ver DEPLOY.md.
+
 ## [2.5.0] - 2026-06-27
 ### Added
 - **Recon sigiloso full-range + priorización de puertos altos** — `active-recon`/`recon-suite` usan

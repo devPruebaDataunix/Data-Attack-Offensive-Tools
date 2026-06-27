@@ -39,24 +39,97 @@ ensure_go(){
   have go
 }
 
-# ProjectDiscovery: pdtm + sus tools (subfinder/httpx/naabu/katana/dnsx…), binarios prebuilt.
-# `go install` puede fallar si la VM no resuelve proxy.golang.org/sum.golang.org por DNS: forzamos el
-# fallback a 'direct' (clona de github, cuyo DNS sí resuelve) y desactivamos la checksum DB. NO fatal.
+# ProjectDiscovery (subfinder/naabu/katana/dnsx/httpx): PRIMARIO = apt de Kali (binarios en /usr/bin,
+# en el PATH; fiable). Esta función es el FALLBACK para lo que apt no dejara (no-Kali, o repos sin esos
+# paquetes): pdtm/go install — frágil (DNS a proxy.golang.org/sum.golang.org y PATH del go-bin). gau NO
+# está en apt -> siempre por go. Quien llama mete las PD tools en la lista apt ANTES de invocar esto.
 ensure_pd(){
-  ensure_go || { echo "[ERR] sin Go no se pueden instalar las PD tools."; return 1; }
+  if have subfinder && have naabu && have katana && have dnsx && { have httpx || have httpx-toolkit; }; then
+    ensure_gau; return 0       # apt ya las dejó; solo falta gau (no empaquetado)
+  fi
+  ensure_go || { echo "[ERR] faltan PD tools y sin Go no puedo instalarlas (prueba: apt install subfinder naabu katana dnsx httpx)."; return 1; }
   export PATH="$PATH:$(gobin)"
   export GOPROXY="${GOPROXY:-https://proxy.golang.org|direct}" GOSUMDB="${GOSUMDB:-off}"
   if ! have pdtm; then
     go install github.com/projectdiscovery/pdtm/cmd/pdtm@latest 2>/dev/null \
       || GOPROXY=direct go install github.com/projectdiscovery/pdtm/cmd/pdtm@latest 2>/dev/null \
-      || echo "[!] pdtm NO instalado (¿DNS/red?): faltarán subfinder/httpx/nuclei/naabu/katana/dnsx." \
-              "Manual: GOPROXY=direct GOSUMDB=off go install github.com/projectdiscovery/pdtm/cmd/pdtm@latest"
+      || echo "[!] pdtm NO instalado (¿DNS/red?): instala las PD tools por apt (subfinder naabu katana dnsx httpx)."
   fi
   export PATH="$PATH:$(gobin)"
   have pdtm && { pdtm -ia -duc -nc 2>/dev/null || true; }   # pdtm no tiene -silent; -duc/-nc = quietos
   have nuclei && { nuclei -update-templates -silent 2>/dev/null || true; }
-  have gau || go install github.com/lc/gau/v2/cmd/gau@latest 2>/dev/null \
+  ensure_gau
+}
+# gau (lc/gau): no está en apt -> go install (con fallback a GOPROXY=direct).
+ensure_gau(){
+  have gau && return 0
+  ensure_go || return 1
+  export PATH="$PATH:$(gobin)" GOPROXY="${GOPROXY:-https://proxy.golang.org|direct}" GOSUMDB="${GOSUMDB:-off}"
+  go install github.com/lc/gau/v2/cmd/gau@latest 2>/dev/null \
     || GOPROXY=direct go install github.com/lc/gau/v2/cmd/gau@latest 2>/dev/null || true
+}
+# httpx (ProjectDiscovery): en Kali el paquete es 'httpx-toolkit' (evita el choque con la lib python3-httpx)
+# y su binario es 'httpx-toolkit'. Los agentes invocan 'httpx' -> si solo está httpx-toolkit, lo symlinkeamos.
+ensure_httpx(){
+  have httpx && return 0
+  $SUDO apt-get install -y httpx-toolkit 2>/dev/null || true
+  if ! have httpx && have httpx-toolkit; then
+    $SUDO ln -sf "$(command -v httpx-toolkit)" /usr/local/bin/httpx 2>/dev/null || true
+  fi
+  have httpx && return 0
+  echo "[*] httpx no quedó por apt (httpx-toolkit); lo intentará pdtm/go en ensure_pd."; return 1
+}
+
+# rustscan: NO está en los repos apt de Debian/Kali (binario Rust). 1 intento apt (por si una Kali futura
+# lo empaqueta); si no, el release oficial publica el .deb DENTRO de un zip (asset 'rustscan.deb.zip',
+# verificado en la API) -> bajar, unzip, dpkg. El .deb es amd64; en arm64 dpkg lo rechaza y los agentes
+# caen a 'nmap -sS -p-' (degradación documentada en la skill stealth-recon).
+ensure_rustscan(){
+  have rustscan && return 0
+  $SUDO apt-get install -y rustscan 2>/dev/null && have rustscan && return 0   # 1 intento (no retry): se espera que falle
+  { have jq && have unzip; } || { echo "[!] rustscan: faltan jq/unzip para bajar el release; los agentes usarán nmap."; return 1; }
+  echo "[*] rustscan no está en apt; bajando el .deb del último release (viene dentro de un .zip)…"
+  local url tmp deb
+  url="$(curl -fsSL https://api.github.com/repos/RustScan/RustScan/releases/latest 2>/dev/null | jq -r '.assets[]?|select(.name|test("\\.deb\\.zip$"))|.browser_download_url' 2>/dev/null | head -1)"
+  [ -z "$url" ] && { echo "[!] rustscan: no hallé el .deb en el release; instálalo a mano o vía cargo. Los agentes usarán nmap."; return 1; }
+  tmp="$(mktemp -d)" || return 1
+  ( cd "$tmp" && curl -fsSLO "$url" && unzip -o -q ./*.zip && deb="$(ls ./*.deb 2>/dev/null | head -1)" && [ -n "$deb" ] && $SUDO dpkg -i "$deb" 2>/dev/null ); $SUDO apt-get install -y -f 2>/dev/null || true
+  rm -rf "$tmp"
+  have rustscan || { echo "[!] rustscan no se pudo instalar (¿arm64? el .deb es amd64); los agentes de recon usarán 'nmap -sS -p-'."; return 1; }
+}
+
+# chisel (pivoting): en Kali está en apt; fallback al binario (gz) del último release de jpillora/chisel.
+ensure_chisel(){
+  have chisel && return 0
+  $SUDO apt-get install -y chisel 2>/dev/null && have chisel && return 0       # 1 intento (no retry)
+  local arch url tmp
+  case "$(uname -m)" in x86_64|amd64) arch="(amd64|x86_64)";; aarch64|arm64) arch="(arm64|aarch64)";; *) echo "[!] chisel: arch no soportada; pivoting usará proxychains/ligolo."; return 1;; esac
+  echo "[*] chisel no está en apt; bajando el binario del release…"
+  url="$(curl -fsSL https://api.github.com/repos/jpillora/chisel/releases/latest 2>/dev/null | jq -r --arg a "$arch" '.assets[]?|select(.name|test("linux_"+$a+"\\.gz$"))|.browser_download_url' 2>/dev/null | head -1)"
+  [ -z "$url" ] && { echo "[!] chisel: no hallé el binario; pivoting usará proxychains/ligolo."; return 1; }
+  tmp="$(mktemp -d)" || return 1
+  ( cd "$tmp" && curl -fsSLO "$url" && gunzip -f ./*.gz && $SUDO install -m0755 ./chisel* /usr/local/bin/chisel ) 2>/dev/null || true
+  rm -rf "$tmp"
+  have chisel || { echo "[!] chisel no se pudo instalar; pivoting usará proxychains/ligolo."; return 1; }
+}
+
+# Sliver C2: instalador oficial; si falla, binarios del último release a /usr/local/bin. Assets reales
+# (BishopFox/sliver, verificado en la API): sliver-server_linux-amd64 / sliver-client_linux-amd64 (+ .minisig).
+ensure_sliver(){
+  have sliver-server && return 0
+  echo "[*] Instalando Sliver C2 (instalador oficial)…"
+  curl -fsSL https://sliver.sh/install 2>/dev/null | $SUDO bash 2>/dev/null || true
+  have sliver-server && return 0
+  have jq || { echo "[!] Sliver: falta jq para el fallback; instálalo a mano (ver DEPLOY.md)."; return 1; }
+  echo "[*] El instalador oficial falló; bajando los binarios del último release…"
+  local sarch api us uc
+  case "$(uname -m)" in x86_64|amd64) sarch="amd64";; aarch64|arm64) sarch="arm64";; *) echo "[!] Sliver: arch $(uname -m) no soportada aquí; ver DEPLOY.md."; return 1;; esac
+  api="$(curl -fsSL https://api.github.com/repos/BishopFox/sliver/releases/latest 2>/dev/null)"
+  us="$(printf '%s' "$api" | jq -r --arg a "$sarch" '.assets[]?|select(.name=="sliver-server_linux-"+$a)|.browser_download_url' 2>/dev/null | head -1)"
+  uc="$(printf '%s' "$api" | jq -r --arg a "$sarch" '.assets[]?|select(.name=="sliver-client_linux-"+$a)|.browser_download_url' 2>/dev/null | head -1)"
+  [ -n "$us" ] && { $SUDO curl -fsSL "$us" -o /usr/local/bin/sliver-server 2>/dev/null && $SUDO chmod +x /usr/local/bin/sliver-server; }
+  [ -n "$uc" ] && { $SUDO curl -fsSL "$uc" -o /usr/local/bin/sliver-client 2>/dev/null && $SUDO chmod +x /usr/local/bin/sliver-client; }
+  have sliver-server || { echo "[!] Sliver no se pudo instalar; instálalo a mano (ver DEPLOY.md)."; return 1; }
 }
 
 ensure_impacket(){
@@ -177,20 +250,26 @@ ensure_agentsview(){
 install_missing(){
   echo "── Instalando lo que falte ──"
   apt_retry update -y
-  for p in nmap rustscan sqlmap metasploit-framework ffuf feroxbuster seclists \
-           netexec gobuster john hashcat amass chisel proxychains4; do
+  # PD tools subfinder/naabu/katana/dnsx van por apt: en Kali es la vía fiable (antes dependían solo de
+  # pdtm/go y fallaban por DNS). httpx NO por apt (colisiona con la lib python 'httpx'): de base/ensure_pd.
+  # naabu necesita libpcap-dev. rustscan NO está en apt -> aparte (ensure_rustscan).
+  for p in nmap sqlmap metasploit-framework ffuf feroxbuster seclists \
+           netexec gobuster john hashcat amass proxychains4 \
+           subfinder naabu katana dnsx libpcap-dev jq unzip; do
     apt_retry install -y "$p" || echo "[!] '$p' no disponible vía apt (revisar)."
   done
   ensure_claude
-  ensure_pd
+  ensure_httpx       # httpx-toolkit (apt) + symlink 'httpx'
+  ensure_pd          # completa por pdtm/go lo que apt no dejara, + gau
+  ensure_rustscan    # .deb del release (no está en apt)
+  ensure_chisel      # apt o binario del release
   ensure_impacket
   ensure_opencode
   ensure_gum
   ensure_textual
   ensure_agentsview
   have bloodhound-python || { have pipx && pipx install bloodhound 2>/dev/null; } || true
-  have sliver-server || { curl -fsSL https://sliver.sh/install | $SUDO bash || \
-    echo "[!] Sliver falló; instálalo a mano (ver DEPLOY.md)."; }
+  ensure_sliver      # instalador oficial + fallback a binarios del release
   echo "── Instalación terminada ──"
 }
 
