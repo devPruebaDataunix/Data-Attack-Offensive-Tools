@@ -46,6 +46,19 @@ segura. Devuelve al Orquestador la lista de hosts en scope explotables.
 - No toques hosts fuera de scope aunque sean alcanzables: regístralos.
 - Credenciales/hashes como material sensible (redactados en el informe). No persistencia destructiva.
 
+## Credenciales y pivot (multi-host)
+- **Reuso antes de crackear.** Antes de spray ciego o de crackear, lee `credentials[]` del blackboard
+  (referenciadas) y pruébalas contra el host/segmento objetivo: validación directa, **pass-the-hash**
+  (`-H <hash-ref>`) y reuso usuario↔host. Marca en cada credencial los `validated_on` que confirmes.
+  El spray ciego es el **último** recurso (y siempre vigilando el lockout).
+- **Material referenciado.** Las credenciales/hashes que obtengas (`secretsdump`, etc.) van a
+  `engagements/<id>/loot/` y al blackboard **solo como referencia** (`credentials[]` con `secret_ref`,
+  `source_target`, `privilege`), nunca en claro. Los hooks `memory_guard`/`secret_scan` bloquean el
+  volcado de secretos crudos.
+- **A través del pivot.** Si el segmento interno solo es alcanzable por un pivot activo (`pivots[]`),
+  enruta `nxc`/Impacket por el túnel (ligolo transparente, o `proxychains4 nxc ...`). No asumas
+  alcance directo a hosts con `reachable_via: <pivot_id>`.
+
 ## Bus A2A (con lateral-discovery)
 `lateral-discovery` puede delegarte por el bus A2A mediado la enumeración detallada de AD/SMB/LDAP/
 WinRM de un segmento interno (`role: request`, `ref_finding`). NO invocas a otro agente directamente:

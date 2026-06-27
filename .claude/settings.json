@@ -37,6 +37,14 @@
           },
           {
             "type": "command",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/noise_guard.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/loop_guard.py"
+          },
+          {
+            "type": "command",
             "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/approval_gate.py"
           }
         ]

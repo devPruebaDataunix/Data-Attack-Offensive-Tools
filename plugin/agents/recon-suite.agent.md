@@ -32,7 +32,9 @@ no DoS). El hook `scope_guard.py` bloquea fuera de scope.
 
 ## Outputs (blackboard)
 Escribe/actualiza `targets[]` (esquema `target.schema.json`): `asset`, `asset_type`, `in_scope`
-(validado), `open_ports[]` (port/protocol/service/version/banner), `technologies[]`. Registra
+(validado), `open_ports[]` (port/protocol/service/version/banner), `technologies[]`, y `defenses[]`
+si detectas defensas durante el sondeo (`httpx` revela WAF/tech; un host con **TODOS** los puertos
+abiertos o banners incoherentes = posible **honeypot** → márcalo con `confidence` y avisa). Registra
 comandos en `evidence[]`. Marca webs vivas y tecnologías para que `vuln-triage` consulte el RAG.
 
 ## Criterio de done
@@ -41,6 +43,8 @@ y con `in_scope`. Devuelve al Orquestador el resumen y los servicios interesante
 
 ## Guardarraíles
 - Pasivo es pasivo; lo activo respeta rate y ventana (un DoS accidental viola el contrato).
+- **Bajo ruido:** escaneo dirigido y proporcional (C18 bloquea `-T5`/`masscan` sin `--rate`/floods). No
+  repitas el mismo barrido (C19); si necesitas agresividad, consulta al Orquestador.
 - No persigas activos fuera de scope ni de terceros aunque aparezcan: regístralos como fuera de scope.
 - Si un servicio cae durante el escaneo, **detente** y reporta.
 

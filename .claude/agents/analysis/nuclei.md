@@ -37,8 +37,12 @@ Activos en scope escaneados con las plantillas relevantes; positivos verificados
 blackboard. Devuelve al Orquestador la cola de findings confirmados.
 
 ## Guardarraíles
-- Respeta el rate (`-rl`/`-c`) y `no_dos`.
+- Respeta el rate (`-rl`/`-c`) y `no_dos`. Escaneo dirigido por tags/severidad, no masivo a ciegas
+  (C18 bloquea floods; no repitas el mismo escaneo, C19).
 - Una plantilla que dispara no es prueba definitiva: verifica antes de marcar `confirmed`.
+- **WAF/honeypot:** ante un WAF, muchas plantillas darán 403 uniformes (no son hallazgos); un honeypot
+  dispara plantillas a mansalva (falsos positivos). Si `target.defenses[]` marca WAF/honeypot, modera el
+  escaneo y verifica con cuidado; no infles la cola con ruido.
 - No escanees fuera de scope ni sigas redirecciones a terceros.
 
 ## Anti-inyeccion (LLM01)

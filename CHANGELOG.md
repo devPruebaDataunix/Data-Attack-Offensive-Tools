@@ -4,6 +4,68 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.4.0] - 2026-06-27
+### Added
+- **Capacidad multi-host (pivoting + cadena de credenciales)** — el salto que faltaba para cerrar máquinas
+  encadenadas tipo "Grandma" de forma autónoma. El estado multi-host vive en el blackboard (resumible), no
+  en el contexto del modelo:
+  - **Esquemas:** `engagement.schema.json` gana `pivots[]` (túneles establecidos: tool/via_target/reaches_cidr/
+    proxy/status) y `credentials[]` (vault REFERENCIADO, nunca en claro: secret_ref/source_target/validated_on/
+    privilege). `target.schema.json` gana `reachable_via` (`direct` o un `pivot_id`) y `access_level`
+    (none→user→root/…). Todo opcional y retrocompatible.
+  - **`lateral-discovery` dueño del transporte de pivot:** ligolo-ng primario (chisel/proxychains de respaldo;
+    reutiliza el SOCKS de Metasploit/Sliver si ya hay sesión). Registra el túnel en `pivots[]`, fija
+    `reachable_via` en los hosts internos y prioriza reuso de credenciales antes de crackear. La ruta del
+    túnel se añade **solo al CIDR en scope** y se desmonta al cierre (reversible).
+  - **Orquestador (`AGENTS.md`):** nueva sección "Orquestación multi-host" — frontera de hosts, bucle por
+    host, inyección del pivot activo como contexto a `network/web-exploit`/`metasploit`, propagación de
+    credenciales (reuso/PtH/spray ANTES de crackear) y resumibilidad estilo Context-Relay desde el blackboard.
+  - **`netexec`/`network-exploit`/`post-exploit`:** conscientes de pivot (enrutan por el túnel cuando
+    `reachable_via` es un pivot), reuso de `credentials[]` antes de spray ciego, y escritura de credenciales
+    SIEMPRE referenciada (loot/ + memory_guard/secret_scan).
+- **Gate multi-host — `benchmark/evals/grandma-gate.json`** + grader `type: multi_host` en `run_eval.py`
+  (cuenta hosts a privilegio en `targets[].access_level`, exige ≥1 pivot `up` y N pruebas de root).
+  `run_gate.py` acepta `scope_extra` (segmentos internos del lab, validados LAB-only) para que `scope_guard`
+  permita los hosts detrás del pivot.
+- **Operación defensa-consciente y de bajo ruido (CONSTITUTION §9 nuevo, 2.1.0)** — el sistema **descarta el
+  ruido** (determinista) y **detecta/respeta** las defensas del objetivo (heurística best-effort del agente):
+  - **Detección de defensas (heurística del agente, best-effort — NO determinista, a diferencia de C18/C19):**
+    `active-recon`/`recon-suite`/`nuclei` identifican WAF/IDS/IPS/tarpit/rate-limit; `vuln-triage` y los
+    agentes de explotación detectan **honeypots** y **falsos positivos de honeypot** (hallazgo "demasiado
+    fácil"/incoherente); `post-exploit`/`lateral-discovery` marcan hosts honeypot (canary/too-clean). Se
+    registran en el nuevo `target.defenses[]` (type/confidence/evidence); un honeypot de confianza alta
+    **sale de la frontera activa** (no bloquea el cierre).
+  - **Anti-alboroto (C18, `.claude/hooks/noise_guard.py`):** hook determinista PreToolUse que bloquea el
+    escaneo ruidoso/DoS-adjacent (`nmap -T5`, `masscan`/`zmap` sin `--rate` o sobre cap, fuerza bruta/
+    fuzzing con hilos excesivos); `constraints.stealth` endurece, `constraints.allow_noisy` lo libera si la
+    ROE autoriza ruido.
+  - **Anti-bucle (C19, `.claude/hooks/loop_guard.py`):** hook determinista que corta el thrashing (mismo
+    comando) y la oscilación A/B tras `constraints.max_repeat` (def. 3) — anti-bucle a nivel de ACCIÓN
+    (complementa C13 global y C15 de hops A2A).
+  - **Modelo de decisión** en `AGENTS.md`: señales (WAF/IDS/honeypot) → decisión {proceder / evadir / bajar
+    ruido / abortar vector / escalar}. Honeypot de confianza alta ⇒ abortar el vector y avisar.
+  - `GUARDRAILS.md` documenta C18/C19 (+ modelo mermaid); `CONSTITUTION.md` sube a **2.1.0** (§9 bajo ruido
+    y conciencia de defensas).
+### Changed
+- **Enum profunda explícita (estilo PEASS/linpeas·winpeas) en `post-exploit`** con bucle ReAct
+  (enumera→observa→adapta); los servicios en loopback se marcan como pistas de pivot.
+- **RAG de conocimiento cableado a `lateral-discovery` y `network-exploit`** (`query_kb.py` + `--semantic`),
+  además de los ya existentes post-exploit/web-exploit.
+- **`maxTurns` ampliado** en los agentes que ahora hacen estrictamente más por invocación (pivot/enum
+  profunda/propagación): lateral-discovery 35→45, network-exploit 35→40, post-exploit 50→60, netexec 30→40.
+  El `budget_guard` sigue limitando las acciones ofensivas reales; re-tune con `tune_maxturns.py` tras medir.
+- **`linux-hard-gate.json`** reposicionado como **checkpoint single-host** (paso previo a `grandma-gate`);
+  evidence_regex alineado (incluye `/root/proof.txt|flag`).
+### Notes
+- **El multi-host NO relaja ninguna puerta:** cada host detrás de un pivot pasa por `scope_guard` igual; el
+  pivot da transporte, no alcance. Credenciales referenciadas bajo memory_guard/secret_scan.
+- Reforzar-primero: **el GATE no se corre todavía**; esta versión es verificación local (validate_suite,
+  py_compile, espejos plugin/opencode, agent-cards).
+- **Higiene de espejos:** al regenerar `plugin/` se corrige un drift previo — 6 espejos de agentes
+  (`ai-security`, `knowledge-postmortem`, `metasploit`, `sqlmap`, `vuln-triage`, `web-fuzzing`) no se
+  habían re-mirrorizado al plugin tras añadir `memory: local` en v2.2.0; ahora el plugin queda al día con
+  la fuente (`.claude/agents`). Cambio puramente aditivo (0 borrados), sin tocar comportamiento.
+
 ## [2.3.1] - 2026-06-26
 ### Fixed
 - **Fuga potencial de scope de cliente (repo PÚBLICO).** El backup que `benchmark/run_gate.py` hace de

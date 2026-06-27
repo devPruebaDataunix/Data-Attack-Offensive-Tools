@@ -84,6 +84,15 @@ def build_scope(ev, target, max_actions=1500):
         in_scope["cidrs"].append(target)
     else:
         in_scope["domains"].append(target)
+    # Segmentos internos adicionales del eval (gate multi-host detrás de pivot). Cada uno ya fue
+    # validado como LAB en main() antes de construir el scope.
+    for extra in ev.get("scope_extra", []):
+        if IP_RE.match(extra):
+            in_scope["ips"].append(extra)
+        elif CIDR_RE.match(extra):
+            in_scope["cidrs"].append(extra)
+        else:
+            in_scope["domains"].append(extra)
     return {
         "engagement_id": f"GATE-{ev['id']}",
         "client": "LAB (eval-harness)",
@@ -163,6 +172,12 @@ def main():
         print(f"[ABORT] target '{target}' no es de LABORATORIO (IP privada/loopback o dominio "
               f".htb/.thm/.dockerlabs/…). run_gate.py es LAB-ONLY; usa --target con un lab.", file=sys.stderr)
         sys.exit(3)
+    # Los segmentos internos extra del gate multi-host también deben ser de LAB (no abrir scope real).
+    for extra in ev.get("scope_extra", []):
+        if not is_lab_target(extra):
+            print(f"[ABORT] scope_extra '{extra}' del eval no es de LABORATORIO. run_gate.py es "
+                  f"LAB-ONLY: corrige el eval.", file=sys.stderr)
+            sys.exit(3)
 
     eng = os.path.join(ROOT, "engagements", f"GATE-{ev['id']}")
     scope = build_scope(ev, target, args.max_actions)

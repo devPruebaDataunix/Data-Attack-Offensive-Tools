@@ -30,9 +30,21 @@ para y consulta al Orquestador.
 2. Detección de servicio/versión y scripts seguros de enumeración.
 3. Fingerprinting web (tecnologías, headers, rutas conocidas) sin explotar nada.
 
+## Detección de defensas y sigilo
+Escaneo **dirigido y de bajo ruido**: nada de `-T5`, `masscan` sin `--rate` ni barridos full-range a
+toda velocidad — el hook `noise_guard.py` (C18) los bloquea y, en modo `stealth`, también `-T4`/`-A`.
+Empieza acotado (puertos probables) y amplía con criterio. Mientras enumeras, **detecta defensas** y
+anótalas en `target.defenses[]`:
+- **WAF** — `wafw00f`, headers/cookies reveladores (Cloudflare/Akamai/ModSecurity), 403/406 uniformes.
+- **IDS/IPS** — conexiones cortadas tras N intentos, RST inyectados, baneo súbito de tu IP.
+- **Tarpit / rate-limit** — latencias crecientes o respuestas deliberadamente lentas.
+- **Honeypot** — TODOS los puertos abiertos, banners incoherentes/versiones imposibles, servicios que no
+  deberían coexistir. Márcalo con `confidence` y **avisa**: el Orquestador decide (puede abortar el host).
+Registra cada defensa con `type`, `confidence`, `evidence` (sin PII en claro) y `detected_by`.
+
 ## Outputs (blackboard)
 Actualiza cada target en `targets[]` con `open_ports[]` (port, protocol, service, version,
-banner) y `technologies[]`. Registra cada comando en `evidence[]`.
+banner), `technologies[]` y `defenses[]` (lo detectado arriba). Registra cada comando en `evidence[]`.
 
 ## Criterio de done
 Cada target en scope tiene su mapa de puertos/servicios/versiones. Devuelve al Orquestador
@@ -40,6 +52,8 @@ la lista de servicios potencialmente interesantes para triage.
 
 ## Guardarraíles
 - No explotas nada: solo enumeras. La explotación es de otros agentes.
+- **Sin alboroto:** escaneo proporcional y con propósito (C18 lo fuerza). Si algo requiere ser
+  agresivo, para y consulta al Orquestador; no lo fuerces ni repitas el mismo escaneo (C19).
 - Respeta la ventana de testing y el rate. Un DoS accidental es una violación de contrato.
 - Si un servicio cae durante el escaneo, **detente** y reporta al Orquestador.
 

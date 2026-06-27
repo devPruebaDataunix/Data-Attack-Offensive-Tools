@@ -31,6 +31,8 @@ flowchart TB
     AGENT -->|escribe findings/targets| G_SCHEMA
     AGENT -->|escribe findings/targets| G_REDACT
     AGENT -->|cada acción Bash| G_BUDGET
+    AGENT -->|comando de escaneo| G_NOISE
+    AGENT -->|acción Bash repetida| G_LOOP
     AGENT -->|comando contra target| G_SCOPE
     AGENT -->|comando ofensivo| G_HITL
     AGENT -->|mensaje A2A a otro agente| G_A2A
@@ -40,6 +42,8 @@ flowchart TB
         G_INJECT{{"🧱 datos ≠ instrucciones<br/>anti-inyección · prompt (LLM01)"}}
         G_SCOPE{{"🛡️ scope_guard.py<br/>PreToolUse · determinista"}}
         G_BUDGET{{"⏱️ budget_guard.py<br/>PreToolUse · determinista (LLM10)"}}
+        G_NOISE{{"🔇 noise_guard.py<br/>PreToolUse · C18 (LLM10/§9)"}}
+        G_LOOP{{"🔁 loop_guard.py<br/>PreToolUse · C19 (LLM10)"}}
         G_HITL{{"🙋 tiers de riesgo + aprobación<br/>HITL (bot)"}}
         G_PERM{{"🔒 permissions ask/deny<br/>settings.json"}}
         G_TOOLS{{"🧰 allowlist + denylist + maxTurns<br/>frontmatter por agente"}}
@@ -52,6 +56,8 @@ flowchart TB
     G_SCOPE -->|en scope| TARGET
     G_SCOPE -.->|fuera de scope| BLOCK["⛔ bloqueado"]
     G_BUDGET -.->|techo superado| BLOCK
+    G_NOISE -.->|ruidoso/DoS-adjacent| BLOCK
+    G_LOOP -.->|bucle/oscilación| BLOCK
     G_HITL -->|✅ autorizado| TARGET
     G_SCHEMA -->|válido| BB
     G_SCHEMA -.->|inválido| FIX["↩️ feedback al orquestador"]
@@ -83,6 +89,8 @@ flowchart TB
 | C15 | **Kill-switch A2A** — acota la conversación entre agentes: bloquea si los mensajes del engagement superan el techo o si una cadena acumula demasiados `hops` (anti-bucle). Equivalente A2A de C13 (`constraints.max_a2a_hops`, def. 50) | Determinista | `.claude/hooks/a2a_guard.py` (PostToolUse) | **LLM10 Unbounded Consumption** |
 | C16 | **Auditoría del ciclo de subagentes** — cada fin de subagente deja un registro JSONL inmutable por anexado (agente, id, sesión, engagement, transcript). **Observacional**: no bloquea la finalización (fail-safe a exit 0) | Determinista (audit) | `.claude/hooks/subagent_stop.py` (SubagentStop) → `engagements/<id>/evidence/subagents.jsonl` (o `.claude/audit/`) | (trazabilidad / defensa legal) |
 | C17 | **Guard de sanitización de la memoria de aprendizaje** — antes de escribir en la memoria persistente de un agente (`.claude/agent-memory*/`: `local` per-operador **y** `project` compartida por git) **bloquea** si el contenido trae secretos, identificadores del scope (IPs/dominios in/out), IPs públicas enrutables o loot (hashes). Convierte "sin datos de cliente en memoria" en garantía de código (aislamiento de cliente, CONSTITUTION §1) | Determinista | `.claude/hooks/memory_guard.py` (PreToolUse) + `tools/redactor.py` + helpers de `scope_guard` | **LLM02 Sensitive Info Disclosure** |
+| C18 | **Anti-alboroto** — bloquea el escaneo ruidoso/DoS-adjacent (`nmap -T5`, `masscan`/`zmap` sin `--rate` o sobre el cap, fuerza bruta con demasiados hilos, fuzzing web con cientos de hilos); en modo `stealth` endurece (`-T4`/`-A`/`-p-` rápido). Configurable: `constraints.allow_noisy` lo desactiva si la ROE autoriza ruido; `stealth`/`max_scan_rate` ajustan umbrales. Aplica CONSTITUTION §9 (bajo ruido) | Determinista | `.claude/hooks/noise_guard.py` (PreToolUse) | **LLM10 Unbounded Consumption** (+ no-daño §5/§9) |
+| C19 | **Anti-bucle (nivel de acción)** — detecta el mismo comando repetido (thrashing) y la oscilación A/B sin progreso, y **bloquea** tras `constraints.max_repeat` (def. 3) en la ventana reciente. Obliga a cambiar de hipótesis o escalar. Complementa C13 (kill-switch global de acciones) y C15 (techo de hops A2A) llevándolo al nivel de ACCIÓN | Determinista | `.claude/hooks/loop_guard.py` (PreToolUse) | **LLM10 Unbounded Consumption** |
 
 > **Refuerzo del router A2A (no es un gate):** `a2a_router_nudge.py` (PostToolUse sobre `Task`)
 > recuerda al Orquestador, tras cada retorno de subagente, que entregue los mensajes A2A `pending`
@@ -126,5 +134,7 @@ python tools/redactor.py <fichero> # escanea un fichero en busca de secretos (sa
 ```
 
 El `dryrun` lanza comandos in-scope y out-of-scope reales contra `scope_guard.py`, comandos de
-sobra para disparar el `budget_guard.py`, y valida el `engagement.json` resultante contra los
-esquemas (incluida la pasada de `secret_scan.py`): si un control se rompe, salta ahí.
+sobra para disparar el `budget_guard.py`, ejercita el bus A2A (`a2a_guard.py`, C14/C15) y los
+guardarraíles **anti-alboroto** (`noise_guard.py`, C18) y **anti-bucle** (`loop_guard.py`, C19) en
+sandbox, y valida el `engagement.json` resultante contra los esquemas (incluida la pasada de
+`secret_scan.py`): si un control se rompe, salta ahí.

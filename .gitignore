@@ -12,6 +12,7 @@ contracts/engagement.json
 contracts/*.tmp
 contracts/*.bak
 contracts/.action_count
+contracts/.cmd_history
 
 # ─── Artefactos crudos por engagement (scans, loot, evidencia) ─
 engagements/

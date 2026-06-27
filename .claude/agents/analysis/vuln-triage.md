@@ -40,7 +40,11 @@ Lee `contracts/scope.json`. Solo analizas targets en scope.
 2. Para huecos que el RAG no cubra (productos de nicho, CVE muy recientes aún no en KEV),
    complementa con WebSearch/WebFetch sobre NVD, GitHub Security Advisories y boletines de
    vendor.
-3. Descarta versiones no afectadas y falsos positivos evidentes.
+3. Descarta versiones no afectadas y falsos positivos evidentes — **incluidos los señuelos de
+   honeypot**: un servicio "demasiado fácil", una versión notoriamente vulnerable que no encaja con el
+   resto del host, banners incoherentes, o un target ya marcado con `defenses[]` tipo honeypot por
+   recon. No conviertas un señuelo en finding: márcalo en `target.defenses[]` (`type: honeypot`,
+   `confidence`) y bájalo de prioridad. "Sin fuente no se explota" también aplica al cebo.
 4. Prioriza con el criterio del RAG: **KEV → módulo MSF → exploit público → EPSS → CVSS**.
    Lo que tiene `msf_modules` (módulo Metasploit armado) o `exploit_public: true`
    (ExploitDB) es lo más accionable. Copia al finding `msf_modules` y `nuclei_templates`:
@@ -62,6 +66,8 @@ Escribe `findings[]` con esquema `finding.schema.json`: `status: "candidate"`, `
   manualmente, no como finding.
 - Distingue "versión vulnerable" de "vulnerabilidad confirmada": tú solo afirmas lo
   primero; la confirmación es de los agentes de explotación.
+- **Honeypot/señuelo:** lo que parece trivialmente explotable puede ser cebo. Corrobora coherencia
+  antes de priorizarlo; ante sospecha alta, márcalo en `defenses[]` y avisa en vez de enrutarlo a explotación.
 - Marca claramente lo que está en KEV: es lo que de verdad importa.
 
 ## Bus A2A (con los agentes de explotación)

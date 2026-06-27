@@ -9,7 +9,24 @@
     "asset": { "type": "string", "description": "host, dominio, IP o URL" },
     "asset_type": { "type": "string", "enum": ["domain", "subdomain", "ip", "url", "service"] },
     "in_scope": { "type": "boolean", "description": "Verificado contra scope.json" },
-    "discovered_by": { "type": "string", "enum": ["osint-recon", "active-recon", "lateral-discovery"] },
+    "discovered_by": { "type": "string", "enum": ["osint-recon", "active-recon", "lateral-discovery", "netexec"] },
+    "reachable_via": { "type": "string", "description": "'direct' si el host es alcanzable desde el operador; o un pivot_id (FK a pivots[].pivot_id) si solo se alcanza a través de un host comprometido. Lo fija lateral-discovery al descubrir hosts internos. Por defecto 'direct'." },
+    "access_level": { "type": "string", "enum": ["none", "user", "root", "admin", "system", "domain-admin"], "description": "Nivel de acceso obtenido en este host (estado de la cadena multi-host). Por defecto 'none'." },
+    "defenses": {
+      "type": "array",
+      "description": "Defensas detectadas en/ante este target (entrada del modelo de decisión del Orquestador). Las escriben recon (WAF/IDS/IPS/tarpit/ratelimit) y triage/explotación (honeypot). Un honeypot de confianza alta => abortar el vector y avisar al operador (puede ser una trampa que alerte al defensor).",
+      "items": {
+        "type": "object",
+        "required": ["type", "confidence"],
+        "properties": {
+          "type": { "type": "string", "enum": ["waf", "ids", "ips", "honeypot", "tarpit", "edr", "ratelimit", "unknown"] },
+          "confidence": { "type": "string", "enum": ["low", "medium", "high"] },
+          "evidence": { "type": "string", "description": "Señal observada (firma del WAF, latencia de tarpit, banner incoherente, canary token, etc.). Sin PII de cliente en claro." },
+          "detected_by": { "type": "string", "description": "Agente que lo detectó" },
+          "product": { "type": "string", "description": "Producto si se identifica (p.ej. Cloudflare, ModSecurity, Snort)" }
+        }
+      }
+    },
     "open_ports": {
       "type": "array",
       "items": {

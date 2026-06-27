@@ -143,6 +143,73 @@ def a2a_demo(cap=3):
             "c14_topology": "TOPOLOG" in offtopo, "c15_flood": "C15" in flood}
 
 
+def _sandbox_hook(modname, attrs):
+    """Carga un hook como módulo y le sobreescribe rutas a un sandbox temporal. Devuelve (mod, runner)."""
+    import importlib.util
+    import io
+    import contextlib
+    spec = importlib.util.spec_from_file_location(
+        modname, os.path.join(ROOT, ".claude", "hooks", modname + ".py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    for k, v in attrs.items():
+        setattr(mod, k, v)
+
+    def run(cmd):
+        ev = json.dumps({"tool_name": "Bash", "tool_input": {"command": cmd}})
+        old = sys.stdin
+        sys.stdin = io.StringIO(ev)
+        buf = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(buf):
+                mod.main()
+        except SystemExit:
+            pass
+        finally:
+            sys.stdin = old
+        return buf.getvalue()
+    return mod, run
+
+
+def noise_demo():
+    """Ejercita noise_guard.py (C18): un escaneo ruidoso (nmap -T5) se bloquea, uno dirigido pasa."""
+    import tempfile
+    d = tempfile.mkdtemp()
+    scope = os.path.join(d, "scope.json")
+    with open(scope, "w", encoding="utf-8") as f:
+        json.dump({"engagement_id": "DEMO", "constraints": {}}, f)
+    _, run = _sandbox_hook("noise_guard", {"SCOPE": scope})
+    return {"noisy_blocked": "C18" in run("nmap -T5 192.168.56.10"),
+            "targeted_ok": run("nmap -sV -T3 -p80,443 192.168.56.10") == ""}
+
+
+def loop_demo(cap=3):
+    """Ejercita loop_guard.py (C19): (a) thrashing del mismo comando ofensivo se corta tras `cap`;
+    (b) oscilación A/B se bloquea; (c) un sondeo benigno repetido (nc -zv) queda EXENTO (no se bloquea)."""
+    import tempfile
+
+    def fresh():
+        d = tempfile.mkdtemp()
+        scope = os.path.join(d, "scope.json")
+        with open(scope, "w", encoding="utf-8") as f:
+            json.dump({"engagement_id": "DEMO", "constraints": {"max_repeat": cap}}, f)
+        _, run = _sandbox_hook("loop_guard", {"HIST_FILE": os.path.join(d, ".cmd_history"),
+                                              "SCOPE": scope, "ENGAGEMENT": os.path.join(d, "engagement.json")})
+        return run
+
+    run = fresh()
+    thrash_at = None
+    for i in range(1, cap + 3):
+        if "C19" in run("nmap -sV -p80 192.168.56.10"):
+            thrash_at = i
+            break
+    run = fresh()
+    osc = any("C19" in run(c) for c in ["cmd-a", "cmd-b", "cmd-a", "cmd-b", "cmd-a"])
+    run = fresh()
+    benign_blocked = any("C19" in run("nc -zv 192.168.56.10 4444") for _ in range(cap + 3))
+    return {"thrash_at": thrash_at, "osc_blocked": osc, "benign_ok": not benign_blocked}
+
+
 def main():
     scope = json.load(open(os.path.join(ROOT, "contracts", "scope.json"), encoding="utf-8"))
     eng = {"engagement_id": scope["engagement_id"], "scope_ref": "contracts/scope.json",
@@ -273,7 +340,7 @@ def main():
     print(f"\n  analyze_engagement -> {'OK (engagement coherente)' if rc == 0 else 'INCOHERENCIAS (revisar arriba)'}")
 
     # ---- GUARDARRAÍLES C11–C13 (REAL — hooks deterministas) ----
-    hr("GUARDARRAÍLES · LLM01/LLM02/LLM10  [REAL — anti-inyección + secretos + kill-switch]")
+    hr("GUARDARRAÍLES · LLM01/LLM02/LLM10  [REAL — anti-inyección + secretos + kill-switch + anti-ruido/bucle]")
     from redactor import scan as _scan, redact as _redact  # noqa: E402
     # C12 secret_scan: el engagement.json recién escrito debe estar LIMPIO (sin claves del motor)
     sec = call_hook(os.path.join(".claude", "hooks", "secret_scan.py"),
@@ -301,6 +368,12 @@ def main():
           f"mensaje válido pasa={a2a['valid']}")
     print(f"  [C14 topología]   destino fuera de pareja bloqueado={a2a['c14_topology']}")
     print(f"  [C15 a2a_kill]    techo=3 -> exceso de mensajes A2A bloqueado={a2a['c15_flood']}")
+    # C18 noise_guard / C19 loop_guard: anti-alboroto y anti-bucle a nivel de acción
+    nz = noise_demo()
+    print(f"  [C18 noise_guard] nmap -T5 bloqueado={nz['noisy_blocked']} · escaneo dirigido pasa={nz['targeted_ok']}")
+    lg = loop_demo(cap=3)
+    print(f"  [C19 loop_guard]  max_repeat=3 -> thrashing cortado en #{lg['thrash_at']} · "
+          f"oscilación A/B bloqueada={lg['osc_blocked']} · sondeo benigno exento={lg['benign_ok']}")
 
     print(f"\n  fase final: {eng['phase']}  ->  listo para el agente reporting")
 

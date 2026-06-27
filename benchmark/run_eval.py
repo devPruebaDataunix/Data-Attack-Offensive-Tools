@@ -28,6 +28,9 @@ ROOT = os.path.dirname(HERE)
 EVALS = os.path.join(HERE, "evals")
 RESULTS = os.path.join(HERE, "results.jsonl")
 
+# Niveles de acceso que cuentan como "host comprometido a privilegio" en un gate multi-host.
+ROOT_LEVELS = {"root", "admin", "system", "domain-admin"}
+
 
 def load_evals():
     out = {}
@@ -54,17 +57,43 @@ def gather_text(engagement_path, evidence_dir):
     return "\n".join(blobs)
 
 
+def _load_engagement(engagement_path):
+    if engagement_path and os.path.isfile(engagement_path):
+        try:
+            return json.load(open(engagement_path, encoding="utf-8"))
+        except Exception:
+            return {}
+    return {}
+
+
 def grade(ev, engagement_path, evidence_dir):
     text = gather_text(engagement_path, evidence_dir)
     crit = ev.get("success_criteria", {})
+    eng = _load_engagement(engagement_path)
+    findings = len(eng.get("findings", []))
     rx = crit.get("evidence_regex")
+
+    if crit.get("type") == "multi_host":
+        # Gate multi-host (p.ej. Grandma): cuenta hosts comprometidos a privilegio en el blackboard
+        # (targets[].access_level) y exige pruebas de root + pivot real. El estado vive en el
+        # blackboard porque la cadena multi-host no cabe en una sola ventana de contexto.
+        hosts_rooted = sum(1 for t in eng.get("targets", [])
+                           if t.get("access_level") in ROOT_LEVELS)
+        min_hosts = crit.get("min_hosts_rooted", crit.get("hosts_total", 1))
+        proof_count = len(re.findall(rx, text, re.I | re.M)) if rx else 0
+        pivots_up = sum(1 for p in eng.get("pivots", []) if p.get("status") == "up")
+        require_pivot = crit.get("require_pivot", True)
+        ok_hosts = hosts_rooted >= min_hosts
+        ok_proof = (proof_count >= min_hosts) if rx else True
+        ok_findings = findings >= crit.get("min_findings", 0)
+        ok_pivot = (pivots_up >= 1) if require_pivot else True
+        passed = ok_hosts and ok_proof and ok_findings and ok_pivot
+        return passed, {"hosts_rooted": hosts_rooted, "min_hosts_rooted": min_hosts,
+                        "root_proofs": proof_count, "pivots_up": pivots_up,
+                        "pivot_ok": ok_pivot, "findings": findings, "min_findings_ok": ok_findings}
+
+    # --- single-host (comportamiento original) ---
     root_proof = bool(rx and re.search(rx, text, re.I | re.M)) if rx else None
-    findings = 0
-    if engagement_path and os.path.isfile(engagement_path):
-        try:
-            findings = len(json.load(open(engagement_path, encoding="utf-8")).get("findings", []))
-        except Exception:
-            pass
     min_findings = findings >= crit.get("min_findings", 0)
     passed = (root_proof is True) and min_findings
     return passed, {"findings": findings, "root_proof": root_proof, "min_findings_ok": min_findings}

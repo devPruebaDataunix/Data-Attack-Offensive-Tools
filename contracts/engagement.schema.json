@@ -14,6 +14,41 @@
     "updated_at": { "type": "string", "format": "date-time" },
     "targets": { "type": "array", "items": { "$ref": "target.schema.json" } },
     "findings": { "type": "array", "items": { "$ref": "finding.schema.json" } },
+    "pivots": {
+      "type": "array",
+      "description": "Túneles de pivoting establecidos para alcanzar segmentos internos EN SCOPE. Los escribe lateral-discovery al levantar un túnel; el Orquestador inyecta el pivot activo como contexto a los agentes de explotación que deban alcanzar hosts internos. No está en `required` (retrocompatible). El pivot NO relaja el scope: cada host detrás del túnel se valida igual contra scope.json.",
+      "items": {
+        "type": "object",
+        "required": ["pivot_id", "tool", "via_target", "status"],
+        "properties": {
+          "pivot_id": { "type": "string" },
+          "tool": { "type": "string", "enum": ["ligolo-ng", "chisel", "proxychains", "msf-socks", "sliver-socks", "ssh"], "description": "Transporte del túnel (ligolo-ng primario)" },
+          "via_target": { "type": "string", "description": "FK a target.target_id: el host comprometido que se atraviesa (punto de pivot)" },
+          "reaches_cidr": { "type": "array", "items": { "type": "string" }, "description": "Segmentos/CIDR internos EN SCOPE alcanzables por este pivot" },
+          "proxy": { "type": "string", "description": "Endpoint local para enrutar tráfico (p.ej. socks5://127.0.0.1:1080 o la interfaz/tun de ligolo). NUNCA credenciales." },
+          "depends_on": { "type": "string", "description": "pivot_id previo si es un pivot encadenado (doble salto)" },
+          "status": { "type": "string", "enum": ["planned", "up", "down"] },
+          "established_by": { "type": "string" }
+        }
+      }
+    },
+    "credentials": {
+      "type": "array",
+      "description": "Vault de credenciales/material recolectado, SIEMPRE REFERENCIADO (nunca el secreto en claro: el valor va a engagements/<id>/loot/ fuera de git, y aquí solo su referencia). Habilita la propagación entre hosts (reuse/pass-the-hash/spray) sin re-crackear. No está en `required`. Los hooks memory_guard/secret_scan impiden volcar secretos crudos.",
+      "items": {
+        "type": "object",
+        "required": ["cred_id", "type", "source_target"],
+        "properties": {
+          "cred_id": { "type": "string" },
+          "principal": { "type": "string", "description": "usuario/cuenta (redáctalo si es sensible)" },
+          "type": { "type": "string", "enum": ["password", "ntlm-hash", "kerberos-ticket", "ssh-key", "token", "other"] },
+          "secret_ref": { "type": "string", "description": "Referencia al material (ruta en loot/ o id de keystore). NUNCA el valor en claro." },
+          "source_target": { "type": "string", "description": "FK a target.target_id donde se obtuvo" },
+          "validated_on": { "type": "array", "items": { "type": "string" }, "description": "target_ids donde se validó (reuse/PtH/spray)" },
+          "privilege": { "type": "string", "enum": ["user", "admin", "domain-admin", "unknown"] }
+        }
+      }
+    },
     "messages": {
       "type": "array",
       "description": "Bus A2A mediado: mensajes entre agentes. Un agente deja aquí su petición/respuesta y el Orquestador-router la entrega al destino. No está en `required` (retrocompatible). Cada item sigue a2a-message.schema.json.",
