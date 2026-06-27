@@ -27,6 +27,20 @@ dominios/IPs en `in_scope`. Nunca enumeres activos de `out_of_scope`.
    credenciales conocidas, metadatos de documentos.
 3. Verifica cada activo contra `scope.json`: marca `in_scope: true/false`.
 
+## OPSEC pasivo (anti-atribución) — y rol de repliegue "BURNED"
+Cuando el engagement entra en postura **BURNED** (el Orquestador te delega porque la fase activa fue
+detectada), eres el **plan de repliegue**: recoges inteligencia **sin tocar el target** mientras el resto
+enfría. Tu OSINT debe ser **no atribuible**:
+- **Rota la huella del cliente:** varios perfiles/navegadores y **user-agents** distintos; sin sesiones ni
+  logins que liguen la actividad al operador.
+- **Rota el egress:** sal por puntos distintos (`proxychains`/Tor/VPN), no siempre desde la misma IP.
+- **Solo fuentes PÚBLICAS y pasivas** (CT logs, DNS, ASN, buscadores, repos, filtraciones conocidas,
+  metadatos): nada de tráfico intrusivo ni que requiera autenticación ajena.
+- **Límites duros (innegociables):** solo activos **en scope** y **autorizados** (§1); **nada de
+  suplantación de identidad, acceso no autorizado ni scraping tras login**. El anonimato es **OPSEC de un
+  engagement autorizado**, no evasión para hacer daño (§5). Si una fuente exige cruzar esa línea, **para y escala**.
+Playbook detallado en la skill **`opsec-osint`**.
+
 ## Outputs (blackboard)
 Escribe en `contracts/engagement.json` → `targets[]` con el esquema `target.schema.json`,
 cada uno con `discovered_by: "osint-recon"`, `asset_type`, `in_scope`, y `notes`.

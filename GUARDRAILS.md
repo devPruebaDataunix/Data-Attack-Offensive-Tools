@@ -89,7 +89,7 @@ flowchart TB
 | C15 | **Kill-switch A2A** — acota la conversación entre agentes: bloquea si los mensajes del engagement superan el techo o si una cadena acumula demasiados `hops` (anti-bucle). Equivalente A2A de C13 (`constraints.max_a2a_hops`, def. 50) | Determinista | `.claude/hooks/a2a_guard.py` (PostToolUse) | **LLM10 Unbounded Consumption** |
 | C16 | **Auditoría del ciclo de subagentes** — cada fin de subagente deja un registro JSONL inmutable por anexado (agente, id, sesión, engagement, transcript). **Observacional**: no bloquea la finalización (fail-safe a exit 0) | Determinista (audit) | `.claude/hooks/subagent_stop.py` (SubagentStop) → `engagements/<id>/evidence/subagents.jsonl` (o `.claude/audit/`) | (trazabilidad / defensa legal) |
 | C17 | **Guard de sanitización de la memoria de aprendizaje** — antes de escribir en la memoria persistente de un agente (`.claude/agent-memory*/`: `local` per-operador **y** `project` compartida por git) **bloquea** si el contenido trae secretos, identificadores del scope (IPs/dominios in/out), IPs públicas enrutables o loot (hashes). Convierte "sin datos de cliente en memoria" en garantía de código (aislamiento de cliente, CONSTITUTION §1) | Determinista | `.claude/hooks/memory_guard.py` (PreToolUse) + `tools/redactor.py` + helpers de `scope_guard` | **LLM02 Sensitive Info Disclosure** |
-| C18 | **Anti-alboroto** — bloquea el escaneo ruidoso/DoS-adjacent (`nmap -T5`, `masscan`/`zmap` sin `--rate` o sobre el cap, fuerza bruta con demasiados hilos, fuzzing web con cientos de hilos); en modo `stealth` endurece (`-T4`/`-A`/`-p-` rápido). Configurable: `constraints.allow_noisy` lo desactiva si la ROE autoriza ruido; `stealth`/`max_scan_rate` ajustan umbrales. Aplica CONSTITUTION §9 (bajo ruido) | Determinista | `.claude/hooks/noise_guard.py` (PreToolUse) | **LLM10 Unbounded Consumption** (+ no-daño §5/§9) |
+| C18 | **Anti-alboroto** — bloquea el escaneo ruidoso/DoS-adjacent (`nmap -T5`, `masscan`/`zmap` sin `--rate` o sobre el cap, `rustscan` con `--batch-size`/`--ulimit` excesivos, fuerza bruta con demasiados hilos, fuzzing web con cientos de hilos); en modo `stealth` endurece (`-T4`/`-A`/`-p-` rápido, rustscan sin acotar). Configurable: `constraints.allow_noisy` lo desactiva si la ROE autoriza ruido; `stealth`/`max_scan_rate` ajustan umbrales. Aplica CONSTITUTION §9 (bajo ruido) | Determinista | `.claude/hooks/noise_guard.py` (PreToolUse) | **LLM10 Unbounded Consumption** (+ no-daño §5/§9) |
 | C19 | **Anti-bucle (nivel de acción)** — detecta el mismo comando repetido (thrashing) y la oscilación A/B sin progreso, y **bloquea** tras `constraints.max_repeat` (def. 3) en la ventana reciente. Obliga a cambiar de hipótesis o escalar. Complementa C13 (kill-switch global de acciones) y C15 (techo de hops A2A) llevándolo al nivel de ACCIÓN | Determinista | `.claude/hooks/loop_guard.py` (PreToolUse) | **LLM10 Unbounded Consumption** |
 
 > **Refuerzo del router A2A (no es un gate):** `a2a_router_nudge.py` (PostToolUse sobre `Task`)
@@ -111,7 +111,8 @@ la postura de seguridad completa vive en el repo desplegado.
 ## Brechas conocidas — ahora cubiertas
 
 Honestidad por delante: estos tres vectores estaban **sin control determinista**; desde jun 2026
-ya tienen uno (C11–C13). Queda un residual de *fase 2* anotado en la última columna.
+ya tienen uno cada uno (C11, C12 y C13 respectivamente). Queda un residual de *fase 2* anotado en
+la última columna.
 
 | Brecha | OWASP | Por qué nos afecta | Mitigación implementada | Estado |
 | :--- | :--- | :--- | :--- | :--- |

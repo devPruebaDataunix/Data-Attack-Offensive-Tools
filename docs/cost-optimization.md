@@ -76,5 +76,5 @@ el runner degrada (effort → flag CLI; techo USD se omite) **sin romper la sesi
 
 ## Qué NO se tocó
 
-El gate de alcance (`scope_guard`), los guardarraíles C11–C13 y la aprobación humana por acción
-quedan intactos. La optimización es de **coste**, no de seguridad.
+El gate de alcance (`scope_guard`), los guardarraíles deterministas (C11–C19) y la aprobación humana
+por acción quedan intactos. La optimización es de **coste**, no de seguridad.

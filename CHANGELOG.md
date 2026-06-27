@@ -4,6 +4,32 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.5.0] - 2026-06-27
+### Added
+- **Recon sigiloso full-range + priorización de puertos altos** — `active-recon`/`recon-suite` usan
+  **rustscan** como front-end de descubrimiento (barre los 65535 a ritmo acotado) → `nmap -sV -sC`
+  **dirigido** solo a los puertos abiertos (menos huella que `nmap -p-`). Se deja de depender de
+  `--top-ports 1000`: los servicios que las empresas mueven a puertos altos (SSH→2222, paneles→8443/9000)
+  ya no se pierden, y `vuln-triage` los **prioriza** (suelen estar menos endurecidos). `deploy` instala
+  rustscan (+ chisel/proxychains4). Nueva skill **`stealth-recon`**.
+- **Detección de honeypots/honeytraps** — nueva skill **`honeypot-detection`** con fingerprints de
+  honeypots conocidos (Cowrie/Kippo, Dionaea, Conpot, Glastopf, T-Pot) + heurísticas conductuales,
+  enganchada en recon/triage. Construye sobre `target.defenses[]` (v2.4.0): confianza alta ⇒ abortar el
+  vector (no perder tiempo ni delatarse).
+- **Postura BURNED → OSINT pasivo** — nueva rama del modelo de decisión: si la detección es activa y de
+  confianza alta (IP baneada/IPS cortando), se **para lo intrusivo**, se pasa a **OSINT no atribuible** +
+  cool-down y se avisa; el host quemado sale de la frontera activa (no rompe el cierre). `osint-recon` gana
+  OPSEC (rotación de user-agent/perfil/egress proxychains-Tor; solo fuentes públicas; dentro de scope —
+  refuerza §1/§5). Nueva skill **`opsec-osint`**.
+- **Disciplina anti-sesgos (epistémica)** — sección en `AGENTS.md` + refuerzo en triage/explotación: ≥2
+  hipótesis, buscar evidencia que refute, no fiarse a ciegas de tool/RAG, "demasiado fácil" = sospechoso,
+  cambiar de hipótesis en vez de repetir. Refuerza §3/§4 (es juicio, no determinista).
+### Changed
+- **`noise_guard` (C18) cubre rustscan** — bloquea `--batch-size`/`--ulimit` excesivos y, en `stealth`,
+  rustscan sin acotar el ritmo → el front-end rápido no es una vía para evadir el anti-alboroto.
+### Notes
+- Sin cambios en CONSTITUTION (las novedades operan §3/§5/§9 desde el modelo de decisión). Skills 10→13.
+
 ## [2.4.0] - 2026-06-27
 ### Added
 - **Capacidad multi-host (pivoting + cadena de credenciales)** — el salto que faltaba para cerrar máquinas

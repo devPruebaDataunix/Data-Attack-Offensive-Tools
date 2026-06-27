@@ -2,7 +2,7 @@
 # =============================================================================
 #  deploy/dash.sh — Lanza el panel de control TUI (Textual) con el venv del bot.
 #  El panel es el gemelo LOCAL del bot de Telegram: mismo cerebro (bot/intel) y
-#  las MISMAS puertas (scope_guard + aprobación humana + C11-C13).
+#  las MISMAS puertas (scope_guard + aprobación humana + C11-C19).
 #    ./deploy/dash.sh
 # =============================================================================
 set -uo pipefail

@@ -26,8 +26,11 @@ no DoS). El hook `scope_guard.py` bloquea fuera de scope.
 ## Pipeline (encadenado, como está diseñado para usarse)
 1. **Subdominios (pasivo)** — `subfinder -d <dominio> -all -silent`; `amass enum -passive -d <dominio>`.
 2. **Resolución DNS** — `dnsx -silent -a -resp` sobre la lista de subdominios.
-3. **Puertos (activo)** — `naabu -top-ports 1000 -silent`; para profundidad de servicio/OS y NSE,
-   **nmap** `nmap -sV -sC --top-ports 1000 -T3` (timing moderado).
+3. **Puertos (activo, FULL-RANGE — no top-1000)** — las empresas mueven servicios a puertos altos, así
+   que barre todo el rango **acotado**: `rustscan -a <ip> -b 4500 -- -sV -sC` (descubre los 65535 a ritmo
+   limitado → `nmap` dirigido solo a los abiertos), o `naabu -p - -rate <r> -silent` / `nmap -sS -p- -T3
+   --max-rate <r>` y luego `nmap -sV -sC -p<abiertos>`. Marca los servicios en **puertos altos no
+   estándar** como prioritarios para triage. El hook C18 acota el ritmo (batch/rate/timing). Playbook: skill `stealth-recon`.
 4. **Sondas HTTP** — `httpx -silent -title -tech-detect -status-code -web-server` para identificar
    webs vivas, tecnologías y stacks.
 5. **Crawling/URLs** — `katana -silent -jc` (crawl) y `gau` (URLs históricas) para superficie web.

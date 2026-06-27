@@ -43,6 +43,10 @@ Lee `contracts/scope.json`. Solo analizas targets en scope.
    - si trae `msf_modules` → enrútalo al agente **metasploit** (ya sabe el módulo exacto).
    - si trae `nuclei_templates` → recurso listo para `nuclei -t <ruta>` (web/bug bounty).
    El CVSS viene de CVE 5.0 (CNA), no del NVD (degradado); el SSVC de CISA da contexto.
+5. **Contexto de puerto (señal de priorización):** un servicio en un **puerto alto no estándar** (SSH
+   movido a 2222, panel en 8443/9000, app a medida en un puerto raro) suele ser **menos endurecido y más
+   interesante** que el servicio estándar muy expuesto (que ya suele estar parcheado) → **súbelo en la cola**
+   aunque su CVE no sea el de mayor CVSS. No sustituye a KEV/exploit; es desempate y foco. Anótalo en el finding.
 
 ## Outputs (blackboard)
 Escribe `findings[]` con esquema `finding.schema.json`: `status: "candidate"`, `severity`,
@@ -59,8 +63,11 @@ Escribe `findings[]` con esquema `finding.schema.json`: `status: "candidate"`, `
 - Distingue "versión vulnerable" de "vulnerabilidad confirmada": tú solo afirmas lo
   primero; la confirmación es de los agentes de explotación.
 - **Honeypot/señuelo:** lo que parece trivialmente explotable puede ser cebo. Corrobora coherencia
-  antes de priorizarlo; ante sospecha alta, márcalo en `defenses[]` y avisa en vez de enrutarlo a explotación.
+  antes de priorizarlo; ante sospecha alta, márcalo en `defenses[]` y avisa en vez de enrutarlo a
+  explotación (playbook: skill **`honeypot-detection`**).
 - Marca claramente lo que está en KEV: es lo que de verdad importa.
+- **Anti-sesgos:** no te ancles en el primer/obvio CVE; un hit del RAG es un **candidato a verificar**, no una
+  verdad. Considera una hipótesis alternativa antes de fijar la prioridad.
 
 ## Bus A2A (con los agentes de explotación)
 Eres el puente recon→explotación: cuando priorizas un finding candidato puedes **dirigirlo

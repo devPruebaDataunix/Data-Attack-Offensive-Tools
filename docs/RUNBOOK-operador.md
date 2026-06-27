@@ -71,7 +71,7 @@ En Telegram: `/start`. Solo tu `user-id` responde; cualquier otro queda rechazad
 
 ## 5b. Panel de control local (TUI)
 Alternativa **local** al bot, con la MISMA lógica y las MISMAS puertas (scope_guard + aprobación
-humana + C11-C13):
+humana + C11-C19):
 ```bash
 ./deploy/dash.sh        # abre el panel Textual en la terminal de la Kali
 ```

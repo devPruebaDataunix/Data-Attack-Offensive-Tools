@@ -3,7 +3,7 @@ Panel de control TUI (Textual) — gemelo LOCAL del bot de Telegram, ahora con C
 
 Reusa EXACTAMENTE el mismo cerebro que el bot (bot/intel: runner, classify, scope) y pasa por
 las MISMAS puertas: el hook scope_guard (vía setting_sources del runner), la APROBACIÓN HUMANA
-por acción (modal) y los guardarraíles C11-C15. La TUI NO puede saltarse ninguna puerta: los
+por acción (modal) y los guardarraíles C11-C19. La TUI NO puede saltarse ninguna puerta: los
 planos de acción son overrides del operador sobre el blackboard/config, o delegaciones que el
 Orquestador ejecuta por el hub (con todas las puertas).
 

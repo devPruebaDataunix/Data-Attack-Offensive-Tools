@@ -5,7 +5,8 @@ noise_guard.py — Hook PreToolUse: control determinista ANTI-ALBOROTO (control 
 El escaneo ruidoso / sin proporción está DESCARTADO por defecto: tumba servicios, dispara
 IDS/IPS y delata al pentester. Este hook BLOQUEA de forma determinista los comandos
 inequívocamente ruidosos o DoS-adjacent (timing 'insane', floods sin límite de rate, fuerza
-bruta con demasiados hilos, fuzzing web con cientos de hilos). No sustituye al criterio del
+bruta con demasiados hilos, fuzzing web con cientos de hilos, rustscan con batch/ulimit sin
+acotar). No sustituye al criterio del
 agente (sigilo proporcional vive en el prompt y en el modelo de decisión del Orquestador): es
 la red dura para que un agente —o un target que intente provocarlo— no genere alboroto.
 
@@ -35,6 +36,10 @@ WEB_THREAD_CAP = 100         # hilos de fuzzing web (ffuf/feroxbuster/gobuster/w
 STEALTH_RATE_CAP = 100
 STEALTH_THREAD_CAP = 8
 STEALTH_WEB_THREAD_CAP = 40
+RUSTSCAN_BATCH_CAP = 4500            # batch de rustscan (default ~4500); por encima = ruidoso
+STEALTH_RUSTSCAN_BATCH_CAP = 1000
+RUSTSCAN_ULIMIT_CAP = 10000          # --ulimit alto = muchos sockets en paralelo = ruidoso
+STEALTH_RUSTSCAN_ULIMIT_CAP = 5000
 
 
 def deny(reason):
@@ -91,6 +96,8 @@ def main():
         rate_cap = min(rate_cap, STEALTH_RATE_CAP)
     thread_cap = STEALTH_THREAD_CAP if stealth else THREAD_CAP
     web_cap = STEALTH_WEB_THREAD_CAP if stealth else WEB_THREAD_CAP
+    rs_batch_cap = STEALTH_RUSTSCAN_BATCH_CAP if stealth else RUSTSCAN_BATCH_CAP
+    rs_ulimit_cap = STEALTH_RUSTSCAN_ULIMIT_CAP if stealth else RUSTSCAN_ULIMIT_CAP
 
     low = cmd.lower()
     fix = ("Reformula con sentido y bajo ruido (escaneo dirigido, rate limitado). Si la ROE "
@@ -119,6 +126,19 @@ def main():
                 deny(f"ANTI-ALBOROTO (C18): {tool} sin --rate es un flood sin límite. Añade --rate <= {rate_cap}. {fix}")
             if rate > rate_cap:
                 deny(f"ANTI-ALBOROTO (C18): {tool} --rate {rate} supera el cap de {rate_cap} pps. {fix}")
+
+    # --- rustscan (descubrimiento full-range rápido; OK como front-end si acota el ritmo) ---
+    if has(low, "rustscan"):
+        b = num_after(low, r"(?:-b|--batch-size)[ =]?(\d+)")
+        if b is not None and b > rs_batch_cap:
+            deny(f"ANTI-ALBOROTO (C18): rustscan --batch-size {b} supera el cap de {rs_batch_cap}; "
+                 f"bájalo y deja el -sV al nmap dirigido sobre los puertos abiertos. {fix}")
+        ul = num_after(low, r"--ulimit[ =]?(\d+)")
+        if ul is not None and ul > rs_ulimit_cap:
+            deny(f"ANTI-ALBOROTO (C18): rustscan --ulimit {ul} (sockets en paralelo) supera {rs_ulimit_cap}. {fix}")
+        if stealth and b is None:
+            deny(f"ANTI-ALBOROTO (C18, stealth): en sigilo, rustscan debe acotar el ritmo explícitamente "
+                 f"(-b <= {rs_batch_cap}). {fix}")
 
     # --- fuerza bruta de credenciales (ruido + lockout) ---
     # Solo hydra/medusa: su -t es paralelismo real. ncrack usa -T (timing) y patator otros flags;

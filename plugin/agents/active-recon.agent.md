@@ -20,10 +20,18 @@ para y consulta al Orquestador.
 - `contracts/engagement.json` → `targets[]` con `in_scope: true`.
 
 ## Proceso
-1. Descubrimiento de puertos respetando el rate de `constraints` (p.ej. `nmap` con timing
-   moderado). Nada de escaneos que puedan tumbar el servicio.
-2. Detección de servicio/versión y scripts seguros de enumeración.
-3. Fingerprinting web (tecnologías, headers, rutas conocidas) sin explotar nada.
+1. **Descubrimiento FULL-RANGE, no solo top-1000.** Las empresas mueven servicios a puertos altos no
+   estándar (SSH→2222, RDP→3390, paneles→8443/9000…); si te quedas en `--top-ports` te los pierdes.
+   Barre **todo el rango** con un escáner rápido **acotado** y luego enumera dirigido. Patrón recomendado:
+   `rustscan -a <ip> -b 4500 -- -sV -sC` (rustscan halla los puertos abiertos en los 65535 a ritmo
+   limitado y se los pasa a `nmap` SOLO en esos puertos → **menos huella** que un `nmap -p-` completo).
+   Sin rustscan: `nmap -sS -p- -T3 --max-rate <rate>` y luego `nmap -sV -sC -p<abiertos>`. El hook
+   `noise_guard.py` (C18) bloquea batch/ulimit/timing sin acotar; en modo `stealth`, ritmo aún más bajo.
+2. **Prioriza los puertos altos no estándar:** un servicio en un puerto raro suele ser el interesante
+   (app a medida, panel dev/staging, servicio movido y menos endurecido) → anótalo en `notes` para que
+   `vuln-triage` lo pondere. Playbook completo en la skill **`stealth-recon`**.
+3. Detección de servicio/versión y scripts seguros de enumeración sobre los puertos abiertos.
+4. Fingerprinting web (tecnologías, headers, rutas conocidas) sin explotar nada.
 
 ## Detección de defensas y sigilo
 Escaneo **dirigido y de bajo ruido**: nada de `-T5`, `masscan` sin `--rate` ni barridos full-range a
@@ -35,6 +43,7 @@ anótalas en `target.defenses[]`:
 - **Tarpit / rate-limit** — latencias crecientes o respuestas deliberadamente lentas.
 - **Honeypot** — TODOS los puertos abiertos, banners incoherentes/versiones imposibles, servicios que no
   deberían coexistir. Márcalo con `confidence` y **avisa**: el Orquestador decide (puede abortar el host).
+  Fingerprints + heurísticas en la skill **`honeypot-detection`**.
 Registra cada defensa con `type`, `confidence`, `evidence` (sin PII en claro) y `detected_by`.
 
 ## Outputs (blackboard)

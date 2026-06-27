@@ -177,8 +177,8 @@ ensure_agentsview(){
 install_missing(){
   echo "── Instalando lo que falte ──"
   apt_retry update -y
-  for p in nmap sqlmap metasploit-framework ffuf feroxbuster seclists \
-           netexec gobuster john hashcat amass; do
+  for p in nmap rustscan sqlmap metasploit-framework ffuf feroxbuster seclists \
+           netexec gobuster john hashcat amass chisel proxychains4; do
     apt_retry install -y "$p" || echo "[!] '$p' no disponible vía apt (revisar)."
   done
   ensure_claude

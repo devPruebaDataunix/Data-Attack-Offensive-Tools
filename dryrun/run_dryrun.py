@@ -180,6 +180,7 @@ def noise_demo():
         json.dump({"engagement_id": "DEMO", "constraints": {}}, f)
     _, run = _sandbox_hook("noise_guard", {"SCOPE": scope})
     return {"noisy_blocked": "C18" in run("nmap -T5 192.168.56.10"),
+            "rustscan_blocked": "C18" in run("rustscan -a 192.168.56.10 -b 9000"),
             "targeted_ok": run("nmap -sV -T3 -p80,443 192.168.56.10") == ""}
 
 
@@ -339,7 +340,7 @@ def main():
     rc = subprocess.run([PY, os.path.join(ROOT, "tools", "analyze_engagement.py")]).returncode
     print(f"\n  analyze_engagement -> {'OK (engagement coherente)' if rc == 0 else 'INCOHERENCIAS (revisar arriba)'}")
 
-    # ---- GUARDARRAÍLES C11–C13 (REAL — hooks deterministas) ----
+    # ---- GUARDARRAÍLES C11–C19 (REAL — hooks deterministas) ----
     hr("GUARDARRAÍLES · LLM01/LLM02/LLM10  [REAL — anti-inyección + secretos + kill-switch + anti-ruido/bucle]")
     from redactor import scan as _scan, redact as _redact  # noqa: E402
     # C12 secret_scan: el engagement.json recién escrito debe estar LIMPIO (sin claves del motor)
@@ -370,7 +371,7 @@ def main():
     print(f"  [C15 a2a_kill]    techo=3 -> exceso de mensajes A2A bloqueado={a2a['c15_flood']}")
     # C18 noise_guard / C19 loop_guard: anti-alboroto y anti-bucle a nivel de acción
     nz = noise_demo()
-    print(f"  [C18 noise_guard] nmap -T5 bloqueado={nz['noisy_blocked']} · escaneo dirigido pasa={nz['targeted_ok']}")
+    print(f"  [C18 noise_guard] nmap -T5 bloq={nz['noisy_blocked']} · rustscan -b 9000 bloq={nz['rustscan_blocked']} · dirigido pasa={nz['targeted_ok']}")
     lg = loop_demo(cap=3)
     print(f"  [C19 loop_guard]  max_repeat=3 -> thrashing cortado en #{lg['thrash_at']} · "
           f"oscilación A/B bloqueada={lg['osc_blocked']} · sondeo benigno exento={lg['benign_ok']}")

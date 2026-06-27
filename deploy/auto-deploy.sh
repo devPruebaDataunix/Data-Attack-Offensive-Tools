@@ -147,8 +147,8 @@ install_tools(){
   step "3/6  Toolchain ofensivo"
   info "Paquetes de los repos de Kali…"
   $SUDO apt-get install -y \
-    nmap sqlmap metasploit-framework ffuf feroxbuster seclists \
-    netexec gobuster john hashcat amass || warn "Algún paquete apt no estaba disponible (revisar)."
+    nmap rustscan sqlmap metasploit-framework ffuf feroxbuster seclists \
+    netexec gobuster john hashcat amass chisel proxychains4 || warn "Algún paquete apt no estaba disponible (revisar)."
 
   # ProjectDiscovery via pdtm (subfinder, httpx, nuclei, naabu, katana, dnsx…)
   export PATH="$PATH:$(go env GOPATH)/bin"
