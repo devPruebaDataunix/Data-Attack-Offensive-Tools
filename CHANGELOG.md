@@ -4,6 +4,23 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.7.1] - 2026-06-28
+### Fixed
+- **El `auto-deploy.sh` no instalaba el BINARIO de opencode.** Configuraba el espejo (opencode.json,
+  `opencode.env`, perfil NVIDIA) pero el runtime `opencode` solo se instalaba vía `verify.sh --install`
+  → "autodespliegue en opencode" dejaba el espejo configurado pero NO ejecutable. Ahora el paso "Espejo
+  opencode" llama a `ensure_opencode` (de `lib.sh`: `npm i -g opencode-ai`, idempotente, no aborta el
+  deploy) para dejar el espejo **ejecutable**.
+### Notes
+- **Decisiones de alcance (tras analizar las opciones):** se DESCARTA construir un bot de Telegram sobre
+  opencode con modelos free — el espejo opencode no ejecuta los hooks deterministas (scope_guard/C1–C19;
+  bug upstream #5894 salta incluso a los subagentes), así que un bot que corre tooling ofensivo sin gate
+  de alcance es inaceptable. El bot sigue **100% Anthropic con todos los guardrails**. El Orquestador
+  sigue en Anthropic (no se fuerza a NVIDIA). Sin rotación multi-cuenta NVIDIA (una sola clave; el límite
+  ~40 RPM es global por clave). opencode/NVIDIA queda como **corroboración de cableado por CLI**, no
+  medición ni runtime del bot. Cambio mínimo verificado: bash -n, validate_suite 0 fallos, source de
+  `lib.sh` bajo `set -e` sin abortar.
+
 ## [2.7.0] - 2026-06-28
 ### Added
 - **Perfil "NVIDIA LAB" como fichero versionado + aplicador reversible.** `tools/routing.nvidia-lab.json`

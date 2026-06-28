@@ -78,6 +78,12 @@ Comprueba además (no críticos) `gum`, `textual` y `agentsview` (asistente, pan
 > **Regla dura:** LAB-ONLY, **jamás** datos de cliente, **nunca** E2/E3. El bot real de engagements
 > sigue 100% Anthropic. Detalle y opt-in de más providers en `.opencode/README.md`.
 >
+> **Autodespliegue del runtime opencode.** El paso "Espejo opencode" del `auto-deploy.sh` **instala el
+> binario de opencode** (`ensure_opencode` → `npm i -g opencode-ai`, idempotente) además de escribir la
+> config y pedir la clave: deja el espejo **ejecutable**, no solo configurado. El bot de Telegram **no**
+> conduce opencode (sigue 100% Anthropic con todos los guardrails, decisión consciente): opencode/NVIDIA
+> se usa por CLI para **corroborar el cableado** (perfil `apply_routing.py nvidia-lab`), no como medición.
+>
 > **NVIDIA NIM (clave interactiva en el auto-deploy).** `auto-deploy.sh` pide `NVIDIA_API_KEY` de
 > forma interactiva (paso "Espejo opencode") y la escribe en `.opencode/opencode.env` (permisos 600,
 > gitignored, propiedad del operador). Decisión consciente: clave **lab-only** de un servicio cloud

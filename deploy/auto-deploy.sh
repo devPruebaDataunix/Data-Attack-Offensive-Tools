@@ -331,7 +331,12 @@ _own_env(){ # _own_env <ruta>
   [ "$(id -u)" -eq 0 ] && [ -n "${SUDO_USER:-}" ] && chown "${SUDO_USER}:" "$1" 2>/dev/null || true
 }
 setup_opencode_env(){
-  step "Espejo opencode — modelos free (LAB-ONLY)"
+  step "Espejo opencode — runtime + claves de modelos free (LAB-ONLY)"
+  # Instala el BINARIO de opencode (idempotente, lab-only) para que el espejo quede EJECUTABLE, no solo
+  # configurado: 'autodespliegue en opencode'. ensure_opencode viene de lib.sh (npm i -g opencode-ai;
+  # no-op si ya está; nunca aborta el deploy). Sin él, el operador tendría el opencode.json/perfil pero
+  # no el runtime para correrlo.
+  ensure_opencode
   local _tmpl="${REPO_DIR}/.opencode/opencode.example.env" _env="${REPO_DIR}/.opencode/opencode.env"
   if [ ! -f "$_tmpl" ]; then
     warn "No encuentro ${_tmpl}; omito la config del espejo opencode."; return 0
