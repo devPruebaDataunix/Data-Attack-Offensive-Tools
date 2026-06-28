@@ -308,6 +308,9 @@ setup_bot(){
     read -rp "  ALLOWED_USER_ID: " _uid
     umask 077
     { echo "TELEGRAM_TOKEN=${_tok}"; echo "ALLOWED_USER_ID=${_uid}"; echo "REPO_DIR=${REPO_DIR}"; } > .env
+    # Propiedad al OPERADOR: el bot se arranca como ${SUDO_USER} no-root (cd bot && ./.venv/bin/python
+    # bot.py); un .env 600 propiedad de root NO sería legible por él (no podría cargar el token).
+    _own_env "$REPO_DIR/bot/.env"
     ok "bot/.env creado (permisos 600, ignorado por git)."
   else
     ok "bot/.env ya existe — se conserva."

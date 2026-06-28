@@ -67,12 +67,42 @@ el runner degrada (effort → flag CLI; techo USD se omite) **sin romper la sesi
 - **Alternativa offline.** Cambia la ruta a `ollama/<modelo>` (coste cero, el dato no sale del
   equipo; requiere `ollama serve` + `ollama pull`).
 - **Reglas duras (innegociables).** Todo lo anterior es **LAB-ONLY**: **jamás** datos de cliente,
-  **nunca** en E2/E3, y solo agentes mecánicos (nunca triage/explotación/reporting). Revertir a 100%
-  Anthropic = vaciar `routes` (`{}`) + `python tools/sync_opencode.py`.
+  **nunca** en E2/E3. En el **perfil ACTIVO** solo van a free los agentes **mecánicos** (nunca
+  triage/explotación/reporting): el riesgo de fuga es mayor en providers que entrenan. La **única
+  excepción** es el perfil *NVIDIA LAB completo* (ver abajo) — NVIDIA no entrena (s/ ToS) y se usa solo
+  para **smoke-test de cableado contra labs sintéticos** (la medición oficial del GATE sigue en Claude).
+  Revertir a 100% Anthropic = vaciar `routes` (`{}`) + `python tools/sync_opencode.py`.
 - **El bot real sigue 100% Anthropic.** El free cloud **en el bot** sigue **sin implementar**
   (decisión deliberada): los free-tier tienen rate-limits agresivos, Claude Code **no tiene
   fallback** (si el proveedor corta, la llamada muere a mitad de run) y los modelos no-Claude dan
   *quirks* de tool-protocol. Para engagements con datos de cliente → 100% Anthropic.
+
+## Modelos free de RAZONAMIENTO — NVIDIA NIM (espejo opencode · v2.6.0)
+
+Groq/Cerebras solo ofrecen modelos **no-razonadores**, por eso el perfil activo solo enruta los 5
+agentes **mecánicos**. **NVIDIA NIM cambia eso**: una sola clave (`NVIDIA_API_KEY`) da modelos de
+**razonamiento gratis** (DeepSeek-R1, Llama-3.3-Nemotron-Super-49B) + generalistas (Llama-3.3-70B,
+GPT-OSS-120B). Eso permite, **en laboratorio**, llevar a free **toda** la cadena —no solo recon— para
+**smoke-test del pipeline del GATE sin gastar Anthropic**.
+
+**Análisis modelo↔agente (qué modelo NVIDIA encaja con cada tier):**
+
+| Tier (modelo Anthropic) | Agentes | Modelo NVIDIA free recomendado | Por qué |
+| :--- | :--- | :--- | :--- |
+| haiku (mecánico) | osint-recon, active-recon, recon-suite, web-fuzzing, nuclei | `meta/llama-3.3-70b-instruct` | recon/escaneo/parseo: rápido y suficiente |
+| sonnet (tool-driving) | sqlmap, metasploit, netexec, sliver, c2-exfil | `openai/gpt-oss-120b` | conduce tools con juicio; el RAG hace lo pesado |
+| sonnet (razona-medio) | vuln-triage, lateral-discovery, network-exploit | `nvidia/llama-3.3-nemotron-super-49b-v1` | correlación/decisión con razonamiento |
+| opus (razona-profundo) | web-exploit, post-exploit, ai-security | `deepseek-ai/deepseek-r1` | razonamiento que **rompe la box** |
+| opus (informe) | reporting | `nvidia/llama-3.3-nemotron-super-49b-v1` | redacción estructurada |
+| — (memoria) | knowledge-postmortem | *(se queda en Anthropic)* | escribe lecciones a memoria; no arriesgar calidad |
+
+> **Caveat innegociable.** Este perfil "NVIDIA LAB completo" es **solo para smoke-test del cableado**
+> del pipeline contra **laboratorios sintéticos propios** (validar que el flujo end-to-end corre sin
+> errores). **La medición OFICIAL de capacidad del GATE se corre con Claude** — los free-tier degradan
+> calidad y tienen rate-limits (~40 RPM). Sigue siendo **LAB-ONLY**: jamás datos de cliente, nunca
+> E2/E3; el bot real de engagements es **100% Anthropic**. El bloque `routes` listo para copiar/pegar
+> está en [`.opencode/README.md`](../.opencode/README.md) ("Perfil NVIDIA LAB completo"). Revertir al
+> perfil activo (5 mecánicos) o a 100% Anthropic (`routes: {}`) = re-correr `python tools/sync_opencode.py`.
 
 ## Qué NO se tocó
 

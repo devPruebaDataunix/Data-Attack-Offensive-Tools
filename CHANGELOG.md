@@ -4,6 +4,26 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.6.1] - 2026-06-28
+### Fixed
+- **`bot/.env` quedaba propiedad de root e ilegible para el operador.** `setup_bot()` corre bajo `sudo`
+  y creaba `bot/.env` con `umask 077` (modo 600) propiedad de **root**; pero el bot se arranca como el
+  operador no-root (`cd bot && ./.venv/bin/python bot.py`), que **no podía leer el `.env`** (no cargaba
+  `TELEGRAM_TOKEN`/`ALLOWED_USER_ID`). Ahora `setup_bot()` devuelve la propiedad al operador con el
+  helper `_own_env` (la misma corrección que ya se aplicó a los artefactos del RAG en v2.5.3 y a
+  `.opencode/opencode.env` en v2.6.0). Detectado durante la auditoría del repo de v2.6.0.
+### Added
+- **Análisis de coste modelo↔agente con NVIDIA NIM (`docs/cost-optimization.md`).** NVIDIA es el único
+  provider free con modelos de **razonamiento** (DeepSeek-R1, Nemotron-Super-49B), lo que permite —en
+  laboratorio— llevar **toda** la cadena (no solo los 5 mecánicos) a free para **smoke-test del pipeline
+  del GATE sin gastar Anthropic**. Tabla tier↔modelo NVIDIA recomendado + perfil **"NVIDIA LAB completo"**
+  (bloque `routes` copy-paste en `.opencode/README.md`). Caveat: solo valida el cableado; la medición
+  OFICIAL del GATE se corre con Claude. LAB-ONLY (jamás cliente/E2/E3).
+### Changed
+- **`tools/routing.json`** (`$comment`) menciona ahora NVIDIA NIM y el perfil LAB completo (antes solo
+  listaba deepseek/minimax/glm/openrouter como opt-in). El routing activo **no cambia** (sigue en los 5
+  agentes mecánicos a Groq/Cerebras).
+
 ## [2.6.0] - 2026-06-28
 ### Added
 - **Provider NVIDIA NIM en el espejo opencode (LAB-ONLY).** Nuevo provider `nvidia`
