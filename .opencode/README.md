@@ -37,6 +37,7 @@ triage/explotación/reporting.
 | :--- | :--- | :--- | :--- |
 | `groq` | `@ai-sdk/openai-compatible` | `GROQ_API_KEY` | **no entrena** ✅ (perfil activo) |
 | `cerebras` | `@ai-sdk/openai-compatible` | `CEREBRAS_API_KEY` | **no entrena** ✅ (perfil activo) |
+| `nvidia` (NIM) | `@ai-sdk/openai-compatible` | `NVIDIA_API_KEY` | no entrena *(s/ ToS)* ✅ · 100+ modelos (opt-in) |
 | `deepseek` | `@ai-sdk/openai-compatible` | `DEEPSEEK_API_KEY` | entrena/residencia ⚠️ (opt-in) |
 | `minimax` | `@ai-sdk/anthropic` | `MINIMAX_API_KEY` | entrena/residencia ⚠️ (opt-in) |
 | `zhipu` (GLM) | `@ai-sdk/anthropic` | `ZHIPU_API_KEY` | entrena/residencia ⚠️ (opt-in) |
@@ -45,6 +46,14 @@ triage/explotación/reporting.
 - **Perfil activo (`tools/routing.json`)**: los 5 agentes mecánicos van a **Groq/Cerebras**, que **no
   entrenan** con los prompts (riesgo de fuga menor). El resto de providers quedan **declarados pero
   NO enrutados** (opt-in manual: añade su `provider/model` a `routing.json` y exporta su clave).
+- **NVIDIA NIM (opt-in, no entrena)**: una sola clave (`NVIDIA_API_KEY`) da acceso a 100+ modelos
+  gratis, incluidos varios de **razonamiento** (DeepSeek-R1, Llama-3.3-Nemotron-Super-49B). Útil para
+  **smoke-test del pipeline contra laboratorios propios sin gastar Anthropic**. Su ToS (API Catalog)
+  declara que no entrena con los prompts (stateless), pero NVIDIA *disclaim* PII/PHI/PCI → **LAB-ONLY
+  igual** (jamás cliente/E2/E3). El `auto-deploy.sh` la pide de forma interactiva (la escribe en
+  `.opencode/opencode.env`, gitignored). Para enrutar un agente a razonamiento NVIDIA, p.ej.:
+  `"vuln-triage": "nvidia/deepseek-ai/deepseek-r1"` (recuerda el gotcha del `/`: provider `nvidia`,
+  modelo `deepseek-ai/deepseek-r1`, que debe existir en `provider.nvidia.models`).
 - **Claves por entorno, sin `auth login`**: opencode lee `{env:VAR}` en runtime. Copia
   `opencode.example.env` → `opencode.env`, rellénalo y cárgalo (`set -a; . ./opencode.env; set +a`).
   `opencode.env` (y todo `*.env`) está gitignored; la plantilla `*.example.env` sí se versiona.

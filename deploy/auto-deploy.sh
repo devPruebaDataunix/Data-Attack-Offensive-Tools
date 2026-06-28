@@ -315,6 +315,63 @@ setup_bot(){
 }
 
 # =============================================================================
+#  Espejo opencode (LAB-ONLY) — claves de los modelos FREE. Pide la de NVIDIA.
+#  El espejo opencode corre agentes mecánicos contra LABORATORIOS PROPIOS con modelos gratis (jamás
+#  cliente/E2). NVIDIA NIM da 100+ modelos de razonamiento gratis con UNA sola clave; la pedimos aquí
+#  para dejar el entorno autoconfigurado. Idempotente; NO cuelga un deploy desatendido (guard de TTY).
+# =============================================================================
+# Propiedad del .env al OPERADOR (no-root): opencode lo lee desde su shell. Modo 600. Solo con sudo.
+_own_env(){ # _own_env <ruta>
+  chmod 600 "$1" 2>/dev/null || true
+  [ "$(id -u)" -eq 0 ] && [ -n "${SUDO_USER:-}" ] && chown "${SUDO_USER}:" "$1" 2>/dev/null || true
+}
+setup_opencode_env(){
+  step "Espejo opencode — modelos free (LAB-ONLY)"
+  local _tmpl="${REPO_DIR}/.opencode/opencode.example.env" _env="${REPO_DIR}/.opencode/opencode.env"
+  if [ ! -f "$_tmpl" ]; then
+    warn "No encuentro ${_tmpl}; omito la config del espejo opencode."; return 0
+  fi
+  if [ -f "$_env" ]; then
+    ok "${_env} ya existe — se conserva (edítalo a mano para añadir/rotar claves)."; return 0
+  fi
+  # Crea el .env desde la plantilla. NO es crítico: si el cp falla, avisa y SIGUE (no abortes el deploy).
+  # umask en subshell para no filtrar el cambio al resto del script.
+  ( umask 077; cp "$_tmpl" "$_env" ) || { warn "No pude crear ${_env}; rellena las claves a mano."; return 0; }
+  _own_env "$_env"
+  # Sin TTY (deploy desatendido/CI): NO preguntamos para no colgar. Dejamos la plantilla copiada.
+  if [ ! -t 0 ]; then
+    info "Sin terminal interactiva: creado ${_env} desde la plantilla (rellena las claves a mano)."; return 0
+  fi
+  info "El espejo opencode usa modelos GRATIS solo para LABORATORIOS PROPIOS (jamás cliente/E2/E3)."
+  info "NVIDIA NIM (build.nvidia.com) ofrece 100+ modelos gratis (DeepSeek-R1, Nemotron…) con una clave."
+  local _nv=""
+  read -rp "  NVIDIA_API_KEY (Enter para dejarla vacía y rellenar luego): " _nv || true
+  if [ -z "$_nv" ]; then
+    ok "${_env} creado desde la plantilla (NVIDIA_API_KEY vacía; rellénala cuando quieras)."
+  else
+    case "$_nv" in
+      # Una clave nvapi real es [A-Za-z0-9_.-]. Si trae otros caracteres (espacio/salto/paste sucio),
+      # NO la escribimos: evita corromper el valor en silencio y abortar el deploy. Se rellena a mano.
+      *[!A-Za-z0-9_.-]*)
+        warn "La clave tiene caracteres inesperados (¿paste con espacio/salto?). NO la escribo; rellena NVIDIA_API_KEY a mano en ${_env}." ;;
+      *)
+        # Reescribe la línea SIN sed (un &/|/\\ de un paste corrompería el reemplazo de sed): filtra la
+        # vieja con grep y añade la nueva con printf (no interpreta metacaracteres). Atómico vía .t + mv.
+        if grep -v '^NVIDIA_API_KEY=' "$_env" > "${_env}.t" 2>/dev/null \
+           && printf 'NVIDIA_API_KEY=%s\n' "$_nv" >> "${_env}.t" \
+           && mv "${_env}.t" "$_env"; then
+          _own_env "$_env"
+          ok "Clave de NVIDIA guardada en ${_env} (permisos 600, ignorado por git)."
+        else
+          rm -f "${_env}.t" 2>/dev/null || true
+          warn "No pude escribir la clave en ${_env}; rellénala a mano."
+        fi ;;
+    esac
+  fi
+  info "Carga las claves en tu shell:  set -a; . \"${REPO_DIR}/.opencode/opencode.env\"; set +a"
+}
+
+# =============================================================================
 # 6) VERIFY — corroboración final
 # =============================================================================
 run_verify(){
@@ -337,6 +394,7 @@ main(){
   if [ "$DO_TOOLS" -eq 1 ]; then install_tools; else warn "Toolchain omitido (--skip-tools)."; fi
   if [ "$DO_RAG"   -eq 1 ]; then setup_rag;      else warn "RAG omitido (--no-rag)."; fi
   if [ "$DO_BOT"   -eq 1 ]; then setup_bot;      else warn "Bot omitido (--no-bot)."; fi
+  setup_opencode_env
   run_verify
   step "✔ Despliegue completado"
   ok "Arranca el bot:  cd bot && ./.venv/bin/python bot.py"

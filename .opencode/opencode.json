@@ -106,6 +106,20 @@
         "meta-llama/llama-3.3-70b-instruct:free": { "name": "Llama 3.3 70B Instruct (free)" },
         "qwen/qwen3-235b-a22b:free": { "name": "Qwen3 235B A22B (free)" }
       }
+    },
+    "nvidia": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "NVIDIA NIM (free · no entrena s/ ToS · LAB-ONLY · 100+ modelos)",
+      "options": {
+        "baseURL": "https://integrate.api.nvidia.com/v1",
+        "apiKey": "{env:NVIDIA_API_KEY}"
+      },
+      "models": {
+        "deepseek-ai/deepseek-r1": { "name": "DeepSeek R1 (NVIDIA · razonamiento)" },
+        "nvidia/llama-3.3-nemotron-super-49b-v1": { "name": "Llama 3.3 Nemotron Super 49B (NVIDIA · razonamiento)" },
+        "meta/llama-3.3-70b-instruct": { "name": "Llama 3.3 70B Instruct (NVIDIA)" },
+        "openai/gpt-oss-120b": { "name": "GPT-OSS 120B (NVIDIA)" }
+      }
     }
   }
 }

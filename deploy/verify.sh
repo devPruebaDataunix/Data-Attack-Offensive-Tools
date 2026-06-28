@@ -98,7 +98,7 @@ if grep -q '"ollama/' tools/routing.json 2>/dev/null; then
 fi
 # Providers free del espejo opencode (LAB-ONLY): si el routing usa uno, su clave debe estar en el
 # entorno (opencode la lee con {env:VAR}). No crítico: solo afecta al runtime opencode de lab.
-for _pp in groq:GROQ_API_KEY cerebras:CEREBRAS_API_KEY deepseek:DEEPSEEK_API_KEY \
+for _pp in groq:GROQ_API_KEY cerebras:CEREBRAS_API_KEY nvidia:NVIDIA_API_KEY deepseek:DEEPSEEK_API_KEY \
            minimax:MINIMAX_API_KEY zhipu:ZHIPU_API_KEY openrouter:OPENROUTER_API_KEY; do
   _prov="${_pp%%:*}"; _var="${_pp##*:}"
   if grep -q "\"${_prov}/" tools/routing.json 2>/dev/null; then

@@ -77,6 +77,14 @@ Comprueba además (no críticos) `gum`, `textual` y `agentsview` (asistente, pan
 > .opencode/opencode.env`, rellena las claves y cárgalas (`set -a; . .opencode/opencode.env; set +a`).
 > **Regla dura:** LAB-ONLY, **jamás** datos de cliente, **nunca** E2/E3. El bot real de engagements
 > sigue 100% Anthropic. Detalle y opt-in de más providers en `.opencode/README.md`.
+>
+> **NVIDIA NIM (clave interactiva en el auto-deploy).** `auto-deploy.sh` pide `NVIDIA_API_KEY` de
+> forma interactiva (paso "Espejo opencode") y la escribe en `.opencode/opencode.env` (permisos 600,
+> gitignored, propiedad del operador). Decisión consciente: clave **lab-only** de un servicio cloud
+> gratuito (NIM no entrena con los prompts según su ToS, pero *disclaim* PII/PHI/PCI → nunca cliente/
+> E2/E3). Si el deploy corre **sin TTY** (CI/desatendido) NO pregunta: copia la plantilla y sigue.
+> Pulsa Enter para dejarla vacía y rellenarla luego. Da acceso a 100+ modelos (incl. razonamiento)
+> con una sola clave; pensado para smoke-test del pipeline sin gastar Anthropic.
 
 ## Asistente guiado y panel TUI
 - **`./deploy/setup.sh`** — asistente interactivo (con [gum](https://github.com/charmbracelet/gum);

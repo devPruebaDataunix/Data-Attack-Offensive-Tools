@@ -282,7 +282,7 @@ Para **actualizar además todo el toolchain** a su última versión: `sudo ./dep
 | Plataforma | Cómo se carga | Estado |
 | :--- | :--- | :--- |
 | **Claude Code** (CLI + extensión de VS Code) | `.claude/agents/*.md` + `.claude/settings.json` | ✅ Objetivo principal |
-| **opencode** | `.opencode/agent/*.md` + `opencode.json` | ✅ Espejo equivalente · routing multi-modelo con modelos **gratuitos** (Groq/Cerebras/… `tools/routing.json`) para lab — ver nota |
+| **opencode** | `.opencode/agent/*.md` + `opencode.json` | ✅ Espejo equivalente · routing multi-modelo con modelos **gratuitos** (Groq/Cerebras/NVIDIA NIM/… `tools/routing.json`) para lab — ver nota |
 | **VS Code** | Misma carpeta `.claude/` del workspace, vía extensión Claude Code | ✅ Sin cambios |
 
 > **Nota (modelos gratuitos del espejo opencode).** El espejo puede correr los agentes mecánicos

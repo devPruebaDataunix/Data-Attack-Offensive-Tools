@@ -4,6 +4,32 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.6.0] - 2026-06-28
+### Added
+- **Provider NVIDIA NIM en el espejo opencode (LAB-ONLY).** Nuevo provider `nvidia`
+  (`@ai-sdk/openai-compatible` → `https://integrate.api.nvidia.com/v1`, clave `{env:NVIDIA_API_KEY}`):
+  una sola clave da acceso a 100+ modelos gratis, incluidos varios de **razonamiento** (DeepSeek-R1,
+  Llama-3.3-Nemotron-Super-49B). Mismo patrón que Groq/Cerebras. Pensado para **smoke-test del pipeline
+  contra laboratorios propios sin gastar Anthropic**. NIM no entrena con los prompts (ToS API Catalog,
+  stateless) pero *disclaim* PII/PHI/PCI → **LAB-ONLY igual** (jamás cliente/E2/E3). Queda **declarado
+  pero NO enrutado** por defecto (opt-in, como deepseek/openrouter): el perfil activo probado sigue en
+  Groq/Cerebras.
+- **`auto-deploy.sh` pide `NVIDIA_API_KEY` de forma interactiva** (paso "Espejo opencode") y la escribe
+  en `.opencode/opencode.env` (permisos 600, gitignored, propiedad del operador). Idempotente (no
+  reescribe un `.env` existente) y con **guard de TTY**: un deploy sin terminal (CI/desatendido) NO se
+  cuelga — copia la plantilla y continúa. Enter deja la clave vacía para rellenarla luego.
+### Changed
+- **`verify.sh`** añade `nvidia:NVIDIA_API_KEY` al chequeo de claves del espejo opencode (solo avisa si
+  el routing enruta a `nvidia/`; no es crítico).
+- **Docs** (`.opencode/README.md`, `README.md`, `DEPLOY.md`): fila NVIDIA en la tabla de providers,
+  ejemplo de opt-in de routing a razonamiento NVIDIA (gotcha del `/`) y nota de la clave interactiva.
+### Notes
+- Council 4-roles pre-push → **GO con must-fix** aplicado: el prompt de la clave ya **no usa `sed`**
+  (un paste con `&`/`|`/`\` corrompía el valor en silencio y un salto de línea abortaba el deploy bajo
+  `set -e`); ahora valida el charset de la clave (`[A-Za-z0-9_.-]`) y reescribe la línea con
+  `grep`+`printf` (atómico). Should aplicados: rutas absolutas (sin `cd`), `cp` que degrada sin abortar,
+  `chown` con grupo + `chmod 600` explícito, y el badge de una línea "no entrena" matizado a *s/ ToS*.
+
 ## [2.5.4] - 2026-06-28
 ### Fixed
 - **El poblado de la Capa 2 "parecía colgado".** `refresh_kb.py --semantic` clona HackTricks (~989 `.md`) y
