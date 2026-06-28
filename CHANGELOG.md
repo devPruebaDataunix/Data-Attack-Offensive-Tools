@@ -4,6 +4,22 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.5.4] - 2026-06-28
+### Fixed
+- **El poblado de la Capa 2 "parecía colgado".** `refresh_kb.py --semantic` clona HackTricks (~989 `.md`) y
+  embebe decenas de miles de chunks en CPU; lo hacía **sin imprimir nada** entre la carga del modelo y el
+  mensaje final, así que parecía bloqueado (mismo patrón que v2.1.2 con el RAG de CVEs) y el operador lo
+  mataba creyéndolo muerto. Ahora `ingest_corpus.py` imprime **progreso por lote** (`ficheros N/total ·
+  trozos · nuevos`, con flush) + un aviso inicial de que la 1.ª vez TARDA y es **incremental** (un `Ctrl+C`
+  no pierde lo hecho: al relanzar retoma por hash).
+- **`FutureWarning` de `embed.py`** (`get_sentence_embedding_dimension` quedó deprecado en
+  sentence-transformers 5.x): ahora se prueba primero `get_embedding_dimension` (el nuevo), con el viejo de
+  fallback.
+### Notes
+- Diagnóstico confirmado con datos del operador (8 cores, ~5,6 GiB RAM libre, swap casi sin usar): **no era
+  un cuelgue** — el embedding avanzaba, solo faltaba feedback. Recomendado correr el primer poblado en
+  `tmux`/`screen`; opcional `HF_TOKEN` para evitar el aviso de rate-limit del modelo.
+
 ## [2.5.3] - 2026-06-28
 ### Fixed
 - **Capa 2 del RAG (semántica): instalación que de verdad funciona en Kali.** v2.5.2 dejó visible la causa

@@ -99,13 +99,16 @@ def main():
         print(f"[corpus:{args.source}] sin .md en {args.src}", file=sys.stderr)
         sys.exit(2)
 
+    print(f"[corpus:{args.source}] {len(files)} ficheros .md -> troceando y embebiendo en CPU por lotes de "
+          f"{args.batch}. La 1a vez TARDA; es incremental (un Ctrl+C no pierde lo ya hecho: al relanzar "
+          f"retoma). Progreso por lote:", flush=True)
     emb = Embedder()
     conn = kb_vec.connect(emb.dim)
     kb_vec.set_meta(conn, "embed_model", emb.model_name)
     now = datetime.now(timezone.utc).isoformat()
 
     pending = []  # (text, meta)
-    n_chunks = n_new = 0
+    n_chunks = n_new = files_done = 0
 
     def flush_batch():
         nonlocal n_new
@@ -127,9 +130,13 @@ def main():
                 if kb_vec.add_chunk(conn, embedding=vec, text=text, updated_at=now, **meta):
                     n_new += 1
             conn.commit()
+        # Progreso visible (sin esto el embedding masivo en CPU "parece colgado" — lección de v2.1.2).
+        print(f"[corpus:{args.source}]   ficheros {files_done}/{len(files)} · {n_chunks} trozos · "
+              f"{n_new} nuevos", flush=True)
         pending.clear()
 
     for f in files:
+        files_done += 1
         rel = os.path.relpath(f, args.src).replace("\\", "/")
         try:
             raw = open(f, encoding="utf-8", errors="replace").read()

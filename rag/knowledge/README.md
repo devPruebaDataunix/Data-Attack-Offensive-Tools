@@ -65,6 +65,10 @@ python rag/knowledge/refresh_kb.py --semantic         # Capa 1 + Capa 2 (crea el
 python rag/knowledge/refresh_kb.py --semantic-only    # solo Capa 2
 python rag/knowledge/refresh_kb.py --ensure-deps      # solo preparar el venv (no poblar)
 ```
+> **El primer poblado TARDA** (HackTricks ≈ 1.000 `.md` → decenas de miles de embeddings en CPU) y ahora
+> imprime **progreso por lote** (`ficheros N/total · trozos · nuevos`). Es **incremental**: un `Ctrl+C` no
+> pierde lo ya hecho (al relanzar retoma por hash). Córrelo en `tmux`/`screen` si la sesión es remota.
+> Opcional: `export HF_TOKEN=...` evita el aviso de rate-limit al bajar el modelo de embeddings (1 vez).
 
 ### Consultar (semántica)
 ```bash

@@ -35,8 +35,10 @@ class Embedder:
     def dim(self):
         if self._dim is None:
             m = self.model
-            fn = (getattr(m, "get_sentence_embedding_dimension", None)
-                  or getattr(m, "get_embedding_dimension", None))  # nombre nuevo en ST recientes
+            # ST 5.x renombró get_sentence_embedding_dimension -> get_embedding_dimension. Probar el NUEVO
+            # primero evita el FutureWarning en versiones recientes; el viejo queda de fallback.
+            fn = (getattr(m, "get_embedding_dimension", None)
+                  or getattr(m, "get_sentence_embedding_dimension", None))
             self._dim = int(fn()) if fn else len(self.encode("x"))
         return self._dim
 
