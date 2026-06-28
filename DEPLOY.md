@@ -84,17 +84,22 @@ Comprueba además (no críticos) `gum`, `textual` y `agentsview` (asistente, pan
 > conduce opencode (sigue 100% Anthropic con todos los guardrails, decisión consciente): opencode/NVIDIA
 > se usa por CLI para **corroborar el cableado** (perfil `apply_routing.py nvidia-lab`), no como medición.
 >
-> **NVIDIA NIM (clave interactiva en el auto-deploy).** `auto-deploy.sh` pide `NVIDIA_API_KEY` de
-> forma interactiva (paso "Espejo opencode") y la escribe en `.opencode/opencode.env` (permisos 600,
-> gitignored, propiedad del operador). Decisión consciente: clave **lab-only** de un servicio cloud
-> gratuito (NIM no entrena con los prompts según su ToS, pero *disclaim* PII/PHI/PCI → nunca cliente/
-> E2/E3). Si el deploy corre **sin TTY** (CI/desatendido) NO pregunta: copia la plantilla y sigue.
-> Pulsa Enter para dejarla vacía y rellenarla luego. Da acceso a 100+ modelos (incl. razonamiento)
-> con una sola clave; pensado para smoke-test del pipeline sin gastar Anthropic.
+> **Claves de modelos free (interactivas en el auto-deploy).** El paso "Espejo opencode" del
+> `auto-deploy.sh` pide **TODAS** las claves free necesarias (`configure_opencode_keys`, en `lib.sh`):
+> primero las que **no entrenan** (`GROQ_API_KEY`, `CEREBRAS_API_KEY` — perfil activo — y `NVIDIA_API_KEY`),
+> y luego, **opt-in**, las de los providers que **recopilan información/entrenan** con los prompts
+> (`DEEPSEEK`/`MINIMAX`/`ZHIPU`/`OPENROUTER`): responder **N** las deja **deshabilitadas** (clave vacía =
+> el routing no las usa). Cada una con **Enter para omitir**; idempotente (no clobbera las ya puestas);
+> escritura charset-safe (sin `sed`); permisos 600 + propiedad del operador. Sin **TTY** (CI) NO pregunta:
+> copia la plantilla y sigue. Todo **lab-only** (jamás cliente/E2/E3). Reconfigura cuando quieras desde
+> `setup.sh` → "Configurar claves de modelos free (opencode)".
 
 ## Asistente guiado y panel TUI
 - **`./deploy/setup.sh`** — asistente interactivo (con [gum](https://github.com/charmbracelet/gum);
-  degrada a texto plano): despliegue, `bot/.env`, `scope.json`, verificación y apertura del panel.
+  degrada a texto plano). Opciones: **Montaje COMPLETO automático** (despliega todo el entorno de punta a
+  punta — base/tools/RAG/bot/opencode + todas las claves free + perfil + scope + verificación — **sin
+  detenerse ante un fallo**: reporta cada paso y resume incidencias), despliegue, `bot/.env`, **claves de
+  modelos free (opencode)**, `scope.json`, verificación y apertura del panel.
 - **`./deploy/dash.sh`** — **panel de control TUI** (Textual), gemelo local del bot: estado,
   hallazgos en vivo y órdenes al Orquestador con la misma aprobación humana y el mismo scope-gate.
   Requiere `textual` (lo instalan `auto-deploy.sh` y `verify.sh --install`).

@@ -154,6 +154,66 @@ ensure_opencode(){
     || echo "[!] opencode no se instaló (lab-only; ¿npm/red?). Reintenta: sudo npm install -g opencode-ai"
 }
 
+# Propiedad de un fichero .env al OPERADOR (no-root): lo lee desde su shell. Modo 600. Solo con sudo.
+# Compartido por setup_bot (auto-deploy) y configure_opencode_keys. (Antes vivía en auto-deploy.sh.)
+_own_env(){ # _own_env <ruta>
+  chmod 600 "$1" 2>/dev/null || true
+  [ "$(id -u)" -eq 0 ] && [ -n "${SUDO_USER:-}" ] && chown "${SUDO_USER}:" "$1" 2>/dev/null || true
+}
+
+# Escribe KEY=valor en un .env SIN sed (un paste con &/|/\ corrompería el reemplazo de sed): valida el
+# charset de la clave y reescribe la línea con grep+printf (atómico). Silencioso ante charset inválido.
+_oc_set_key(){ # _oc_set_key <env> <KEY> <valor>
+  case "$3" in *[!A-Za-z0-9_.-]*) echo "  [!] $2: caracteres inesperados (¿espacio/salto?); NO la escribo." ; return 0 ;; esac
+  # `|| true` por si el .env quedara con SOLO la línea de esta KEY (grep -v vaciaría .t y daría exit 1).
+  if { grep -v "^$2=" "$1" 2>/dev/null || true; } > "$1.t" && printf '%s=%s\n' "$2" "$3" >> "$1.t" && mv "$1.t" "$1"; then
+    _own_env "$1"
+  else
+    rm -f "$1.t" 2>/dev/null || true; echo "  [!] no pude escribir $2 en $1."
+  fi
+}
+
+# Pide una clave SOLO si está vacía en el .env (idempotente: re-ejecuciones NO clobberan lo ya puesto).
+_oc_prompt_key(){ # _oc_prompt_key <env> <KEY> <etiqueta>
+  local cur; cur="$(grep -m1 "^$2=" "$1" 2>/dev/null | cut -d= -f2- || true)"
+  if [ -n "$cur" ]; then echo "  [=] $2 ya configurada (se conserva)." ; return 0; fi
+  # -s: input OCULTO (la salida del deploy se canaliza a un log por tee; no exponer la clave). echo: nueva línea.
+  local v=""; read -rsp "  $2 ($3; Enter para omitir): " v || true; echo
+  if [ -n "$v" ]; then _oc_set_key "$1" "$2" "$v"; echo "  [OK] $2 guardada." ; else echo "  [—] $2 omitida." ; fi
+}
+
+# Configura TODAS las claves de los providers FREE del espejo opencode en .opencode/opencode.env.
+# No-train (Groq/Cerebras/NVIDIA) siempre; las que RECOPILAN INFORMACIÓN/entrenan (DeepSeek/MiniMax/GLM/
+# OpenRouter) son OPT-IN y deshabilitables dinámicamente (responder N las deja con clave VACÍA = el routing
+# no las usa). Idempotente (solo pide claves vacías). Guard de TTY (no cuelga CI). LAB-ONLY. La usan el
+# auto-deploy (setup_opencode_env) y setup.sh (menú + montaje completo) → única fuente de verdad.
+configure_opencode_keys(){
+  local repo tmpl env
+  repo="${REPO_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+  tmpl="${repo}/.opencode/opencode.example.env"; env="${repo}/.opencode/opencode.env"
+  [ -f "$tmpl" ] || { echo "[!] falta ${tmpl}; omito las claves de opencode." ; return 0; }
+  if [ ! -f "$env" ]; then ( umask 077; cp "$tmpl" "$env" ) || { echo "[!] no pude crear ${env}; rellena a mano." ; return 0; }; fi
+  _own_env "$env"
+  if [ ! -t 0 ]; then echo "[*] Sin terminal interactiva: ${env} desde la plantilla (rellena las claves a mano)." ; return 0; fi
+  echo "── Claves de modelos FREE del espejo opencode (LAB-ONLY; Enter omite cada una) ──"
+  echo "   No entrenan con los prompts (perfil activo Groq/Cerebras + NVIDIA):"
+  _oc_prompt_key "$env" GROQ_API_KEY "no entrena · perfil activo"
+  _oc_prompt_key "$env" CEREBRAS_API_KEY "no entrena · perfil activo"
+  _oc_prompt_key "$env" NVIDIA_API_KEY "no entrena s/ ToS · 100+ modelos"
+  local _ans=""
+  read -rp "  ¿Configurar también los providers que RECOPILAN INFORMACIÓN/entrenan (DeepSeek/MiniMax/GLM/OpenRouter)? Solo lab puro [y/N]: " _ans || true
+  case "$_ans" in
+    [yYsS]*)
+      _oc_prompt_key "$env" DEEPSEEK_API_KEY "entrena/residencia · solo lab"
+      _oc_prompt_key "$env" MINIMAX_API_KEY "entrena/residencia · solo lab"
+      _oc_prompt_key "$env" ZHIPU_API_KEY "entrena/residencia · solo lab"
+      _oc_prompt_key "$env" OPENROUTER_API_KEY "los :free entrenan · solo lab"
+      ;;
+    *) echo "  [—] DeepSeek/MiniMax/GLM/OpenRouter DESHABILITADOS (claves vacías = el routing no los usa)." ;;
+  esac
+  echo "[OK] Claves en ${env}. Cárgalas: set -a; . \"${env}\"; set +a"
+}
+
 # gum (Charm) — para el asistente interactivo deploy/setup.sh. Vía el repo apt de Charm;
 # si no se puede, deja que setup.sh degrade a prompts de texto (no es crítico).
 ensure_gum(){

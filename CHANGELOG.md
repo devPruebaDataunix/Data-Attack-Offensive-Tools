@@ -4,6 +4,30 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.8.0] - 2026-06-28
+### Added
+- **El auto-deploy pide TODAS las claves de modelos free, no solo NVIDIA.** Nueva función compartida
+  `configure_opencode_keys` (en `lib.sh`, única fuente de verdad) que pide en el paso "Espejo opencode":
+  las que **no entrenan** (`GROQ`/`CEREBRAS` —perfil activo— + `NVIDIA`) y, **opt-in**, las que
+  **recopilan información/entrenan** (`DEEPSEEK`/`MINIMAX`/`ZHIPU`/`OPENROUTER`). Responder **N** las deja
+  **deshabilitadas dinámicamente** (clave vacía = el routing no las usa). Idempotente (solo pide claves
+  vacías; no clobbera), escritura charset-safe sin `sed`, guard de TTY (no cuelga CI), permisos 600 +
+  propiedad del operador. **Cierra la incongruencia**: el perfil activo usa Groq/Cerebras pero el deploy
+  solo pedía NVIDIA.
+- **`setup.sh`: opción "Montaje COMPLETO automático"** (`full_mount`) que despliega el entorno de punta a
+  punta (base/tools/RAG/bot/opencode + todas las claves free + perfil + scope + verificación) **con manejo
+  de errores**: NO se detiene ante un fallo, reporta cada paso y resume incidencias. + opción "Configurar
+  claves de modelos free (opencode)" para reconfigurar/deshabilitar providers cuando quieras.
+### Changed
+- **`_own_env` y la lógica de claves se centralizan en `lib.sh`** (las reusan `auto-deploy.sh` y `setup.sh`):
+  `setup_opencode_env` queda en `ensure_opencode` + `configure_opencode_keys` (fin de la duplicación; sin
+  incongruencias). Sin cambios en el comportamiento del bot (sigue 100% Anthropic con guardrails).
+### Notes
+- Verificado: `bash -n` en lib.sh/auto-deploy.sh/setup.sh; test funcional de los helpers
+  (`_oc_set_key`/`_oc_prompt_key`: escribe válidas, rechaza charset inválido, conserva las ya puestas, no
+  clobbera ni duplica); validate_suite 405/0/0, verify_opencode 28/0; `_own_env`/`configure_opencode_keys`
+  con una sola definición (lib.sh) y sus usos cruzados. LAB-ONLY.
+
 ## [2.7.1] - 2026-06-28
 ### Fixed
 - **El `auto-deploy.sh` no instalaba el BINARIO de opencode.** Configuraba el espejo (opencode.json,

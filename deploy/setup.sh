@@ -69,14 +69,35 @@ PY
   note "contracts/scope.json escrito. REVÍSALO (fechas de autorización, out_of_scope) antes de operar."
 }
 
+# ── Montaje COMPLETO automático (todo el entorno, con manejo de errores) ───────
+# Orquesta el despliegue de punta a punta SIN detener el asistente ante un fallo: cada paso reporta y
+# se cuentan incidencias para un resumen final. El auto-deploy ya pide el token del bot, TODAS las
+# claves de modelos free (configure_opencode_keys) y ofrece el perfil opencode; aquí añadimos el
+# alcance y la verificación final. Idempotente: re-ejecutar corrige lo que falló.
+full_mount() {
+  note "Montaje COMPLETO automático — entorno listo de principio a fin (con manejo de errores)."
+  local fails=0
+  note "1/3 · Desplegando (te pedirá el token del bot, TODAS las claves de modelos free y el perfil opencode)…"
+  if sudo "${SCRIPT_DIR}/auto-deploy.sh"; then note "Despliegue OK."
+  else warnp "El despliegue terminó con incidencias — revisa el log (deploy/deploy-*.log)."; fails=$((fails + 1)); fi
+  if confirm "2/3 · ¿Definir el alcance (scope.json) ahora?"; then setup_scope; fi
+  note "3/3 · Verificación final del entorno…"
+  if bash "${SCRIPT_DIR}/verify.sh"; then note "Verificación: sin fallos críticos."
+  else warnp "La verificación reporta faltantes (revisa la tabla de arriba)."; fails=$((fails + 1)); fi
+  if [ "$fails" -eq 0 ]; then note "✔ Entorno COMPLETO montado sin incidencias. Arranca el bot o el panel (TUI)."
+  else warnp "Terminado con ${fails} incidencia(s) — el asistente NO se detuvo; corrige lo señalado y re-ejecuta (es idempotente)."; fi
+}
+
 # ── Menú ──────────────────────────────────────────────────────────────────────
 da_banner
 [ "$HAVE_GUM" = 1 ] || warnp "gum no disponible: uso prompts de texto plano."
 note "Asistente de Data Attack — ¿qué quieres hacer?"
 action=$(choose \
+  "Montaje COMPLETO automático (todo el entorno)" \
   "Despliegue completo (auto-deploy)" \
   "Desplegar en contenedores (Docker)" \
   "Configurar bot (.env)" \
+  "Configurar claves de modelos free (opencode)" \
   "Definir alcance (scope.json)" \
   "Verificar entorno" \
   "Abrir panel de control (TUI)" \
@@ -84,9 +105,11 @@ action=$(choose \
   "Salir")
 
 case "$action" in
+  "Montaje COMPLETO"*)           full_mount ;;
   "Despliegue completo"*)        exec sudo "${SCRIPT_DIR}/auto-deploy.sh" ;;
   "Desplegar en contenedores"*)  exec bash "${SCRIPT_DIR}/docker.sh" up ;;
   "Configurar bot"*)             setup_env ;;
+  "Configurar claves de modelos"*) configure_opencode_keys ;;
   "Definir alcance"*)            setup_scope ;;
   "Verificar entorno"*)          bash "${SCRIPT_DIR}/verify.sh" ;;
   "Abrir panel de control"*)     exec bash "${SCRIPT_DIR}/dash.sh" ;;
