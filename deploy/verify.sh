@@ -117,6 +117,12 @@ if "$_PYV" -c "import textual" >/dev/null 2>&1; then
   printf "  $(c 2)[OK]$(r)  %-22s instalado\n" "textual (TUI)"; OKN=$((OKN+1))
 else printf "  $(c 3)[??]$(r)  %-22s opcional (panel TUI: pip install textual)\n" "textual (TUI)"; fi
 
+# Deps de la Capa 2 del RAG de conocimiento (semántica) — opcionales, en el python3 del SISTEMA (no en el
+# venv del bot). Las puebla 'refresh_kb.py --semantic' o el deploy '--semantic-rag'. Capa 1 basta para operar.
+if python3 -c "import sqlite_vec, sentence_transformers" >/dev/null 2>&1; then
+  printf "  $(c 2)[OK]$(r)  %-22s instaladas\n" "RAG Capa 2 (deps)"; OKN=$((OKN+1))
+else printf "  $(c 3)[??]$(r)  %-22s opcional (RAG semántico: refresh_kb.py --semantic)\n" "RAG Capa 2 (deps)"; fi
+
 # Docker + Compose — opcional (solo para el despliegue en contenedores, deploy/docker.sh).
 if command -v docker >/dev/null 2>&1; then
   if docker compose version >/dev/null 2>&1 || command -v docker-compose >/dev/null 2>&1; then

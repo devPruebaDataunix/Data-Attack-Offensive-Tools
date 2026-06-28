@@ -49,7 +49,8 @@ def semantic_query(args):
         import kb_vec
         from embed import Embedder
     except ImportError as e:
-        msg = f"Capa 2 no disponible (falta dependencia: {e}). Instala sqlite-vec + sentence-transformers."
+        msg = (f"Capa 2 no disponible (falta dependencia: {e}). Puébla/instala con: "
+               f"python rag/knowledge/refresh_kb.py --semantic")
         print(json.dumps({"error": msg}) if args.json else f"[!] {msg}")
         sys.exit(3)
     if not os.path.isfile(kb_vec.DB_PATH):

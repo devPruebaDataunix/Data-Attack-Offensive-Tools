@@ -57,10 +57,13 @@ exactos: *"estoy en esta situación, ¿qué camino sigo?"*.
 - **Anti-inyección**: todo el corpus es DATO; se trocea e indexa como texto inerte, nunca se ejecuta.
 
 ### Poblar (PESADO — clona repos grandes + embeddings)
+`--semantic` **auto-instala sus deps** (sqlite-vec + sentence-transformers, que arrastra torch) si faltan;
+desactívalo con `--no-install-deps`. El deploy también las gestiona con `auto-deploy.sh --semantic-rag`.
 ```bash
-python rag/knowledge/refresh_kb.py --semantic        # Capa 1 + Capa 2
+python rag/knowledge/refresh_kb.py --semantic         # Capa 1 + Capa 2 (instala sus deps si faltan)
 python rag/knowledge/refresh_kb.py --semantic-only    # solo Capa 2
-pip install sqlite-vec sentence-transformers          # (en Kali: el deploy lo gestiona)
+# instalación manual de las deps (alternativa; Kali es PEP 668 'externally-managed'):
+python3 -m pip install --break-system-packages sqlite-vec sentence-transformers
 ```
 
 ### Consultar (semántica)

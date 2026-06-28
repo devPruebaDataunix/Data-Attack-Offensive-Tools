@@ -229,12 +229,14 @@ except Exception: print(0)' 2>/dev/null || echo 0)"
   # Las deps van al python3 del sistema (Kali, caja dedicada) para que los agentes consulten en runtime.
   if [ "$DO_SEMANTIC" -eq 1 ]; then
     info "Capa 2 (semántica): instalando deps y poblando embeddings locales. Esto TARDA (corpus grande)."
-    python3 -m pip install --quiet --break-system-packages sqlite-vec sentence-transformers \
-      || warn "No pude instalar deps de Capa 2 (sqlite-vec/sentence-transformers); revisa pip/red."
-    if python3 rag/knowledge/refresh_kb.py --semantic-only; then
-      ok "Capa 2 (semántica) poblada."
+    if ensure_semantic_deps; then
+      if python3 rag/knowledge/refresh_kb.py --semantic-only --no-install-deps; then
+        ok "Capa 2 (semántica) poblada."
+      else
+        warn "Capa 2 no se pobló del todo. Reintenta: python3 rag/knowledge/refresh_kb.py --semantic-only"
+      fi
     else
-      warn "Capa 2 no se pobló del todo. Reintenta: python3 rag/knowledge/refresh_kb.py --semantic-only"
+      warn "Capa 2 omitida: no se pudieron instalar/verificar sus deps. Reintenta luego: python3 rag/knowledge/refresh_kb.py --semantic"
     fi
   else
     info "Capa 2 (semántica) omitida (actívala con --semantic-rag; requiere torch + tiempo de embeddings)."
@@ -256,7 +258,10 @@ except Exception: print(0)' 2>/dev/null || echo 0)"
       _mark="# data-attack-rag"
       _log="${REPO_DIR}/rag/.refresh.log"
       _kb="rag/knowledge/refresh_kb.py"
-      [ "$DO_SEMANTIC" -eq 1 ] && _kb="rag/knowledge/refresh_kb.py --semantic"
+      # El cron NO auto-instala deps (--no-install-deps): corre como el operador (no-root) y un
+      # 'pip --break-system-packages' al python del sistema fallaría por permisos; las deps las dejó el
+      # deploy (ensure_semantic_deps, como root). Si se rompieran, refresh_kb avisa en el log, no reinstala.
+      [ "$DO_SEMANTIC" -eq 1 ] && _kb="rag/knowledge/refresh_kb.py --semantic --no-install-deps"
       _daily="0 6 * * * cd ${REPO_DIR} && ${_py} rag/refresh.py --epss-all >> ${_log} 2>&1 ${_mark}"
       _weekly="0 4 * * 0 cd ${REPO_DIR} && ${_py} ${_kb} >> ${_log} 2>&1 ${_mark}"
       # Idempotente: descarta las líneas gestionadas previas (por marcador) y reescribe.

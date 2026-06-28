@@ -212,6 +212,29 @@ ensure_textual(){
   rm -f "$errf"; return 1
 }
 
+# Deps de la Capa 2 del RAG de CONOCIMIENTO (semántica): sqlite-vec + sentence-transformers (arrastra
+# torch, ~cientos de MB). Van al python3 del SISTEMA (no a un venv): los agentes consultan en runtime por
+# Bash con 'python3 rag/knowledge/query_kb.py --semantic'. Kali es PEP 668 -> --break-system-packages, con
+# fallback sin él. VERIFICA el import después (no un falso "instalado"); su fallo NO es crítico (los
+# agentes degradan a la Capa 1 estructurada).
+ensure_semantic_deps(){
+  local py; py="$(command -v python3 || echo python3)"
+  if "$py" -c 'import sqlite_vec, sentence_transformers' 2>/dev/null; then
+    echo "[*] Deps de Capa 2 ya presentes (sqlite-vec + sentence-transformers)."; return 0
+  fi
+  echo "[*] Instalando deps de Capa 2 (sqlite-vec, sentence-transformers + torch): descarga grande, TARDA…"
+  # Sin 2>/dev/null a propósito: el error real de pip (red/espacio/ABI) debe verse — no fallo silencioso.
+  # --no-input + </dev/null: nunca bloquear esperando entrada. ESPEJO de _install_semantic_deps() en
+  # rag/knowledge/refresh_kb.py — si tocas una, toca la otra.
+  "$py" -m pip install --no-input --break-system-packages sqlite-vec sentence-transformers </dev/null \
+    || "$py" -m pip install --no-input sqlite-vec sentence-transformers </dev/null || true
+  if "$py" -c 'import sqlite_vec, sentence_transformers' 2>/dev/null; then
+    echo "[*] Deps de Capa 2 instaladas y verificadas."; return 0
+  fi
+  echo "[!] No pude instalar/verificar las deps de Capa 2 (sqlite-vec/sentence-transformers); revisa pip/red/espacio."
+  return 1
+}
+
 # agentsview — analítica local-first de sesiones de Claude Code (coste/actividad por agente).
 # Binario standalone (Go, MIT). VERSIÓN FIJADA + verificación SHA256 (auditable, sin curl|bash).
 # Lee ~/.claude/projects/ y sirve una UI en 127.0.0.1:8080 (local-only). Aquí SOLO se instala el

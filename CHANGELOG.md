@@ -4,6 +4,31 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.5.2] - 2026-06-28
+### Fixed
+- **RAG de conocimiento Capa 2 (semántica): poblado fiable de un paso.** `refresh_kb.py --semantic` ahora
+  **auto-instala** sus dependencias (`sqlite-vec` + `sentence-transformers`, que arrastra torch) cuando
+  faltan, con método **portable** (Kali/Debian son PEP 668 `externally-managed` → `pip install
+  --break-system-packages`, con fallback sin él) y **verificación real del import** después (no un falso
+  "instalado"). Antes, correr el comando con las deps ausentes dejaba la Capa 2 sin poblar (`kb_vec.db` no
+  se creaba, como vio el operador). Desactivable con `--no-install-deps` (p. ej. cron estricto).
+- **Mensajes de instalación correctos en Kali.** `refresh_kb.py`, `query_kb.py --semantic` y
+  `rag/knowledge/README.md` ya no sugieren `pip install …` a secas (falla por PEP 668): apuntan a
+  `refresh_kb.py --semantic` o al `pip install --break-system-packages`.
+- **Deploy sin fallo silencioso.** Las deps de Capa 2 se instalan ahora por `ensure_semantic_deps` (en
+  `deploy/lib.sh`, reutilizable como el resto de `ensure_*`), que **verifica que importan** antes de dar
+  "OK"; `auto-deploy.sh --semantic-rag` la usa. `verify.sh` reporta el estado de las deps de Capa 2 (opcional).
+### Notes
+- Las deps de Capa 2 van al `python3` del SISTEMA (no a un venv): los agentes las consultan en runtime por
+  Bash. Su ausencia no es crítica — los agentes degradan a la Capa 1 estructurada.
+- **Tras un council de 4 roles:** el **cron** semanal corre con `--no-install-deps` (no auto-instala sin
+  supervisión; además correría como no-root y no podría escribir en el `python` del sistema);
+  `refresh_kb.py --semantic` ahora **verifica el conteo real de `kb_vec.db`** tras poblar y avisa si quedó
+  vacío (p. ej. si no se pudo bajar el modelo de embeddings de HuggingFace) en vez de dar un falso "OK";
+  `pip` corre con `--no-input` + `timeout`. Las deps van **sin pin de versión/hash** — decisión consciente
+  lab/E2 (como los demás instaladores de release) y **requieren egress a PyPI** (en air-gap real fallan y la
+  Capa 2 se omite sin romper nada). Ver DEPLOY.md.
+
 ## [2.5.1] - 2026-06-27
 ### Fixed
 - **Despliegue: herramientas que no se instalaban (subfinder/naabu/katana/dnsx/sliver) + regresión de
