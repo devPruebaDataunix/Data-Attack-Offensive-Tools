@@ -12,6 +12,7 @@
 #    ./deploy/auto-deploy.sh --no-bot --no-rag    # solo base + claude
 #    ./deploy/auto-deploy.sh --semantic-rag       # + RAG Capa 2 semantica (pesado: torch + embeddings)
 #    ./deploy/auto-deploy.sh --no-cron            # no programar la ingesta pasiva (cron)
+#    ./deploy/auto-deploy.sh --opencode-nvidia    # monta el perfil NVIDIA en el espejo opencode (lab)
 #    ./deploy/auto-deploy.sh -h
 # =============================================================================
 set -Eeuo pipefail
@@ -30,14 +31,15 @@ LOG="${SCRIPT_DIR}/deploy-$(date +%Y%m%d-%H%M%S).log"
 . "${SCRIPT_DIR}/banner.sh" 2>/dev/null || true
 
 # ── Flags ────────────────────────────────────────────────────────────────────
-DO_TOOLS=1; DO_RAG=1; DO_BOT=1; UPDATE=0; DO_SEMANTIC=0; DO_CRON=1
+DO_TOOLS=1; DO_RAG=1; DO_BOT=1; UPDATE=0; DO_SEMANTIC=0; DO_CRON=1; DO_OC_NVIDIA=0
 for a in "$@"; do case "$a" in
-  --skip-tools)   DO_TOOLS=0 ;;
-  --no-rag)       DO_RAG=0 ;;
-  --no-bot)       DO_BOT=0 ;;
-  --update)       UPDATE=1 ;;
-  --semantic-rag) DO_SEMANTIC=1 ;;
-  --no-cron)      DO_CRON=0 ;;
+  --skip-tools)     DO_TOOLS=0 ;;
+  --no-rag)         DO_RAG=0 ;;
+  --no-bot)         DO_BOT=0 ;;
+  --update)         UPDATE=1 ;;
+  --semantic-rag)   DO_SEMANTIC=1 ;;
+  --no-cron)        DO_CRON=0 ;;
+  --opencode-nvidia) DO_OC_NVIDIA=1 ;;
   -h|--help)    grep -E '^#( |$)' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
   *) echo "Flag desconocido: $a"; exit 2 ;;
 esac; done
@@ -374,6 +376,26 @@ setup_opencode_env(){
   info "Carga las claves en tu shell:  set -a; . \"${REPO_DIR}/.opencode/opencode.env\"; set +a"
 }
 
+# Opción: montar el perfil NVIDIA en el espejo opencode (17 agentes recon/explotación → modelos NVIDIA
+# free) para CORROBORAR que la suite se conduce con NVIDIA sin gastar Anthropic. Reversible. NO es la
+# medición oficial (esa = Claude, run_gate.py): opencode no ejecuta los hooks deterministas ni el A2A.
+mount_opencode_profile(){
+  local _mount="${DO_OC_NVIDIA:-0}"
+  if [ "$_mount" -eq 0 ] && [ -t 0 ]; then
+    local _ans=""
+    read -rp "  ¿Montar el perfil NVIDIA en el espejo opencode para corroborar el cableado (17 agentes free)? [y/N]: " _ans || true
+    case "$_ans" in [yYsS]) _mount=1 ;; esac
+  fi
+  [ "$_mount" -eq 1 ] || return 0
+  step "Espejo opencode — perfil NVIDIA (corroboración, LAB-ONLY)"
+  if python3 "${REPO_DIR}/tools/apply_routing.py" nvidia-lab; then
+    ok "Perfil NVIDIA montado (17 agentes). Revertir: python3 tools/apply_routing.py default"
+    warn "opencode NO ejecuta hooks (scope_guard/C1-C19) ni A2A → corrobora cableado, NO es la medición oficial (esa = Claude, run_gate.py). Exporta NVIDIA_API_KEY antes de usarlo."
+  else
+    warn "No pude montar el perfil NVIDIA. Reintenta: python3 tools/apply_routing.py nvidia-lab"
+  fi
+}
+
 # =============================================================================
 # 6) VERIFY — corroboración final
 # =============================================================================
@@ -398,6 +420,7 @@ main(){
   if [ "$DO_RAG"   -eq 1 ]; then setup_rag;      else warn "RAG omitido (--no-rag)."; fi
   if [ "$DO_BOT"   -eq 1 ]; then setup_bot;      else warn "Bot omitido (--no-bot)."; fi
   setup_opencode_env
+  mount_opencode_profile
   run_verify
   step "✔ Despliegue completado"
   ok "Arranca el bot:  cd bot && ./.venv/bin/python bot.py"

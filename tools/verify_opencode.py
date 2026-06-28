@@ -121,20 +121,31 @@ def main():
     else:
         ok(f"frontmatter OK en los {len(oc_files)} agentes (mode subagent + provider/model)")
 
-    # Cruce routing.json <-> providers/modelos declarados
-    routes = (load_json(ROUTING) or {}).get("routes", {}) if os.path.isfile(ROUTING) else {}
-    if not routes:
-        ok("routing.json sin rutas activas (todo Anthropic por defecto)")
-    for agent, model in sorted(routes.items()):
-        prov, _, mid = model.partition("/")
-        if prov == "anthropic":
-            ok(f"ruta {agent} -> {model} (anthropic)")
-        elif prov not in providers:
-            fail(f"ruta {agent} -> {model}: provider '{prov}' NO declarado en opencode.json")
-        elif mid and mid not in (providers[prov].get("models", {}) or {}):
-            fail(f"ruta {agent} -> {model}: el modelo '{mid}' no está en provider.{prov}.models")
-        else:
-            ok(f"ruta {agent} -> {model}: provider y modelo declarados")
+    # Cruce de un perfil de routing <-> providers/modelos declarados (reutilizable).
+    def check_routes(routes, label):
+        if not routes:
+            ok(f"{label}: sin rutas (todo Anthropic por defecto)")
+            return
+        for agent, model in sorted(routes.items()):
+            prov, _, mid = model.partition("/")
+            if prov == "anthropic":
+                ok(f"{label}: {agent} -> {model} (anthropic)")
+            elif prov not in providers:
+                fail(f"{label}: {agent} -> {model}: provider '{prov}' NO declarado en opencode.json")
+            elif mid and mid not in (providers[prov].get("models", {}) or {}):
+                fail(f"{label}: {agent} -> {model}: el modelo '{mid}' no está en provider.{prov}.models")
+            else:
+                ok(f"{label}: {agent} -> {model}: provider y modelo declarados")
+
+    # Routing ACTIVO (tools/routing.json).
+    active = (load_json(ROUTING) or {}).get("routes", {}) if os.path.isfile(ROUTING) else {}
+    check_routes(active, "routing.json")
+    # Perfiles ALTERNATIVOS versionados (tools/routing.<nombre>.json, p.ej. el NVIDIA-lab que aplica
+    # apply_routing.py): se validan también aunque NO estén activos, para que no queden con IDs
+    # incongruentes (un model id inexistente se cazaría al aplicarlos, no antes).
+    for prof in sorted(glob.glob(os.path.join(ROOT, "tools", "routing.*.json"))):
+        proutes = (load_json(prof) or {}).get("routes", {})
+        check_routes(proutes, os.path.basename(prof))
 
     finish()
 

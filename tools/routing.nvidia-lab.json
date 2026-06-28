@@ -1,0 +1,22 @@
+{
+  "$comment": "PERFIL ALTERNATIVO 'NVIDIA LAB' del espejo opencode — NO es el routing activo (ese es tools/routing.json). Aplícalo con 'python tools/apply_routing.py nvidia-lab' (revierte con 'python tools/apply_routing.py default') o desde el auto-deploy (--opencode-nvidia / pregunta interactiva). Enruta los 17 agentes de recon/explotación a modelos FREE de NVIDIA NIM (cada uno a su mejor modelo: mecánicos→llama-3.3-70b; razona-medio→nemotron-super-49b; razona-profundo→deepseek-r1; gpt-oss-120b para tool-driving). El Orquestador (opencode.json) y knowledge-postmortem (escribe a memoria) se quedan en Anthropic a propósito. SIRVE para CORROBORAR que la suite (agentes+tools+RAG) se conduce con NVIDIA sin gastar Anthropic; NO ejecuta los hooks deterministas (scope_guard/C1-C19) ni el bus A2A — eso es inherente a opencode, no a NVIDIA. La medición OFICIAL del GATE (con guardrails) sigue siendo Claude vía benchmark/run_gate.py. LAB-ONLY: jamás datos de cliente, nunca E2/E3. Gotcha del '/': el valor se parte por el PRIMER '/' -> provider 'nvidia', el resto debe ser una clave de provider.nvidia.models en opencode.json (verify_opencode.py valida este fichero también).",
+  "routes": {
+    "osint-recon":       "nvidia/meta/llama-3.3-70b-instruct",
+    "active-recon":      "nvidia/meta/llama-3.3-70b-instruct",
+    "recon-suite":       "nvidia/meta/llama-3.3-70b-instruct",
+    "web-fuzzing":       "nvidia/meta/llama-3.3-70b-instruct",
+    "nuclei":            "nvidia/meta/llama-3.3-70b-instruct",
+    "vuln-triage":       "nvidia/deepseek-ai/deepseek-r1",
+    "sqlmap":            "nvidia/openai/gpt-oss-120b",
+    "metasploit":        "nvidia/openai/gpt-oss-120b",
+    "netexec":           "nvidia/openai/gpt-oss-120b",
+    "sliver":            "nvidia/openai/gpt-oss-120b",
+    "c2-exfil":          "nvidia/openai/gpt-oss-120b",
+    "lateral-discovery": "nvidia/nvidia/llama-3.3-nemotron-super-49b-v1",
+    "network-exploit":   "nvidia/nvidia/llama-3.3-nemotron-super-49b-v1",
+    "web-exploit":       "nvidia/deepseek-ai/deepseek-r1",
+    "post-exploit":      "nvidia/deepseek-ai/deepseek-r1",
+    "ai-security":       "nvidia/deepseek-ai/deepseek-r1",
+    "reporting":         "nvidia/nvidia/llama-3.3-nemotron-super-49b-v1"
+  }
+}

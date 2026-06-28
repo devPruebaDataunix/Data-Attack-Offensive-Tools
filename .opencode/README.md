@@ -56,42 +56,28 @@ toda la cadena a NVIDIA (no entrena s/ ToS) solo para smoke-test de cableado con
   `"vuln-triage": "nvidia/deepseek-ai/deepseek-r1"` (recuerda el gotcha del `/`: provider `nvidia`,
   modelo `deepseek-ai/deepseek-r1`, que debe existir en `provider.nvidia.models`).
 
-### Perfil NVIDIA LAB completo (smoke-test del GATE)
+### Perfil NVIDIA LAB completo (corroborar el cableado con NVIDIA free)
 
-Para correr **toda** la cadena con modelos free de NVIDIA (validar el cableado del pipeline contra
-**laboratorios sintéticos propios** sin gastar Anthropic), pega este `routes` en `tools/routing.json`
-y re-corre `python tools/sync_opencode.py`. Análisis modelo↔agente en
+Para conducir **toda la cadena** (17 agentes de recon/explotación) con modelos free de NVIDIA y
+**corroborar que la suite se mueve solo con NVIDIA** sin gastar Anthropic. El perfil vive en un
+**fichero versionado** — `tools/routing.nvidia-lab.json` (única fuente de verdad; `verify_opencode.py`
+lo valida) — y cada agente va a su mejor modelo (mecánicos→`llama-3.3-70b`; razona-medio→`nemotron-super-49b`;
+razona-profundo→`deepseek-r1`; `gpt-oss-120b` para tool-driving). Análisis modelo↔agente en
 [`docs/cost-optimization.md`](../docs/cost-optimization.md).
 
-```json
-"routes": {
-  "osint-recon":      "nvidia/meta/llama-3.3-70b-instruct",
-  "active-recon":     "nvidia/meta/llama-3.3-70b-instruct",
-  "recon-suite":      "nvidia/meta/llama-3.3-70b-instruct",
-  "web-fuzzing":      "nvidia/meta/llama-3.3-70b-instruct",
-  "nuclei":           "nvidia/meta/llama-3.3-70b-instruct",
-  "vuln-triage":      "nvidia/deepseek-ai/deepseek-r1",
-  "sqlmap":           "nvidia/openai/gpt-oss-120b",
-  "metasploit":       "nvidia/openai/gpt-oss-120b",
-  "netexec":          "nvidia/openai/gpt-oss-120b",
-  "sliver":           "nvidia/openai/gpt-oss-120b",
-  "c2-exfil":         "nvidia/openai/gpt-oss-120b",
-  "lateral-discovery":"nvidia/nvidia/llama-3.3-nemotron-super-49b-v1",
-  "network-exploit":  "nvidia/nvidia/llama-3.3-nemotron-super-49b-v1",
-  "web-exploit":      "nvidia/deepseek-ai/deepseek-r1",
-  "post-exploit":     "nvidia/deepseek-ai/deepseek-r1",
-  "ai-security":      "nvidia/deepseek-ai/deepseek-r1",
-  "reporting":        "nvidia/nvidia/llama-3.3-nemotron-super-49b-v1"
-}
+```bash
+python tools/apply_routing.py nvidia-lab   # aplica el perfil + regenera el espejo (sync_opencode)
+python tools/apply_routing.py default      # revierte al perfil activo (5 mecánicos a Groq/Cerebras)
 ```
+El `auto-deploy.sh` también lo ofrece (interactivo, o `--opencode-nvidia` no-interactivo).
 
-> **Solo cableado, no medición.** Sirve para depurar que el flujo end-to-end corre sin errores; **la
-> corrida OFICIAL del GATE se mide con Claude** (los free degradan calidad y topan a ~40 RPM/modelo, lo
-> que con 18 agentes en paralelo puede throttlear). `knowledge-postmortem` se deja FUERA a propósito
-> (escribe lecciones a memoria → conserva Anthropic). **LAB-ONLY**: jamás cliente, nunca E2/E3. Exporta
-> `NVIDIA_API_KEY` (el `auto-deploy.sh` la pide). Revertir = perfil activo (5 mecánicos) o `routes: {}`.
-> Tras pegar el perfil, corre `python tools/verify_opencode.py` para validar el cruce ruta↔provider↔modelo
-> (este bloque del README no lo valida nadie automáticamente; el verify solo cruza el `routing.json` activo).
+> **Solo cableado, no medición.** Corrobora que el flujo end-to-end corre con NVIDIA; **la corrida
+> OFICIAL del GATE se mide con Claude** (`benchmark/run_gate.py` lanza `claude`, no opencode). El espejo
+> opencode **NO ejecuta los hooks deterministas** (`scope_guard`/C1–C19) **ni el bus A2A** — es inherente
+> a opencode, no a NVIDIA. El **Orquestador** (`opencode.json`) y **`knowledge-postmortem`** (escribe a
+> memoria) se quedan en Anthropic a propósito. Los free degradan calidad y topan a ~40 RPM/modelo (con 17
+> agentes en paralelo puede throttlear). **LAB-ONLY**: jamás cliente, nunca E2/E3. Exporta `NVIDIA_API_KEY`
+> (el `auto-deploy.sh` la pide).
 - **Claves por entorno, sin `auth login`**: opencode lee `{env:VAR}` en runtime. Copia
   `opencode.example.env` → `opencode.env`, rellénalo y cárgalo (`set -a; . ./opencode.env; set +a`).
   `opencode.env` (y todo `*.env`) está gitignored; la plantilla `*.example.env` sí se versiona.

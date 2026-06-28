@@ -4,6 +4,32 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.7.0] - 2026-06-28
+### Added
+- **Perfil "NVIDIA LAB" como fichero versionado + aplicador reversible.** `tools/routing.nvidia-lab.json`
+  (única fuente de verdad) enruta los **17 agentes** de recon/explotación a su mejor modelo NVIDIA free
+  (mecánicos→`llama-3.3-70b`; razona-medio→`nemotron-super-49b`; razona-profundo→`deepseek-r1`;
+  `gpt-oss-120b` para tool-driving). **`tools/apply_routing.py nvidia-lab`** lo aplica (respaldando el
+  routing activo en `tools/routing.json.bak`, gitignored) y regenera el espejo; **`apply_routing.py
+  default`** revierte. Sirve para **corroborar que la suite se conduce solo con NVIDIA sin gastar
+  Anthropic**.
+- **Opción en `auto-deploy.sh` para montarlo:** flag **`--opencode-nvidia`** + **pregunta interactiva**
+  (guard de TTY) en el despliegue → aplica el perfil. El Orquestador (`opencode.json`) y
+  `knowledge-postmortem` se quedan en Anthropic a propósito.
+### Changed
+- **`verify_opencode.py`** valida ahora **también los perfiles alternativos** (`tools/routing.*.json`),
+  no solo el `routing.json` activo: un model ID inexistente en el perfil NVIDIA-lab se caza antes de
+  aplicarlo (evita el fallo silencioso en runtime).
+- **Docs** (`.opencode/README.md`, `docs/cost-optimization.md`): el bloque copy-paste se sustituye por el
+  fichero versionado + el aplicador (sin duplicación que pueda divergir).
+### Notes
+- **Corroboración ≠ medición oficial.** El espejo opencode **no ejecuta los hooks deterministas**
+  (`scope_guard`/C1–C19) **ni el bus A2A** — es inherente a opencode (cualquier provider), no a NVIDIA.
+  El perfil NVIDIA-lab valida que los modelos conducen agentes+tools+RAG; la **medición OFICIAL del GATE
+  (con guardrails) sigue siendo Claude** vía `benchmark/run_gate.py` (lanza `claude`, no opencode).
+  Verificado: espejo sin drift (18==18), `verify_opencode` valida el perfil, validate_suite 0 fallos,
+  test funcional de apply/revert. **LAB-ONLY.**
+
 ## [2.6.1] - 2026-06-28
 ### Fixed
 - **`bot/.env` quedaba propiedad de root e ilegible para el operador.** `setup_bot()` corre bajo `sudo`

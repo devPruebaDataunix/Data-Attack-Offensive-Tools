@@ -34,6 +34,8 @@ rag/.refresh.log
 benchmark/results.jsonl
 report/INFORME-*.md
 report/findings-summary.csv
+# Backup del routing activo que deja apply_routing.py al montar un perfil alternativo (NVIDIA-lab).
+tools/routing.json.bak
 
 # ─── Python / venv ─────────────────────────────────────────────
 **/__pycache__/
