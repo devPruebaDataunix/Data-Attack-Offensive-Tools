@@ -4,6 +4,33 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.5.3] - 2026-06-28
+### Fixed
+- **Capa 2 del RAG (semántica): instalación que de verdad funciona en Kali.** v2.5.2 dejó visible la causa
+  raíz (al quitar el `2>/dev/null`): instalar `sentence-transformers`/`torch` al `python3` del **sistema**
+  es inviable en Kali — choca con dpkg (`torch→sympy` pide `mpmath<1.4`, pero apt tiene `mpmath 1.4.1` sin
+  registro de pip, que ni `--break-system-packages` puede desinstalar → `uninstall-no-record-file`; el
+  fallback sin el flag cae en `externally-managed-environment`). Además `torch` arrastraba **~2,5 GB de stack
+  CUDA** inútil en una caja sin GPU.
+- **Solución: venv AISLADO del RAG + torch CPU-only.** Las deps de la Capa 2 se instalan ahora en
+  `rag/knowledge/.venv` (parte de cero, no toca apt) con **torch CPU-only** (índice oficial CPU de PyTorch).
+  Nuevo `rag/knowledge/_venv.py` = **única fuente de verdad** (crea el venv, instala, verifica el import);
+  `deploy/lib.sh` la **invoca** (deja de duplicar la lógica en Bash). Los agentes siguen llamando
+  `python3 rag/knowledge/query_kb.py --semantic`: el script se **re-ejecuta solo** con el python del venv
+  (os.execv); el poblado lanza los ingesters de la Capa 2 con ese python. `--ensure-deps` solo prepara el
+  venv; `--no-install-deps` no lo crea. `verify.sh` comprueba las deps en el venv del RAG.
+### Notes
+- `--break-system-packages` al python del sistema queda **retirado** para estas deps (era la causa del
+  fallo). Siguen **sin pin de versión/hash** (decisión consciente lab/E2; requieren egress a PyPI + el
+  modelo de embeddings desde HuggingFace en el primer uso). Ver DEPLOY.md.
+- En un Windows-dev con las libs ya en el python del sistema, se usan tal cual (no se crea venv).
+- **Council de 4 roles pre-push:** el deploy **devuelve la propiedad** de los artefactos del RAG al operador
+  (el cron corre como no-root; evita que las DB queden root-owned y el cron las deje obsoletas en silencio);
+  `refresh_kb.py` sale con **código de error** si se pidió la Capa 2 y no se pobló (el cron avisa en vez de
+  rotar callado, y el deploy entra en su rama de *warn*); el 2.º `pip` usa `--extra-index-url` CPU (evita
+  re-traer un torch CUDA). El `os.execv` al `.venv/bin/python` y el segundo índice quedan documentados en
+  DEPLOY.md como decisión consciente.
+
 ## [2.5.2] - 2026-06-28
 ### Fixed
 - **RAG de conocimiento Capa 2 (semántica): poblado fiable de un paso.** `refresh_kb.py --semantic` ahora

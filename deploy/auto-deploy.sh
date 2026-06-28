@@ -225,10 +225,11 @@ except Exception: print(0)' 2>/dev/null || echo 0)"
   fi
 
   # --- Capa 2 SEMÁNTICA (HackTricks · PayloadsAllTheThings · PEASS · feeds) — OPT-IN (--semantic-rag) ---
-  # Pesada: deps (torch ~cientos de MB) + embeddings locales de un corpus grande (TARDA bastante).
-  # Las deps van al python3 del sistema (Kali, caja dedicada) para que los agentes consulten en runtime.
+  # Pesada: venv AISLADO del RAG (torch CPU-only) + embeddings locales de un corpus grande (TARDA bastante).
+  # Las deps NO van al python3 del sistema (chocan con dpkg en Kali): viven en rag/knowledge/.venv; la
+  # lógica está en rag/knowledge/_venv.py y los agentes consultan en runtime vía query_kb (se redirige solo).
   if [ "$DO_SEMANTIC" -eq 1 ]; then
-    info "Capa 2 (semántica): instalando deps y poblando embeddings locales. Esto TARDA (corpus grande)."
+    info "Capa 2 (semántica): preparando el venv del RAG (torch CPU) y poblando embeddings. Esto TARDA."
     if ensure_semantic_deps; then
       if python3 rag/knowledge/refresh_kb.py --semantic-only --no-install-deps; then
         ok "Capa 2 (semántica) poblada."
@@ -240,6 +241,18 @@ except Exception: print(0)' 2>/dev/null || echo 0)"
     fi
   else
     info "Capa 2 (semántica) omitida (actívala con --semantic-rag; requiere torch + tiempo de embeddings)."
+  fi
+
+  # Propiedad de los artefactos del RAG -> OPERADOR. El cron de ingesta corre como ${SUDO_USER} (no-root);
+  # si el deploy los pobló como root, el cron no podría reescribir las DB y quedarían obsoletas EN SILENCIO
+  # (los ingesters se tragan el error). Devolver la propiedad evita ese "OK" falso. Solo aplica con sudo.
+  if [ "$(id -u)" -eq 0 ] && [ -n "${SUDO_USER:-}" ]; then
+    for _p in rag/vulns.db rag/vulns.db-* rag/knowledge/kb.db rag/knowledge/kb.db-* \
+              rag/knowledge/kb_vec.db rag/knowledge/kb_vec.db-* rag/knowledge/.cache \
+              rag/knowledge/.venv rag/.refresh.log; do
+      [ -e "$_p" ] && chown -R "${SUDO_USER}" "$_p" 2>/dev/null || true
+    done
+    info "Propiedad de los artefactos del RAG devuelta a '${SUDO_USER}' (el cron los refresca como ese usuario)."
   fi
 
   # --- INGESTA PASIVA: programa el refresco con cron (idempotente) ------------------------------

@@ -117,10 +117,11 @@ if "$_PYV" -c "import textual" >/dev/null 2>&1; then
   printf "  $(c 2)[OK]$(r)  %-22s instalado\n" "textual (TUI)"; OKN=$((OKN+1))
 else printf "  $(c 3)[??]$(r)  %-22s opcional (panel TUI: pip install textual)\n" "textual (TUI)"; fi
 
-# Deps de la Capa 2 del RAG de conocimiento (semántica) — opcionales, en el python3 del SISTEMA (no en el
-# venv del bot). Las puebla 'refresh_kb.py --semantic' o el deploy '--semantic-rag'. Capa 1 basta para operar.
-if python3 -c "import sqlite_vec, sentence_transformers" >/dev/null 2>&1; then
-  printf "  $(c 2)[OK]$(r)  %-22s instaladas\n" "RAG Capa 2 (deps)"; OKN=$((OKN+1))
+# Deps de la Capa 2 del RAG de conocimiento (semántica) — opcionales. Viven en el venv dedicado del RAG
+# (rag/knowledge/.venv); en un dev con las libs en el python del sistema, también valen. Capa 1 basta.
+_RAGV="${REPO_DIR}/rag/knowledge/.venv/bin/python"; [ -x "$_RAGV" ] || _RAGV="$(command -v python3 || echo python3)"
+if "$_RAGV" -c "import sqlite_vec, sentence_transformers" >/dev/null 2>&1; then
+  printf "  $(c 2)[OK]$(r)  %-22s listas (venv del RAG)\n" "RAG Capa 2 (deps)"; OKN=$((OKN+1))
 else printf "  $(c 3)[??]$(r)  %-22s opcional (RAG semántico: refresh_kb.py --semantic)\n" "RAG Capa 2 (deps)"; fi
 
 # Docker + Compose — opcional (solo para el despliegue en contenedores, deploy/docker.sh).

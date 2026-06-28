@@ -34,14 +34,22 @@ cd bot && ./.venv/bin/python bot.py
 > pueden instalar, los agentes degradan solos a `nmap -sS -p-` / `proxychains`.
 
 > **Deps de la Capa 2 del RAG (semántica) — `sqlite-vec` + `sentence-transformers` (arrastra torch).** Se
-> instalan con `pip` al `python3` del **sistema** (vía `--break-system-packages`, porque Kali es PEP 668),
-> **sin pin de versión ni hash**: misma decisión consciente que arriba (modelo lab/E2, caja dedicada).
-> Requieren **salida HTTPS a PyPI** y, en el primer uso, la descarga del modelo de embeddings desde
-> **HuggingFace**; en una caja **air-gapped de verdad** el `pip`/la descarga simplemente fallan y la Capa 2
-> se **omite sin romper nada** (los agentes usan la Capa 1 estructurada). Las dispara
-> `auto-deploy.sh --semantic-rag` (como root) y `refresh_kb.py --semantic` (interactivo, con verificación del
-> conteo final); el **cron** semanal corre con `--no-install-deps` (no instala sin supervisión). Endurecimiento
-> futuro: vendoring de wheels pineados + `--no-index` para air-gap real.
+> instalan en un **venv AISLADO del RAG** (`rag/knowledge/.venv`), **no** en el `python3` del sistema: en
+> Kali (PEP 668) instalarlas al sistema choca con dpkg (p. ej. el `mpmath` de apt —sin registro de pip— que
+> no se puede desinstalar para satisfacer a `torch→sympy`). El venv parte de cero y no toca nada de apt, y se
+> instala **torch CPU-only** desde el **índice oficial CPU de PyTorch** (un **segundo índice** además de PyPI)
+> para evitar ~2,5 GB de stack CUDA inútil sin GPU. **Sin pin de versión ni hash y desde dos índices** (PyPI +
+> `download.pytorch.org`): misma decisión consciente que arriba (modelo lab/E2). Requiere **salida HTTPS** a
+> ambos y, en el primer uso, la descarga del modelo de embeddings desde **HuggingFace**; en una caja
+> **air-gapped de verdad** la descarga falla y la Capa 2 se **omite sin romper nada** (los agentes usan la
+> Capa 1). La prepara `auto-deploy.sh --semantic-rag` y `refresh_kb.py --semantic` (con verificación del
+> conteo final). Los agentes consultan con `query_kb.py --semantic`, que **se re-ejecuta** con
+> `rag/knowledge/.venv/bin/python` (`os.execv`) — es decir, **el pipeline de agentes ejecuta ese intérprete**:
+> trátalo como código de confianza (propiedad del operador, como el resto del árbol del repo; `.venv/` está
+> gitignored, no se sube nada). El **cron** semanal corre con `--no-install-deps`, y el deploy **devuelve la
+> propiedad** de los artefactos del RAG al operador (el cron no es root). La lógica vive en
+> `rag/knowledge/_venv.py` (única fuente de verdad). Endurecimiento futuro: pin + hash de wheels y
+> `--no-index` desde un espejo local para air-gap real.
 
 Flags: `--update` (todo a lo último), `--skip-tools`, `--no-rag`, `--no-bot`.
 

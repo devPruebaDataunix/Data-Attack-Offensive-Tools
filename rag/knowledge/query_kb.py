@@ -45,6 +45,8 @@ def score(row, terms):
 
 def semantic_query(args):
     """Capa 2: recupera por SIGNIFICADO sobre kb_vec.db (prosa: HackTricks/PaTT/PEASS/feeds)."""
+    import _venv
+    _venv.reexec_in_venv_if_available()  # si las deps viven en el venv del RAG, se re-ejecuta ahí
     try:
         import kb_vec
         from embed import Embedder

@@ -7,16 +7,23 @@ Clona/actualiza las fuentes a `.cache/` y corre los ingesters.
 - Capa 2 (semántica, kb_vec.db): HackTricks + PayloadsAllTheThings + PEASS + feeds (0dayfans/HN).
   Solo con --semantic (PESADO: clona repos grandes + embeddings locales; tarda).
 
+La Capa 2 vive en un venv AISLADO (rag/knowledge/.venv) con torch CPU-only: ver _venv.py (evita el choque
+pip/dpkg de Kali y el stack CUDA). `--semantic` lo crea/usa solo; los agentes consultan vía query_kb.
+
 Uso:
-    python rag/knowledge/refresh_kb.py                  # solo Capa 1
-    python rag/knowledge/refresh_kb.py --semantic       # Capa 1 + Capa 2 (auto-instala sus deps si faltan)
+    python rag/knowledge/refresh_kb.py                  # solo Capa 1 (stdlib)
+    python rag/knowledge/refresh_kb.py --semantic       # Capa 1 + Capa 2 (crea el venv e instala si falta)
     python rag/knowledge/refresh_kb.py --semantic-only  # solo Capa 2
-    python rag/knowledge/refresh_kb.py --semantic --no-install-deps  # Capa 2 SIN auto-instalar sus deps
+    python rag/knowledge/refresh_kb.py --semantic --no-install-deps  # Capa 2 sin crear/instalar el venv
+    python rag/knowledge/refresh_kb.py --ensure-deps    # solo prepara el venv de la Capa 2 (no puebla)
 """
 import os
 import runpy
 import subprocess
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import _venv  # noqa: E402 — helper del venv aislado de la Capa 2 (mismo directorio)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CACHE = os.path.join(HERE, ".cache")
@@ -90,55 +97,32 @@ def refresh_layer1():
         print("[ATT&CK] (omitido) no hay enterprise-attack.json en rag/knowledge/.cache/.")
 
 
-def _semantic_deps_present():
+def _run_ext(py, module, argv):
+    """Lanza un ingester de la Capa 2 con el python que TIENE las deps (el venv del RAG, normalmente) como
+    subprocess — el proceso actual (python del sistema) no las tiene. cwd=HERE para que `import kb_vec`/
+    `embed` resuelvan por el dir del script."""
     try:
-        import sqlite_vec  # noqa: F401
-        import sentence_transformers  # noqa: F401
-        return True
-    except ImportError:
-        return False
-
-
-def _install_semantic_deps():
-    """Instala las deps de la Capa 2 (sqlite-vec + sentence-transformers, que arrastra torch) en ESTE
-    intérprete. Portable: prueba con --break-system-packages (Kali/Debian son PEP 668 'externally-managed')
-    y, si ese pip no lo acepta, sin él. NO usa --quiet: la descarga de torch es grande y conviene ver el
-    progreso. `--no-input` + stdin cerrado + timeout para no bloquear nunca en no-interactivo. Devuelve True
-    solo si después los módulos importan: cubre el caso aún-no-importado (un módulo ya cargado en el proceso
-    NO se reemplaza). ESPEJO de ensure_semantic_deps() en deploy/lib.sh — si tocas una, toca la otra."""
-    print("[Capa 2] Faltan dependencias (sqlite-vec / sentence-transformers). Las instalo ahora: descargan\n"
-          "         torch (~cientos de MB) y TARDA. Desactívalo con --no-install-deps.", flush=True)
-    pkgs = ["sqlite-vec", "sentence-transformers"]
-    for extra in (["--break-system-packages"], []):
-        try:
-            if subprocess.run([sys.executable, "-m", "pip", "install", "--no-input", *extra, *pkgs],
-                              stdin=subprocess.DEVNULL, timeout=1800).returncode == 0:
-                break
-        except subprocess.TimeoutExpired:
-            print("[Capa 2] la instalación de deps superó el límite de tiempo (30 min); la abandono.")
-        except Exception as e:  # noqa: BLE001 — pip ausente/roto: lo reporta el verificador de abajo
-            print(f"[Capa 2] no pude ejecutar pip ({e}).")
-    import importlib
-    importlib.invalidate_caches()
-    return _semantic_deps_present()
+        subprocess.run([py, os.path.join(HERE, module), *argv], cwd=HERE, check=False)
+    except Exception as e:  # noqa: BLE001 — una fuente caída no aborta el refresco
+        print(f"[!] {module} falló: {e} (continúo).")
 
 
 def refresh_layer2(install_deps=True):
     print("=== Refresco RAG de conocimiento — Capa 2 (semántica/embeddings) ===")
-    if not _semantic_deps_present():
-        manual = ("python3 -m pip install --break-system-packages sqlite-vec sentence-transformers"
-                  "  (o: sudo ./deploy/auto-deploy.sh --semantic-rag)")
-        if not install_deps:
-            print(f"[Capa 2] OMITIDA: faltan deps y --no-install-deps está activo. Instálalas con:\n         {manual}")
-            return
-        if not _install_semantic_deps():
-            print(f"[Capa 2] OMITIDA: no pude instalar/verificar las deps. Instálalas a mano:\n         {manual}")
-            return
+    py = _venv.python_with_semantic_deps(install=install_deps)
+    if py is None:
+        if install_deps:
+            print("[Capa 2] OMITIDA: no pude preparar el venv con las deps. Revisa el log de pip de arriba\n"
+                  "         (instala 'python3-venv' si faltaba) y reintenta: python rag/knowledge/refresh_kb.py --semantic")
+        else:
+            print("[Capa 2] OMITIDA: faltan las deps y --no-install-deps está activo. Prepáralas con:\n"
+                  "         python rag/knowledge/refresh_kb.py --semantic   (crea el venv aislado e instala)")
+        return False
     for label, (url, slug) in CORPUS.items():
         path = clone_or_pull(label, url)
-        run("ingest_corpus.py", ["--source", label, "--src", path, "--repo", slug])
-    run("ingest_feeds.py", [])  # 0dayfans + Hacker News
-    _verify_layer2_populated()
+        _run_ext(py, "ingest_corpus.py", ["--source", label, "--src", path, "--repo", slug])
+    _run_ext(py, "ingest_feeds.py", [])  # 0dayfans + Hacker News
+    return _verify_layer2_populated()
 
 
 def _verify_layer2_populated():
@@ -161,20 +145,29 @@ def _verify_layer2_populated():
               "         descargar el modelo de embeddings (BAAI/bge-small-en-v1.5) de HuggingFace, o se\n"
               "         interrumpió un clone. Revisa la conectividad a huggingface.co y reintenta;\n"
               "         comprueba con: python rag/knowledge/query_kb.py --stats")
-    else:
-        print(f"[Capa 2] OK: kb_vec.db poblado ({n} trozos). Detalle: python rag/knowledge/query_kb.py --stats")
+        return False
+    print(f"[Capa 2] OK: kb_vec.db poblado ({n} trozos). Detalle: python rag/knowledge/query_kb.py --stats")
+    return True
 
 
 def main():
     argv = sys.argv[1:]
+    if "--ensure-deps" in argv:
+        # Solo prepara el venv de la Capa 2 (lo invoca deploy/lib.sh). No clona ni puebla nada.
+        sys.exit(0 if _venv.ensure_venv_and_deps() else 1)
     do_l1 = "--semantic-only" not in argv
     do_l2 = ("--semantic" in argv) or ("--semantic-only" in argv)
     install_deps = "--no-install-deps" not in argv
+    layer2_ok = True
     if do_l1:
         refresh_layer1()
     if do_l2:
-        refresh_layer2(install_deps)
+        layer2_ok = refresh_layer2(install_deps)
     print("=== Hecho ===")
+    # Si se pidió la Capa 2 y no quedó poblada, salir con error: el CRON dispara aviso (no rota en silencio)
+    # y el deploy entra en su rama de warn en vez de dar un falso "poblada".
+    if do_l2 and not layer2_ok:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

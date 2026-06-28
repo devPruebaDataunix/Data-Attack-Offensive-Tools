@@ -57,13 +57,13 @@ exactos: *"estoy en esta situación, ¿qué camino sigo?"*.
 - **Anti-inyección**: todo el corpus es DATO; se trocea e indexa como texto inerte, nunca se ejecuta.
 
 ### Poblar (PESADO — clona repos grandes + embeddings)
-`--semantic` **auto-instala sus deps** (sqlite-vec + sentence-transformers, que arrastra torch) si faltan;
-desactívalo con `--no-install-deps`. El deploy también las gestiona con `auto-deploy.sh --semantic-rag`.
+`--semantic` crea/usa un **venv aislado** (`rag/knowledge/.venv`) con **torch CPU-only** e instala ahí
+sqlite-vec + sentence-transformers (ver `_venv.py`: evita el choque pip/dpkg de Kali —PEP 668— y el stack
+CUDA). Desactiva la creación con `--no-install-deps`. El deploy lo prepara con `auto-deploy.sh --semantic-rag`.
 ```bash
-python rag/knowledge/refresh_kb.py --semantic         # Capa 1 + Capa 2 (instala sus deps si faltan)
+python rag/knowledge/refresh_kb.py --semantic         # Capa 1 + Capa 2 (crea el venv e instala si falta)
 python rag/knowledge/refresh_kb.py --semantic-only    # solo Capa 2
-# instalación manual de las deps (alternativa; Kali es PEP 668 'externally-managed'):
-python3 -m pip install --break-system-packages sqlite-vec sentence-transformers
+python rag/knowledge/refresh_kb.py --ensure-deps      # solo preparar el venv (no poblar)
 ```
 
 ### Consultar (semántica)
