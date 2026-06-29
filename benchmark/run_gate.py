@@ -206,6 +206,16 @@ def main():
         json.dump(scope, f, ensure_ascii=False, indent=2)
     os.replace(tmp, SCOPE)  # atómico: nunca un scope.json a medias si el proceso muere a mitad
 
+    # Reinicia los contadores deterministas por-engagement para que ESTA corrida empiece de cero:
+    # budget_guard (.action_count, acumula por engagement_id = GATE-<id>) y loop_guard (.cmd_history).
+    # Sin esto, re-lanzar el MISMO eval continúa el contador y podría disparar el KILL-SWITCH antes de
+    # tiempo (falso corte durante la iteración del GATE).
+    for _cf in (".action_count", ".cmd_history"):
+        try:
+            os.remove(os.path.join(ROOT, "contracts", _cf))
+        except OSError:
+            pass
+
     try:
         launch(prompt, args.timeout, args.yolo)
         passed, detail = grade(ev, os.path.join(ROOT, "contracts", "engagement.json"),

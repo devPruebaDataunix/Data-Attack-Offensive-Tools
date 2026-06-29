@@ -4,6 +4,23 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.8.1] - 2026-06-29
+### Fixed
+- **El GATE (`run_gate.py`) acumulaba el contador del kill-switch entre corridas del MISMO eval.**
+  `budget_guard` cuenta acciones Bash por `engagement_id` (= `GATE-<id>`) y persiste en
+  `contracts/.action_count`; re-lanzar el mismo eval **continuaba** el contador y podía disparar el
+  KILL-SWITCH antes de tiempo (falso corte durante la iteración del GATE). Ahora `run_gate.py` **reinicia
+  `.action_count` y `.cmd_history`** al arrancar una corrida REAL (no en `--dry-run`), para que cada
+  intento empiece de cero. Detectado en la auditoría pre-GATE.
+### Notes
+- **Auditoría pre-GATE (verificación exhaustiva del entorno antes de correr el GATE).** Confirmado LISTO:
+  el grader (`run_eval.py`) es correcto (single-host: regex de root + min_findings; multi_host: hosts_rooted
+  + root_proofs + pivots_up≥1 + findings); la **autonomía headless es sólida** — en `approval_mode=auto`
+  (que `run_gate` fija) `approval_gate` emite `allow`, así que la corrida NO se cuelga **sin** `--yolo` y
+  los guards deterministas (scope/budget/C18/C19) **siguen activos** (mejor que `--yolo`, que los apaga);
+  el RAG está cableado en 5 agentes (vuln-triage/lateral-discovery/network-exploit/post-exploit/web-exploit)
+  y la Capa 2 es usable (query_kb se re-ejecuta en el venv). validate_suite 405/0/0, verify_opencode 28/0.
+
 ## [2.8.0] - 2026-06-28
 ### Added
 - **El auto-deploy pide TODAS las claves de modelos free, no solo NVIDIA.** Nueva función compartida
