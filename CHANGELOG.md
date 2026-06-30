@@ -4,6 +4,24 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.10.0] - 2026-06-30
+### Changed
+- **TUI v2 — Fase A.2 (i18n español + empty-states + marca).** Segundo incremento del rediseño visual de
+  `bot/tui/`: (1) **i18n de las fases** — nuevo `PHASES_ES` + `phase_es()`; la cabecera, el timeline de fase
+  y la columna de fase del **Roster** se muestran en español (`inicio`/`reconocimiento`/`triaje`/`explotación`/
+  `post-explotación`/`informe`/`cerrado`; + `orquestador`/`cualquiera` para los agent-cards), manteniendo la
+  **clave canónica interna en inglés** (enum del esquema, lo que se guarda en `engagement.json`). (2) **Fix del glitch de render** del timeline: el bullet va ahora **separado** de la
+  etiqueta (`○ inicio` en vez de `○inicio`, que se leía "oinit"). (3) **Empty-states amables**: el panel
+  principal muestra un mensaje guía cuando no hay engagement (en vez de un muro de `—`) y el de Evidencia
+  indica que aún no hay artefactos; la lógica del dashboard se movió a `state.py` (`dashboard_status` /
+  `evidence_header`) para poder testearla. (4) **Marca DataUnix sobria**: el wordmark del `Header` y el borde
+  de la línea de orden en rojo de marca `#e02c41`. Sin cambios en los guardrails; el bot sigue 100% Anthropic.
+### Notes
+- Cambio visual + lógica pura: la UI Textual se verifica en KALI (no renderiza en Windows); la lógica nueva
+  queda cubierta por tests. py_compile OK, **test_tui 39/39** (36 + 3 nuevos: `phase_es`, `dashboard_status`,
+  `evidence_header`), test_intel 28/28, **validate_suite 405/0/0**. Siguen: paleta de comandos de dominio en
+  español (A.3), 2ª columna modelo lab + RAG de conocimiento + selects en Acciones + multi-host (Fase B).
+
 ## [2.9.0] - 2026-06-29
 ### Changed
 - **TUI v2 — Fase A.1 (layout + footer).** Primer incremento del rediseño visual del panel `bot/tui/`:

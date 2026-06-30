@@ -28,26 +28,7 @@ class DashboardPanel(Vertical):
         self.query_one("#dash-findings", DataTable).add_columns("", "ID", "Sev", "Título", "Target")
 
     def refresh_from(self, snap: S.Snapshot, grp: dict, sdk_ok: bool) -> None:
-        ins = (snap.scope or {}).get("in_scope", {})
-        doms = ", ".join(ins.get("domains", []) or ["—"])
-        ips = ", ".join((ins.get("ips", []) or []) + (ins.get("cidrs", []) or []) or ["—"])
-        lines = [
-            "[b #00D4FF]Engagement[/]",
-            f"id:   {snap.eng.get('engagement_id', '—')}",
-            f"fase: {snap.eng.get('phase', '—')}",
-            "",
-            "[b #00D4FF]Scope[/]",
-            f"dom: {doms}",
-            f"ip:  {ips}",
-            "",
-            "[b #00D4FF]Hallazgos[/]",
-            f"[#FF4444]reales:[/]  {len(grp['real'])}",
-            f"[#FF6B35]vigilar:[/] {len(grp['watch'])}",
-            f"ruido:   {len(grp['noise'])}",
-            "",
-            f"motor: {'Agent SDK' if sdk_ok else 'remoto (Kali)'}",
-        ]
-        self.query_one("#dash-status", Static).update("\n".join(lines))
+        self.query_one("#dash-status", Static).update(S.dashboard_status(snap, grp, sdk_ok))
         t = self.query_one("#dash-findings", DataTable)
         t.clear()
         for v in grp["verdicts"]:
@@ -133,8 +114,7 @@ class EvidencePanel(Vertical):
             "ts", "agente", "acción", "target", "artefacto")
 
     def refresh_from(self, snap: S.Snapshot, engagements: list[str]) -> None:
-        self.query_one("#ev-hdr", Static).update(
-            "[b #00D4FF]Engagements con artefactos[/]: " + (", ".join(engagements) or "—"))
+        self.query_one("#ev-hdr", Static).update(S.evidence_header(engagements))
         t = self.query_one("#ev-table", DataTable)
         t.clear()
         for row in S.evidence_rows(snap.eng):

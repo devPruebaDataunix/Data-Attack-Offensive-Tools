@@ -88,6 +88,7 @@ def test_roster_rows():
               "a2a_peers": ["web-exploit"], "description": "SQLi"}]
     rows = S.roster_rows(cards)
     assert rows[0][0] == "sqlmap" and rows[0][2] == "sonnet-4-6" and rows[0][3] == "1"
+    assert rows[0][1] == "explotación"   # i18n: la fase del Roster también en español
     assert S.agent_names(cards) == ["sqlmap"]
 
 
@@ -100,8 +101,28 @@ def test_budget_render():
 
 def test_phase_render_marks_current():
     out = S.phase_render("triage")
-    assert "●triage" in out
-    assert "✓recon" in out and "○exploitation" in out
+    assert "● triaje" in out                              # bullet SEPARADO + español (fix glitch "oinit")
+    assert "✓ reconocimiento" in out and "○ explotación" in out
+
+
+def test_phase_es_labels():
+    assert S.phase_es("post-exploitation") == "post-explotación"
+    assert S.phase_es("desconocida") == "desconocida"    # fase fuera del catálogo: se devuelve tal cual
+
+
+def test_dashboard_status_empty_and_active():
+    grp = {"real": [], "watch": [], "noise": [], "verdicts": []}
+    empty = S.dashboard_status(S.Snapshot(eng={}), grp, True)
+    assert "Sin engagement" in empty                     # empty-state amable, no un muro de "—"
+    snap = S.Snapshot(eng={"engagement_id": "E-1", "phase": "recon"},
+                      scope={"in_scope": {"domains": ["a.com"]}})
+    out = S.dashboard_status(snap, grp, True)
+    assert "E-1" in out and "reconocimiento" in out and "a.com" in out
+
+
+def test_evidence_header_empty_and_full():
+    assert "Sin artefactos" in S.evidence_header([])
+    assert "GATE-1" in S.evidence_header(["GATE-1"])
 
 
 def test_evidence_rows():
@@ -310,6 +331,7 @@ def test_state_resolve_approval_mode():
 def test_header_line_shows_supervision_mode():
     out = S.header_line({"engagement_id": "T", "phase": "recon"}, 5, 100, 1.23, "critical")
     assert "supervisión" in out and "critical" in out
+    assert "reconocimiento" in out   # i18n: la fase se muestra en español en la cabecera
 
 
 def test_set_env_var_approval_mode():

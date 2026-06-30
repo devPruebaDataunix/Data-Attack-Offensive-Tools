@@ -17,8 +17,24 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-# Fases del engagement (enum de contracts/engagement.schema.json), en orden.
+# Fases del engagement (enum de contracts/engagement.schema.json), en orden. La CLAVE canónica
+# se queda en inglés (es el enum del esquema y lo que se guarda en engagement.json); solo la
+# ETIQUETA visible se traduce (i18n) — ver PHASES_ES / phase_es().
 PHASES = ["init", "recon", "triage", "exploitation", "post-exploitation", "reporting", "closed"]
+
+# Etiquetas en español para MOSTRAR. El valor interno nunca cambia.
+PHASES_ES = {
+    "init": "inicio",
+    "recon": "reconocimiento",
+    "triage": "triaje",
+    "exploitation": "explotación",
+    "post-exploitation": "post-explotación",
+    "reporting": "informe",
+    "closed": "cerrado",
+    # Valores de fase que aparecen en agent-cards.json (Roster), fuera del timeline del engagement:
+    "orchestrator": "orquestador",
+    "any": "cualquiera",
+}
 
 # Status de un mensaje A2A (enum de contracts/a2a-message.schema.json) -> emoji para la tabla.
 A2A_STATUS_EMOJI = {"pending": "⏳", "delivered": "📨", "done": "✅", "blocked": "⛔"}
@@ -151,7 +167,7 @@ def roster_rows(cards: list[dict]) -> list[tuple]:
         model = (c.get("model") or "—").replace("claude-", "")
         rows.append((
             c.get("name", "?"),
-            c.get("phase", "—"),
+            phase_es(c.get("phase")),   # i18n: misma etiqueta española que el resto de la UI
             model,
             str(len(c.get("a2a_peers", []) or [])),
             _clip(c.get("description", ""), 60),
@@ -179,18 +195,26 @@ def budget_render(count: int, cap: int, key: str) -> str:
 
 
 # ── Timeline de fase ─────────────────────────────────────────────────────────────
+def phase_es(phase: str) -> str:
+    """Etiqueta en español de una fase (la cadena tal cual si es desconocida, '—' si vacía/ausente)."""
+    return PHASES_ES.get(phase, phase) if phase else "—"
+
+
 def phase_render(phase: str) -> str:
+    # El bullet va SEPARADO de la etiqueta (con un espacio) para que no se "pegue" en el render
+    # (antes "○init" se leía como "oinit"). La etiqueta se muestra en español (phase_es).
     if phase not in PHASES:   # fase desconocida/ausente: nada se marca como completado
-        return "  →  ".join(f"[#6E7681]○{p}[/]" for p in PHASES)
+        return "  →  ".join(f"[#6E7681]○ {phase_es(p)}[/]" for p in PHASES)
     out, reached = [], True
     for p in PHASES:
+        label = phase_es(p)
         if p == phase:
-            out.append(f"[b #00D4FF]●{p}[/]")
+            out.append(f"[b #00D4FF]● {label}[/]")
             reached = False
         elif reached:
-            out.append(f"[#3FB950]✓{p}[/]")
+            out.append(f"[#3FB950]✓ {label}[/]")
         else:
-            out.append(f"[#6E7681]○{p}[/]")
+            out.append(f"[#6E7681]○ {label}[/]")
     return "  →  ".join(out)
 
 
@@ -209,6 +233,15 @@ def evidence_rows(eng: dict) -> list[tuple]:
             _clip(e.get("artifact_path") or e.get("output_hash") or "", 28),
         ))
     return rows
+
+
+def evidence_header(engagements: list[str]) -> str:
+    """Cabecera del panel de evidencia (empty-state amable si aún no hay artefactos)."""
+    if not engagements:
+        return ("[b #00D4FF]Evidencia[/]\n"
+                "Sin artefactos todavía — aparecerán aquí cuando un engagement genere "
+                "recon/exploit/loot/evidence.")
+    return "[b #00D4FF]Engagements con artefactos[/]: " + ", ".join(engagements)
 
 
 def engagement_dirs(repo: Path) -> list[str]:
@@ -252,11 +285,47 @@ def header_line(eng: dict, count: int, cap: int, cost: Optional[float],
     mode_color = {"full": "#3FB950", "critical": "#FF6B35", "auto": "#FF4444"}.get(approval_mode, "#FF6B35")
     return (
         f"engagement: [b]{eng.get('engagement_id', '—')}[/]   "
-        f"fase: [b]{eng.get('phase', '—')}[/]   "
+        f"fase: [b]{phase_es(eng.get('phase')) if eng.get('phase') else '—'}[/]   "
         f"acciones: {count}/{cap}   "
         f"coste: {cost_txt}   "
         f"supervisión: [{mode_color}]{approval_mode}[/]"
     )
+
+
+# ── Panel principal (dashboard) ──────────────────────────────────────────────────
+def dashboard_status(snap: "Snapshot", grp: dict, sdk_ok: bool) -> str:
+    """Bloque de estado del panel principal. Empty-state amable si aún no hay engagement."""
+    motor = "Agent SDK" if sdk_ok else "remoto (Kali)"
+    eid = snap.eng.get("engagement_id")
+    if not eid:
+        return (
+            "[b #00D4FF]Sin engagement activo[/]\n\n"
+            "Todavía no hay nada en marcha.\n"
+            "Lanza una orden al Orquestador en la línea de abajo\n"
+            "(p. ej. [b]haz recon de ejemplo.com[/]).\n\n"
+            f"motor: {motor}"
+        )
+    ins = (snap.scope or {}).get("in_scope", {})
+    doms = ", ".join(ins.get("domains", []) or ["—"])
+    ips = ", ".join((ins.get("ips", []) or []) + (ins.get("cidrs", []) or []) or ["—"])
+    fase = snap.eng.get("phase")
+    lines = [
+        "[b #00D4FF]Engagement[/]",
+        f"id:   {eid}",
+        f"fase: {phase_es(fase) if fase else '—'}",
+        "",
+        "[b #00D4FF]Scope[/]",
+        f"dom: {doms}",
+        f"ip:  {ips}",
+        "",
+        "[b #00D4FF]Hallazgos[/]",
+        f"[#FF4444]reales:[/]  {len(grp['real'])}",
+        f"[#FF6B35]vigilar:[/] {len(grp['watch'])}",
+        f"ruido:   {len(grp['noise'])}",
+        "",
+        f"motor: {motor}",
+    ]
+    return "\n".join(lines)
 
 
 # ── Snapshot (una sola lectura por refresco, compartida por todos los paneles) ───

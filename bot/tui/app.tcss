@@ -3,6 +3,9 @@ Screen { background: #0D1117; }
 
 #hdr { height: 1; color: #C9D1D9; background: #161B22; padding: 0 1; }
 
+/* Marca DataUnix (#e02c41): el wordmark del Header en rojo de marca = acento de identidad sobrio. */
+HeaderTitle { color: #e02c41; text-style: bold; }
+
 TabbedContent { height: 1fr; }
 
 /* Panel (dashboard) */
@@ -31,7 +34,7 @@ ActionsPanel Label { padding: 1 0 0 0; }
 
 /* Log + línea de orden persistentes */
 #log { height: 8; border: round #3FB950; padding: 0 1; }
-#cmd { border: tall #00D4FF; }
+#cmd { border: tall #e02c41; }
 
 /* Modal de aprobación humana */
 #appr-box { background: #161B22; border: thick #FF4444; padding: 1 2; width: 76; height: auto; }
