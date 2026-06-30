@@ -4,6 +4,20 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.8.2] - 2026-06-29
+### Added
+- **El GATE archiva el blackboard por-lab y arranca limpio.** `run_gate.py`, al lanzar una corrida REAL:
+  (1) si `contracts/engagement.json` es de OTRO engagement, lo **archiva** en `engagements/<id>/engagement.json`
+  y empieza con un blackboard LIMPIO (no mezcla labs ni el grader cuenta findings rancios de una corrida
+  anterior); si es del MISMO `GATE-<id>`, lo **conserva** (corrida resumible). (2) Tras graduar, **copia el
+  blackboard final** dentro de `engagements/GATE-<id>/engagement.json` → cada lab queda **autocontenido**
+  (artefactos `recon/exploit/loot/evidence/report` + su `engagement.json` en su propia carpeta). Responde a
+  "¿dónde se almacena la info de cada lab?": en `engagements/GATE-<id>/` (gitignored). No toca nada en `--dry-run`.
+### Notes
+- Verificado con test funcional (4 casos: distinto-lab→archiva+reinicia, mismo-lab→conserva, snapshot, sin-bb→
+  no-op), py_compile, validate_suite 405/0/0. Cambio pequeño y bien acotado → verificación determinista
+  (precedente v2.7.1/v2.8.1). Complementa el reset de contadores de v2.8.1.
+
 ## [2.8.1] - 2026-06-29
 ### Fixed
 - **El GATE (`run_gate.py`) acumulaba el contador del kill-switch entre corridas del MISMO eval.**

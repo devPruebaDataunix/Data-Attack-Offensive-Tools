@@ -39,6 +39,7 @@ from datetime import datetime, timezone
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 SCOPE = os.path.join(ROOT, "contracts", "scope.json")
+ENG_BB = os.path.join(ROOT, "contracts", "engagement.json")  # blackboard (compartido entre corridas)
 
 # Salida UTF-8 robusta (la consola de Windows es cp1252 y revienta con '→'/'…'); en Kali ya es UTF-8.
 for _s in (sys.stdout, sys.stderr):
@@ -149,6 +150,46 @@ def launch(prompt, timeout, yolo):
     return True
 
 
+def _reset_blackboard_for(this_id):
+    """Antes de una corrida REAL: si el blackboard (engagement.json) es de OTRO engagement, archívalo en
+    SU carpeta (engagements/<id>/) y arranca con uno LIMPIO — así no se mezclan labs ni el grader cuenta
+    findings rancios de una corrida anterior. Si es del MISMO GATE-<id>, se CONSERVA (permite RESUMIR una
+    corrida interrumpida: el blackboard es la fuente de verdad resumible). Si no existe, nada que hacer."""
+    if not os.path.isfile(ENG_BB):
+        return
+    try:
+        prev = json.load(open(ENG_BB, encoding="utf-8")).get("engagement_id")
+    except Exception:  # noqa: BLE001
+        prev = None
+    if prev == this_id:
+        print(f"[gate] blackboard previo es de '{this_id}': se CONSERVA (corrida resumible).")
+        return
+    if prev:  # archiva el blackboard del lab anterior en su propia carpeta antes de reiniciar
+        dst = os.path.join(ROOT, "engagements", str(prev))
+        try:
+            os.makedirs(dst, exist_ok=True)
+            shutil.copy2(ENG_BB, os.path.join(dst, "engagement.json"))
+            print(f"[gate] blackboard del lab anterior ('{prev}') archivado en engagements/{prev}/engagement.json")
+        except OSError:
+            pass
+    try:
+        os.remove(ENG_BB)
+        print("[gate] blackboard reiniciado: esta corrida empieza limpia (engagement.json nuevo).")
+    except OSError:
+        pass
+
+
+def _snapshot_blackboard(eng_dir):
+    """Tras graduar: copia el blackboard FINAL dentro de la carpeta del engagement, para que cada lab quede
+    AUTOCONTENIDO (artefactos recon/exploit/loot/evidence/report + su engagement.json) en engagements/GATE-<id>/."""
+    if os.path.isfile(ENG_BB):
+        try:
+            shutil.copy2(ENG_BB, os.path.join(eng_dir, "engagement.json"))
+            print(f"[gate] blackboard archivado en {os.path.relpath(eng_dir, ROOT)}/engagement.json")
+        except OSError:
+            pass
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--eval", required=True)
@@ -215,6 +256,8 @@ def main():
             os.remove(os.path.join(ROOT, "contracts", _cf))
         except OSError:
             pass
+    # Blackboard limpio para ESTA corrida (archiva el del lab anterior en su carpeta; conserva si es el mismo).
+    _reset_blackboard_for(f"GATE-{ev['id']}")
 
     try:
         launch(prompt, args.timeout, args.yolo)
@@ -222,6 +265,7 @@ def main():
                                os.path.join(eng, "evidence"))
         verdict = "PASS" if passed else "FAIL"
         print(f"\n[{verdict}] {ev['id']}  detalle={json.dumps(detail)}")
+        _snapshot_blackboard(eng)  # deja el blackboard final junto a los artefactos del lab
         if args.record:
             res = os.path.join(HERE, "results.jsonl")
             with open(res, "a", encoding="utf-8") as fh:
