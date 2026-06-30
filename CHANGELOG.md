@@ -4,6 +4,19 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.9.0] - 2026-06-29
+### Changed
+- **TUI v2 — Fase A.1 (layout + footer).** Primer incremento del rediseño visual del panel `bot/tui/`:
+  (1) las tablas/paneles ahora **llenan el espacio vertical** (`DataTable`/`#dash-status`/`#dash-findings`
+  a `height: 1fr` en `app.tcss`) — antes el contenido quedaba arriba con un gran vacío negro debajo; el
+  log de eventos baja a 8 líneas. (2) El **footer muestra `Ctrl+K`/`Ctrl+P`** en vez de la notación caret
+  `^k`/`^p` de Textual (`Binding(..., key_display="Ctrl+K")` + `COMMAND_PALETTE_DISPLAY="Ctrl+P"`).
+  Sin cambios en la lógica pura (`state.py`/`actions.py`) ni en los guardrails; el bot sigue 100% Anthropic.
+### Notes
+- Cambio solo visual (Textual/CSS): se verifica en KALI (Textual no renderiza en Windows). py_compile OK,
+  validate_suite 405/0/0. Primer paso de la "TUI v2"; siguen i18n español + paleta de dominio + 2ª columna
+  modelo lab + RAG conocimiento + selects en Acciones + empty-states + color de marca (ver tui-overhaul-plan).
+
 ## [2.8.2] - 2026-06-29
 ### Added
 - **El GATE archiva el blackboard por-lab y arranca limpio.** `run_gate.py`, al lanzar una corrida REAL:

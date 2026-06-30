@@ -23,6 +23,7 @@ from pathlib import Path
 
 from textual import work
 from textual.app import App, ComposeResult
+from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import (Button, Footer, Header, Input, Label, RichLog,
@@ -98,8 +99,15 @@ class ApprovalModal(ModalScreen[bool]):
 
 class DataAttackTUI(App[None]):
     CSS_PATH = "app.tcss"
-    BINDINGS = [("q", "quit", "Salir"), ("r", "refresh", "Refrescar"),
-                ("ctrl+k", "abort", "Kill-switch")]
+    # key_display: el footer muestra "Ctrl+K" en vez de la notación caret "^k" de Textual.
+    BINDINGS = [
+        Binding("q", "quit", "Salir", key_display="q"),
+        Binding("r", "refresh", "Refrescar", key_display="r"),
+        Binding("ctrl+k", "abort", "Kill-switch", key_display="Ctrl+K"),
+    ]
+    # Footer: "Ctrl+P" en vez de "^p" para la paleta de comandos (atributo de Textual ≥ reciente;
+    # si la versión no lo soporta, se ignora sin error — se confirma visualmente en Kali).
+    COMMAND_PALETTE_DISPLAY = "Ctrl+P"
 
     _running = False
 
