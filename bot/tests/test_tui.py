@@ -61,13 +61,14 @@ def test_a2a_rows():
     assert len(rows) == 1
     emoji, frm, to, role, hops, preview = rows[0]
     assert frm == "web-exploit" and to == "sqlmap" and hops == "2"
+    assert role == "solicitud"   # i18n: rol A2A en español (request -> solicitud)
     assert "confirma SQLi" in preview and emoji == "📨"
 
 
 def test_a2a_summary_counts_and_hops():
     eng = {"messages": [_msg("M1", "a", "b", "pending", 1), _msg("M2", "b", "a", "done", 40)]}
     out = S.a2a_summary(eng, {"constraints": {"max_a2a_hops": 50}})
-    assert "pending: 1" in out and "done: 1" in out and "40/50" in out
+    assert "pendiente: 1" in out and "hecho: 1" in out and "40/50" in out   # i18n status A2A
 
 
 def test_pending_message_ids():
@@ -330,7 +331,7 @@ def test_state_resolve_approval_mode():
 
 def test_header_line_shows_supervision_mode():
     out = S.header_line({"engagement_id": "T", "phase": "recon"}, 5, 100, 1.23, "critical")
-    assert "supervisión" in out and "critical" in out
+    assert "supervisión" in out and "crítica" in out   # i18n: modo de supervisión en español
     assert "reconocimiento" in out   # i18n: la fase se muestra en español en la cabecera
 
 

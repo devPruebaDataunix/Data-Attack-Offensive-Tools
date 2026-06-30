@@ -4,6 +4,20 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.10.1] - 2026-06-30
+### Changed
+- **TUI v2 — i18n de los enums visibles restantes** (completa la traducción iniciada en v2.10.0; los huecos se
+  detectaron en las capturas de Kali del panel "Bus A2A" y la cabecera, que aún mostraban valores en inglés).
+  Ahora se muestran en español manteniendo la **clave canónica interna en inglés** (enum del esquema): los
+  **estados del Bus A2A** (`pendiente`/`entregado`/`hecho`/`bloqueado`) en el resumen; el **rol** de cada mensaje
+  A2A (`solicitud`/`respuesta`/`traspaso`/`hallazgo`/`estado`) en la tabla; y el **modo de supervisión** en la
+  cabecera (`completa`/`crítica`/`automática`). Nuevos mapas `A2A_STATUS_ES`/`A2A_ROLE_ES`/`APPROVAL_MODE_ES`.
+### Notes
+- Mismo patrón que las fases de v2.10.0 (mapa ES + clave canónica inglesa; el runner y los guards usan siempre el
+  valor inglés). test_tui 39/39, validate_suite 405/0/0. Verificación determinista (extensión trivial de un patrón
+  ya revisado por el council en v2.10.0; precedente v2.8.1/v2.8.2). Pendientes ya planificados: paleta de comandos
+  en español (A.3); Roster sin truncar + 2ª columna modelo lab; `ts`→`fecha` humanizada en Evidencia (Fase B).
+
 ## [2.10.0] - 2026-06-30
 ### Changed
 - **TUI v2 — Fase A.2 (i18n español + empty-states + marca).** Segundo incremento del rediseño visual de

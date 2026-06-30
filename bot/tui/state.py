@@ -39,6 +39,12 @@ PHASES_ES = {
 # Status de un mensaje A2A (enum de contracts/a2a-message.schema.json) -> emoji para la tabla.
 A2A_STATUS_EMOJI = {"pending": "⏳", "delivered": "📨", "done": "✅", "blocked": "⛔"}
 
+# Etiquetas en español de los enums visibles (i18n). La clave canónica sigue en inglés (enum del esquema):
+A2A_STATUS_ES = {"pending": "pendiente", "delivered": "entregado", "done": "hecho", "blocked": "bloqueado"}
+A2A_ROLE_ES = {"request": "solicitud", "response": "respuesta", "handoff": "traspaso",
+               "finding": "hallazgo", "status": "estado"}
+APPROVAL_MODE_ES = {"full": "completa", "critical": "crítica", "auto": "automática"}
+
 DEFAULT_MAX_ACTIONS = 1000   # igual que budget_guard.py (DEFAULT_MAX)
 DEFAULT_MAX_A2A_HOPS = 50    # igual que blackboard.py (DEFAULT_MAX_A2A_HOPS)
 
@@ -110,7 +116,7 @@ def a2a_rows(eng: dict) -> list[tuple]:
             A2A_STATUS_EMOJI.get(status, "•"),
             m.get("from_agent", "?"),
             m.get("to_agent", "?"),
-            m.get("role", ""),
+            A2A_ROLE_ES.get(m.get("role", ""), m.get("role", "")),
             str(m.get("hops", 0)),
             _clip(_msg_text(m), 48),
         ))
@@ -127,8 +133,10 @@ def a2a_summary(eng: dict, scope: Optional[dict]) -> str:
     ceil = max_a2a_hops(scope)
     return (
         f"[b #00D4FF]Bus A2A[/]  ({len(msgs)} mensajes)\n"
-        f"⏳ pending: {counts['pending']}   📨 delivered: {counts['delivered']}\n"
-        f"✅ done: {counts['done']}   ⛔ blocked: {counts['blocked']}\n"
+        f"⏳ {A2A_STATUS_ES['pending']}: {counts['pending']}   "
+        f"📨 {A2A_STATUS_ES['delivered']}: {counts['delivered']}\n"
+        f"✅ {A2A_STATUS_ES['done']}: {counts['done']}   "
+        f"⛔ {A2A_STATUS_ES['blocked']}: {counts['blocked']}\n"
         f"hops máx: {hops_max}/{ceil}"
         + ("  [#FF4444](¡cerca del techo!)[/]" if ceil and hops_max >= ceil * 0.8 else "")
     )
@@ -288,7 +296,7 @@ def header_line(eng: dict, count: int, cap: int, cost: Optional[float],
         f"fase: [b]{phase_es(eng.get('phase')) if eng.get('phase') else '—'}[/]   "
         f"acciones: {count}/{cap}   "
         f"coste: {cost_txt}   "
-        f"supervisión: [{mode_color}]{approval_mode}[/]"
+        f"supervisión: [{mode_color}]{APPROVAL_MODE_ES.get(approval_mode, approval_mode)}[/]"
     )
 
 
