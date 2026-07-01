@@ -31,12 +31,12 @@ claro → agentsview se usa **siempre local** (vincula a `127.0.0.1`, telemetrí
 `AGENTSVIEW_TELEMETRY_ENABLED=0`), **nunca** con `--public-url`, y en una máquina del operador. Es
 read-only sobre los transcripts. Decláralo en el NDA/ROE como índice local de sesiones.
 
-## Tier de modelos por agente (4 opus · 8 sonnet · 6 haiku)
+## Tier de modelos por agente (4 opus · 11 sonnet · 6 haiku)
 
 | Tier | Agentes | Criterio |
 | :--- | :--- | :--- |
 | `claude-opus-4-8` | web-exploit, post-exploit, ai-security, reporting | razonamiento profundo que **rompe la box** / calidad del informe |
-| `claude-sonnet-4-6` | vuln-triage, sqlmap, metasploit, netexec, sliver, lateral-discovery, c2-exfil, network-exploit | tool-driving con juicio; el RAG hace el trabajo pesado |
+| `claude-sonnet-4-6` | vuln-triage, sqlmap, metasploit, netexec, ad-enum, kerberos, adcs, sliver, lateral-discovery, c2-exfil, network-exploit | tool-driving con juicio; el RAG hace el trabajo pesado |
 | `claude-haiku-4-5` | osint-recon, recon-suite, active-recon, web-fuzzing, nuclei, knowledge-postmortem | recon/escaneo/parseo mecánico (sin `effort`: Haiku da 400) |
 
 Principio: opus solo donde un peor razonamiento te hace **fallar la box** (y gastar MÁS turnos

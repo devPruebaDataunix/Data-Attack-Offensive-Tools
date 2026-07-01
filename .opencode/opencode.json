@@ -4,7 +4,7 @@
     "orchestrator": {
       "mode": "primary",
       "model": "anthropic/claude-opus-4-8",
-      "description": "Orquestador del engagement. Coordina los 18 especialistas (hub-and-spoke) y aplica el alcance. Ver AGENTS.md.",
+      "description": "Orquestador del engagement. Coordina los 21 especialistas (hub-and-spoke) y aplica el alcance. Ver AGENTS.md.",
       "temperature": 0.2,
       "permission": {
         "read": "allow",

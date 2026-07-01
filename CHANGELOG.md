@@ -4,6 +4,37 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.11.0] - 2026-07-01
+### Added
+- **Capacidad de Active Directory — 3 agentes nuevos (ROE-gated).** La suite pasa de 18 a **21
+  especialistas** (11 de fase + 10 de herramienta) con tres agentes de AD en la Zona E2, **solo
+  operables con ROE que autorice explotacion de dominio** (heredan el gate por herramienta como `netexec`: aprobacion por
+  accion solo bajo `approval_mode: full`; en `critical`/default la proteccion efectiva es scope_guard +
+  budget_guard):
+  - **`ad-enum`** — reconocimiento interno de AD con **BloodHound CE** (SharpHound/`bloodhound-python`),
+    analisis de grafo (Cypher) y priorizacion de rutas a Domain Admin (ACLs, kerberoast, AS-REP,
+    DCSync, delegaciones). Descubre `targets[]` internos.
+  - **`kerberos`** — **Kerberoasting** (`GetUserSPNs`/Rubeus), **AS-REP Roasting** (`GetNPUsers`), abuso
+    de **delegaciones** (unconstrained/constrained/RBCD) y cracking offline (hashcat).
+  - **`adcs`** — **AD Certificate Services** con **Certipy**: enumeracion y explotacion de **ESC1-ESC16**
+    (SAN abuse, ESC8 NTLM relay a web enrollment, golden certificate, shadow credentials).
+  Forman un **cluster A2A** (`ad-enum <-> kerberos <-> adcs`) + enlace `ad-enum <-> netexec`; escriben
+  credenciales **referenciadas** (nunca en claro), respetan el multi-host/pivot y traen `memory: local`
+  + bloque anti-inyeccion C11. Contenido tecnico basado en playbooks MITRE-mapeados.
+### Changed
+- **`risk.py`** (clasificacion de aprobacion): nuevos tokens de AD para que sus comandos hereden el gate
+  — `rubeus`/`coercer`/`petitpotam` (destructive) y `sharphound`/`azurehound`/`gettgt`/`getst`/
+  `finddelegation` (sensitive). `certipy`/`getuserspns`/`getnpusers`/`bloodhound`/`kerbrute` ya estaban.
+- **Esquema**: `target.schema.json` anade `ad-enum` al enum `discovered_by`.
+- **Coherencia de docs** (verificacion de obsolescencia): README (conteos 18->21, tabla E2, ancla TOC),
+  AGENTS.md (herramienta 7->10 + parejas A2A del cluster AD), ARCHITECTURE/ENTORNO-LISTO/DEPLOY/
+  SETUP-VSCODE/.opencode/STYLE_GUIDE/cost-optimization (conteos 18->21, reparto de modelos 8->11 sonnet).
+  ARCHITECTURE_MAP.md regenerado (21 agentes, E1=3/E2=16/E3=2).
+### Notes
+- Espejo opencode + agent-cards + plugin regenerados. **validate_suite 463/0/0**, verify_opencode 28/0,
+  test_intel 28/28. A2A bidireccional verificado. La medicion real de la capacidad AD se hace en un lab
+  de AD/Windows (fuera de este repo).
+
 ## [2.10.1] - 2026-06-30
 ### Changed
 - **TUI v2 — i18n de los enums visibles restantes** (completa la traducción iniciada en v2.10.0; los huecos se

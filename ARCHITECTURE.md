@@ -34,7 +34,7 @@ Por eso el A2A es **mediado**, sobre dos mecanismos:
 
 ### Fallo 2 — El Orquestador no puede ser un subagente
 Como los subagentes no pueden lanzar otros subagentes, el Orquestador **es el agente
-principal** (la sesión main), descrito en `AGENTS.md`. No es uno de los 18 de la carpeta
+principal** (la sesión main), descrito en `AGENTS.md`. No es uno de los 21 de la carpeta
 `agents/`.
 
 ### Fallo 3 — El Scope Guard como agente es saltable
@@ -115,12 +115,12 @@ El Orquestador es el plano de control; no ejecuta tooling ofensivo por sí mismo
 ## 5. Asignación de modelos (coste vs. razonamiento)
 
 Routing por tier para no quemar cupo de Pro (sin `CLAUDE_CODE_SUBAGENT_MODEL`): cada agente
-fija su propio `model`. Distribución real: **6 haiku · 8 sonnet · 4 opus-4-8** (sin fable).
+fija su propio `model`. Distribución real: **6 haiku · 11 sonnet · 4 opus-4-8** (sin fable).
 
 | Tier | Agentes | Motivo |
 | :--- | :--- | :--- |
 | `claude-haiku-4-5` | osint-recon, recon-suite, active-recon, web-fuzzing, nuclei, knowledge-postmortem | recon/escaneo/parseo mecánico: mucho dato, poco razonamiento (sin `effort`) |
-| `claude-sonnet-4-6` | vuln-triage, sqlmap, metasploit, netexec, sliver, lateral-discovery, c2-exfil, network-exploit | tool-driving con juicio / el RAG hace el trabajo pesado |
+| `claude-sonnet-4-6` | vuln-triage, sqlmap, metasploit, netexec, ad-enum, kerberos, adcs, sliver, lateral-discovery, c2-exfil, network-exploit | tool-driving con juicio / el RAG hace el trabajo pesado |
 | `claude-opus-4-8` | web-exploit, post-exploit, ai-security, reporting | razonamiento ofensivo profundo + informe |
 
 > El inventario completo y siempre al día (modelo por agente) vive en `ARCHITECTURE_MAP.md`

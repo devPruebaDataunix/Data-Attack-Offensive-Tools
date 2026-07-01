@@ -54,7 +54,7 @@ class A2APanel(Vertical):
 
 
 class RosterPanel(Vertical):
-    """Catálogo de los 18 agentes (+orquestador) desde agent-cards.json."""
+    """Catálogo de los 21 agentes (+orquestador) desde agent-cards.json."""
 
     def compose(self) -> ComposeResult:
         yield Static("", id="roster-hdr")

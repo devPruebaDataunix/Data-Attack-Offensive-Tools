@@ -13,23 +13,23 @@ verificado; queda **un solo paso manual** (tu login, que no puedo hacer por ti).
 | Pieza | Estado | Verificación |
 | :--- | :--- | :--- |
 | **Plugin** (`plugin/`) | manifest en `plugin.json` (VS Code) **y** `.claude-plugin/plugin.json` (Claude) | `claude plugin validate ./plugin` → **✔ passed** |
-| **Agents** | 18 especialistas: 11 de fase + 7 de herramienta (metasploit, recon-suite, nuclei, web-fuzzing, sqlmap, netexec, sliver) | auto-descubiertos |
+| **Agents** | 21 especialistas: 11 de fase + 10 de herramienta (metasploit, recon-suite, nuclei, web-fuzzing, sqlmap, netexec, sliver, ad-enum, kerberos, adcs) | auto-descubiertos |
 | **Skills** | `rag-vuln-triage`, `pentest-report` (`SKILL.md`, Open Standard) | name+description ✔ |
 | **Hooks** | gate de alcance `PreToolUse` (envoltorio `{"hooks":{…}}`) | ✔ |
 | **MCP Servers** | vacío en el plugin (eip no auto-arranca); eip opt-in en `.mcp.json.example` | ✔ |
 | **Instructions** | `AGENTS.md` (VS Code lo reconoce) | ✔ |
 | **Registro** | `chat.pluginLocations` → `plugin/` | `.vscode/settings.json` |
-| **Modelos** | 6 haiku · 8 sonnet · 4 opus-4-8 (sin fable; tier de coste v1.4.0) | tuneado para Pro |
+| **Modelos** | 6 haiku · 11 sonnet · 4 opus-4-8 (sin fable; tier de coste v1.4.0) | tuneado para Pro |
 | **RAG** | store poblado: KEV + CVSS/SSVC (CVE 5.0) + EPSS + **ExploitDB + módulos Metasploit + plantillas Nuclei** | `python rag/refresh.py --epss-all` |
 | **Alcance** | `contracts/scope.json` armado (placeholder de **laboratorio**) | gate fail-closed |
-| **QA** | `python tools/validate_suite.py` | **106 checks OK, 0 fallos** |
+| **QA** | `python tools/validate_suite.py` | **463 checks OK, 0 fallos** |
 
 ## El único paso manual que queda (es tuyo)
 A VS Code solo puedo hacerle clic, no escribir; y tu login es tuyo:
 1. Ventana **cyberseg-agents** → `Ctrl+Shift+P` → **Reload Window** (carga el plugin).
 2. Ventana de **Agents** → **Session Type → Claude** (no Copilot CLI).
 3. Login con **Pro** si lo pide.
-4. `/agents` → deben salir los 18. Prueba:
+4. `/agents` → deben salir los 21. Prueba:
    `Actúa como Orquestador. Lee contracts/scope.json y usa vuln-triage para "Apache HTTP Server 2.4.49".`
 
 ## ⚠️ Antes de cada engagement real

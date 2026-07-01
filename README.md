@@ -6,7 +6,7 @@
 <h1 align="center">Data Attack — Offensive Tools</h1>
 
 <p align="center">
-  <b>Suite de 18 agentes especialistas para pentesting y bug bounty autorizado.</b><br>
+  <b>Suite de 21 agentes especialistas para pentesting y bug bounty autorizado.</b><br>
   Orquestación hub-and-spoke con bus A2A mediado sobre los subagentes nativos de Claude Code,
   con guardián de alcance determinista, doble RAG (vulnerabilidades + conocimiento ofensivo) y
   control remoto por Telegram.
@@ -33,7 +33,7 @@
 
 <!-- BADGES — capacidades -->
 <p align="center">
-  <img src="https://img.shields.io/badge/Agentes-18_especialistas-00D4FF?style=flat-square&labelColor=0D1117" alt="18 agentes">
+  <img src="https://img.shields.io/badge/Agentes-21_especialistas-00D4FF?style=flat-square&labelColor=0D1117" alt="21 agentes">
   <img src="https://img.shields.io/badge/Orquestaci%C3%B3n-Hub--and--Spoke_%2B_A2A-00D4FF?style=flat-square&labelColor=0D1117" alt="Hub-and-spoke + A2A">
   <img src="https://img.shields.io/badge/RAG_vulns-KEV%2BEPSS%2Brecientes-00D4FF?style=flat-square&labelColor=0D1117" alt="RAG vulnerabilidades">
   <img src="https://img.shields.io/badge/RAG_t%C3%A9cnicas-GTFOBins%2FATT%26CK%2BHackTricks-00D4FF?style=flat-square&labelColor=0D1117" alt="RAG de conocimiento">
@@ -67,7 +67,7 @@
 - [Actualizar](#actualizar)
 - [Plataformas soportadas](#plataformas-soportadas)
 - [Instalación rápida (Claude Code)](#instalación-rápida-claude-code)
-- [Los 18 agentes](#los-18-agentes)
+- [Los 21 agentes](#los-21-agentes)
 - [Bot de Telegram](#bot-de-telegram)
 - [Los dos RAG locales](#los-dos-rag-locales)
 - [Flujo engagement-driven](#flujo-engagement-driven)
@@ -81,7 +81,7 @@
 
 ## Qué es Data Attack
 
-Data Attack es una suite de **18 agentes especialistas** (de fase y de herramienta), un **orquestador**, un
+Data Attack es una suite de **21 agentes especialistas** (de fase y de herramienta), un **orquestador**, un
 **guardián de alcance** (hook determinista), **dos RAG locales** (vulnerabilidades KEV+EPSS+CVE recientes y
 conocimiento de técnicas ofensivas) y un **bot de Telegram** para conducir todo desde el móvil. Cubre las fases de un engagement
 ofensivo —recon, análisis, explotación y cierre— sobre el sistema nativo de **subagentes de
@@ -101,7 +101,7 @@ hops anti-bucle).
 | | Capacidad | Qué aporta |
 | :---: | :--- | :--- |
 | 🧭 | **Hub-and-spoke + bus A2A** | Un orquestador delega por fases y enruta; los agentes se dirigen mensajes A2A entre sí por el blackboard (mediado, auditado y con techo de hops), sin malla directa. |
-| 🤖 | **18 agentes especialistas** | Recon, triage, explotación web/red/AD, C2 simulado, red team de IA/LLM, informe y postmortem. |
+| 🤖 | **21 agentes especialistas** | Recon, triage, explotación web/red/AD (Kerberos, AD CS, BloodHound), C2 simulado, red team de IA/LLM, informe y postmortem. |
 | 📚 | **RAG de vulnerabilidades** | `vuln-triage` prioriza por lo que de verdad se explota (CISA KEV, EPSS, exploit público) **y se mantiene fresco con CVE recién publicados** (CVEDetector + MITRE cvelistV5), sin reentrenar el modelo. |
 | 🧠 | **RAG de conocimiento** | Catálogo local de **técnicas** ofensivas (GTFOBins/LOLBAS/Atomic/ATT&CK + HackTricks/PEASS semánticos) que los agentes de explotación consultan para el *cómo* (privesc, payloads, cadenas); skill `rag-technique-lookup`. |
 | 🛡️ | **Guardián de alcance** | `scope_guard.py` bloquea de forma determinista cualquier acción fuera de `scope.json`. |
@@ -137,8 +137,8 @@ flowchart TB
     subgraph E1["🟦 E1 · Recon (3)"]
         R["osint-recon · active-recon · recon-suite"]
     end
-    subgraph E2["🟥 E2 · Explotación (13)"]
-        X["vuln-triage · nuclei · web-exploit · web-fuzzing · sqlmap<br/>network-exploit · metasploit · netexec<br/>post-exploit · lateral-discovery · sliver · c2-exfil · ai-security"]
+    subgraph E2["🟥 E2 · Explotación (16)"]
+        X["vuln-triage · nuclei · web-exploit · web-fuzzing · sqlmap<br/>network-exploit · metasploit · netexec · ad-enum · kerberos · adcs<br/>post-exploit · lateral-discovery · sliver · c2-exfil · ai-security"]
     end
     subgraph E3["🟩 E3 · Cierre (2)"]
         C["reporting · knowledge-postmortem"]
@@ -308,7 +308,7 @@ copy contracts\scope.example.json contracts\scope.json
 #    revisa .claude/settings.json -> hooks.PreToolUse
 ```
 
-## Los 18 agentes
+## Los 21 agentes
 
 Repartidos por zona de aislamiento. Cada agente trae su modelo, sus tools y su permiso ya
 fijados; el orquestador decide a quién llamar en cada fase.
@@ -325,7 +325,7 @@ fijados; el orquestador decide a quién llamar en cada fase.
 </details>
 
 <details>
-<summary><b>🟥 Zona E2 · Explotación (13)</b></summary>
+<summary><b>🟥 Zona E2 · Explotación (16)</b></summary>
 
 | Agente | Modelo | Función |
 | :--- | :--- | :--- |
@@ -339,6 +339,9 @@ fijados; el orquestador decide a quién llamar en cada fase.
 | **lateral-discovery** | sonnet-4-6 | Descubrimiento interno y movimiento lateral desde un punto de apoyo. |
 | **metasploit** | sonnet-4-6 | Operador senior de Metasploit Framework. |
 | **netexec** | sonnet-4-6 | NetExec (nxc) + Impacket para entornos Windows/AD. |
+| **ad-enum** | sonnet-4-6 | Recon interno de AD con BloodHound CE: rutas de ataque a Domain Admin (ROE). |
+| **kerberos** | sonnet-4-6 | Kerberoasting / AS-REP / abuso de delegaciones en Active Directory (ROE). |
+| **adcs** | sonnet-4-6 | AD Certificate Services: ESC1-ESC16 con Certipy (ROE). |
 | **sliver** | sonnet-4-6 | Operador de Sliver C2 (open source) para post-explotación. |
 | **c2-exfil** | sonnet-4-6 | Simulación controlada de C2, exfiltración e impacto. |
 | **ai-security** | opus-4-8 | Red teaming de aplicaciones con IA/LLM (OWASP LLM Top 10). |
@@ -489,7 +492,7 @@ Chuleta de todo lo ejecutable, por categoría. Salvo que se indique otra cosa, l
 | :--- | :--- |
 | `cd bot && ./.venv/bin/python bot.py` | Arranca el **bot de Telegram** (control remoto). |
 | `./deploy/dash.sh` | **Panel TUI de control total** (pestañas: A2A, agentes, presupuesto, RAG, evidencia, acciones). |
-| `claude` → `/agents` | Abre la **CLI de Claude Code** y lista los 18 agentes. |
+| `claude` → `/agents` | Abre la **CLI de Claude Code** y lista los 21 agentes. |
 
 ### 💰 Coste (agentsview · local)
 | Comando | Qué hace |
@@ -532,7 +535,7 @@ Chuleta de todo lo ejecutable, por categoría. Salvo que se indique otra cosa, l
 | Comando | Qué hace |
 | :--- | :--- |
 | `python tools/validate_suite.py` | Valida hooks, esquemas, agentes y la topología A2A. |
-| `python tools/verify_opencode.py` | Verifica el espejo opencode (config + 18 agentes + cruce routing↔provider). |
+| `python tools/verify_opencode.py` | Verifica el espejo opencode (config + 21 agentes + cruce routing↔provider). |
 | `python tools/sync_opencode.py` | Regenera el espejo `.opencode/agent/*.md` desde `.claude/agents/`. |
 | `python tools/build_plugin.py` | Empaqueta el plugin de Claude Code (carpeta `plugin/`). |
 | `python tools/build_agent_cards.py` | Regenera `contracts/agent-cards.json` (parejas A2A). |
@@ -557,7 +560,7 @@ cyberseg-agents/
 ├── bot/            → bot de Telegram (Claude Agent SDK) + clasificador de riesgo
 ├── deploy/         → auto-deploy y verificación del toolchain en Kali (+ Docker: Dockerfile/compose)
 ├── dryrun/         → prueba end-to-end segura (sin atacar)
-├── .claude/        → settings, hooks (alcance, presupuesto, supervisión, blackboard, secretos, A2A, auditoría de subagentes) y los 18 subagentes
+├── .claude/        → settings, hooks (alcance, presupuesto, supervisión, blackboard, secretos, A2A, auditoría de subagentes) y los 21 subagentes
 └── .opencode/      → espejo de los agentes para opencode
 ```
 

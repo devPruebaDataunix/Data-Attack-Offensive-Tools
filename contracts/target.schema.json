@@ -9,7 +9,7 @@
     "asset": { "type": "string", "description": "host, dominio, IP o URL" },
     "asset_type": { "type": "string", "enum": ["domain", "subdomain", "ip", "url", "service"] },
     "in_scope": { "type": "boolean", "description": "Verificado contra scope.json" },
-    "discovered_by": { "type": "string", "enum": ["osint-recon", "active-recon", "lateral-discovery", "netexec"] },
+    "discovered_by": { "type": "string", "enum": ["osint-recon", "active-recon", "lateral-discovery", "netexec", "ad-enum"] },
     "reachable_via": { "type": "string", "description": "'direct' si el host es alcanzable desde el operador; o un pivot_id (FK a pivots[].pivot_id) si solo se alcanza a través de un host comprometido. Lo fija lateral-discovery al descubrir hosts internos. Por defecto 'direct'." },
     "access_level": { "type": "string", "enum": ["none", "user", "root", "admin", "system", "domain-admin"], "description": "Nivel de acceso obtenido en este host (estado de la cadena multi-host). Por defecto 'none'." },
     "defenses": {

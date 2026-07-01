@@ -39,12 +39,13 @@ TIERS: dict[str, list[str]] = {
         "sqlmap", "commix", "dalfox", "hydra", "medusa", "patator", "ncrack",
         "ldapsearch", "kerbrute", "enum4linux", "certipy", "getuserspns",
         "getnpusers", "smbmap", "john", "hashcat", "bloodhound",
+        "sharphound", "azurehound", "gettgt", "getst", "finddelegation",
     ],
     "destructive": [
         "msfconsole", "msfcli", "metasploit", "meterpreter", "netexec", "nxc",
         "crackmapexec", "cme", "secretsdump", "mimikatz", "psexec", "wmiexec",
         "smbexec", "atexec", "dcomexec", "evil-winrm", "responder", "ntlmrelayx",
-        "lsassy", "nanodump",
+        "lsassy", "nanodump", "rubeus", "coercer", "petitpotam",
     ],
     "critical": [
         "sliver", "cobaltstrike", "cobalt", "havoc", "mythic", "empire",
