@@ -62,14 +62,16 @@ class RosterPanel(Vertical):
 
     def on_mount(self) -> None:
         self.query_one("#roster-table", DataTable).add_columns(
-            "agente", "fase", "modelo", "peers", "descripción")
+            "agente", "fase", "modelo (bot)", "modelo lab", "peers", "descripción")
 
     def refresh_from(self, snap: S.Snapshot) -> None:
         self.query_one("#roster-hdr", Static).update(
-            f"[b #00D4FF]Roster[/] — {len(snap.cards)} cards (incl. orquestador)")
+            f"[b #00D4FF]Roster[/] — {len(snap.cards)} cards (incl. orquestador)\n"
+            "[#6E7681]modelo (bot) = Anthropic real · modelo lab = perfil NVIDIA del espejo opencode "
+            "(LAB-ONLY, el bot NO lo usa; '—' = solo Anthropic)[/]")
         t = self.query_one("#roster-table", DataTable)
         t.clear()
-        for row in S.roster_rows(snap.cards):
+        for row in S.roster_rows(snap.cards, snap.lab_routes):
             t.add_row(*row)
 
 

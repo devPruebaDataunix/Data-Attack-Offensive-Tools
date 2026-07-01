@@ -4,6 +4,21 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.14.0] - 2026-07-01
+### Added
+- **TUI v2 · Fase B (panel Agentes) — 2ª columna «modelo lab» + orden por fase.** El Roster (pestaña
+  Agentes) muestra ahora DOS columnas de modelo: **modelo (bot)** = el modelo Anthropic REAL con que corre
+  cada agente, y **modelo lab** = el modelo free de NVIDIA del perfil `tools/routing.nvidia-lab.json` (espejo
+  opencode, LAB-ONLY) con que ese agente correría, o «—» si no se enruta ahí (el bot es **100% Anthropic**).
+  Aclara de un vistazo qué es Anthropic y qué es el lab (el orquestador y `knowledge-postmortem` salen «—»).
+  Además el roster se **ordena por fase** (orquestador primero, luego recon→…→informe, alfabético dentro);
+  antes salían mezclados alfabéticamente.
+### Notes
+- Todo en `state.py` (lógica PURA): `load_lab_routes` + `roster_rows` con la columna lab + `_roster_sort_key`;
+  `Snapshot.lab_routes` lo carga el lector único. `panels.py` añade la columna y una leyenda que aclara el
+  significado (responde a la duda «¿qué agentes usan NVIDIA?»: ninguno en el bot; el perfil lab es opencode).
+  validate_suite **464/0/0**, test_tui **43/43** (+2). El render se valida en Kali con captura.
+
 ## [2.13.0] - 2026-07-01
 ### Added
 - **TUI v2 · Fase A.3 — paleta de comandos de dominio en español (Ctrl+P).** Nueva `bot/tui/commands.py`

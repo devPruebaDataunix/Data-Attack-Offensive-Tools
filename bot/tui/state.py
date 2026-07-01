@@ -72,6 +72,18 @@ def load_cards(repo: Path) -> list[dict]:
     return cards if isinstance(cards, list) else []
 
 
+def load_lab_routes(repo: Path) -> dict:
+    """Mapa {agente: modelo_lab_corto} del perfil NVIDIA LAB (tools/routing.nvidia-lab.json), para la
+    2ª columna del Roster. LAB-ONLY: es el espejo opencode que el bot NO usa (el bot es 100% Anthropic);
+    solo sirve para ver con qué modelo free de NVIDIA correría cada agente. `{}` si el fichero no existe.
+    El modelo corto = último segmento de la ruta 'nvidia/<vendor>/<modelo>'."""
+    data = read_json(Path(repo) / "tools" / "routing.nvidia-lab.json") or {}
+    routes = data.get("routes", {})
+    if not isinstance(routes, dict):
+        return {}
+    return {name: str(route).rsplit("/", 1)[-1] for name, route in routes.items() if route}
+
+
 def action_count(repo: Path) -> tuple[int, str]:
     """(count, key) del contador de acciones Bash. (0, '') si no existe/corrupto."""
     data = read_json(Path(repo) / "contracts" / ".action_count") or {}
@@ -166,17 +178,32 @@ def pending_message_ids(eng: dict) -> list[str]:
 
 
 # ── Roster de agentes ────────────────────────────────────────────────────────────
-def roster_rows(cards: list[dict]) -> list[tuple]:
-    """Filas para la tabla del roster: (name, phase, model, #peers, descripción)."""
+def _roster_sort_key(card: dict) -> tuple:
+    """Orden del Roster: el orquestador PRIMERO, luego por fase del engagement, y alfabético
+    dentro de cada fase (antes salían mezclados alfabéticamente)."""
+    phase = card.get("phase", "")
+    if phase == "orchestrator":
+        rank = -1
+    elif phase in PHASES:
+        rank = PHASES.index(phase)
+    else:
+        rank = len(PHASES)   # fases fuera del catálogo, al final
+    return (rank, card.get("name", ""))
+
+
+def roster_rows(cards: list[dict], lab_routes: Optional[dict] = None) -> list[tuple]:
+    """Filas del roster: (name, fase, modelo bot, modelo lab, #peers, descripción), ordenadas por fase
+    (orquestador primero). `modelo lab` viene del perfil NVIDIA LAB (o '—' si el agente no se enruta ahí:
+    el bot es 100% Anthropic; el perfil lab es un espejo opencode que el bot NO usa)."""
+    lab_routes = lab_routes or {}
     rows = []
-    for c in cards:
-        if not isinstance(c, dict):
-            continue
+    for c in sorted((c for c in cards if isinstance(c, dict)), key=_roster_sort_key):
         model = (c.get("model") or "—").replace("claude-", "")
         rows.append((
             c.get("name", "?"),
             phase_es(c.get("phase")),   # i18n: misma etiqueta española que el resto de la UI
             model,
+            lab_routes.get(c.get("name", ""), "—"),   # 2ª col: modelo del perfil lab (NVIDIA) o '—'
             str(len(c.get("a2a_peers", []) or [])),
             _clip(c.get("description", ""), 60),
         ))
@@ -347,6 +374,7 @@ class Snapshot:
     cap: int = DEFAULT_MAX_ACTIONS
     cost: Optional[float] = None
     approval_mode: str = "critical"
+    lab_routes: dict = field(default_factory=dict)
 
 
 def resolve_approval_mode(scope: Optional[dict], override: Optional[str] = None) -> str:
@@ -372,4 +400,5 @@ def build_snapshot(repo, cost: Optional[float] = None, approval_mode: Optional[s
         cap=max_actions(scope),
         cost=cost,
         approval_mode=resolve_approval_mode(scope, approval_mode),
+        lab_routes=load_lab_routes(repo),
     )

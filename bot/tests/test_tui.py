@@ -88,10 +88,33 @@ def test_message_detail():
 def test_roster_rows():
     cards = [{"name": "sqlmap", "phase": "exploitation", "model": "claude-sonnet-4-6",
               "a2a_peers": ["web-exploit"], "description": "SQLi"}]
-    rows = S.roster_rows(cards)
-    assert rows[0][0] == "sqlmap" and rows[0][2] == "sonnet-4-6" and rows[0][3] == "1"
+    rows = S.roster_rows(cards, {"sqlmap": "gpt-oss-120b"})
+    assert rows[0][0] == "sqlmap" and rows[0][2] == "sonnet-4-6"
     assert rows[0][1] == "explotación"   # i18n: la fase del Roster también en español
+    assert rows[0][3] == "gpt-oss-120b"  # 2ª col: modelo del perfil lab (NVIDIA)
+    assert rows[0][4] == "1"             # #peers, desplazado por la columna lab
+    assert S.roster_rows(cards)[0][3] == "—"   # sin ruta lab -> '—' (el bot es 100% Anthropic)
     assert S.agent_names(cards) == ["sqlmap"]
+
+
+def test_roster_rows_order_orchestrator_first_then_phase():
+    cards = [{"name": "sqlmap", "phase": "exploitation"},
+             {"name": "orchestrator", "phase": "orchestrator"},
+             {"name": "osint-recon", "phase": "recon"}]
+    order = [r[0] for r in S.roster_rows(cards)]
+    assert order == ["orchestrator", "osint-recon", "sqlmap"]   # orquestador, luego por fase
+
+
+def test_load_lab_routes():
+    d = tempfile.mkdtemp()
+    os.makedirs(os.path.join(d, "tools"))
+    with open(os.path.join(d, "tools", "routing.nvidia-lab.json"), "w", encoding="utf-8") as f:
+        json.dump({"routes": {"sqlmap": "nvidia/openai/gpt-oss-120b",
+                              "osint-recon": "nvidia/meta/llama-3.3-70b-instruct"}}, f)
+    routes = S.load_lab_routes(Path(d))
+    assert routes["sqlmap"] == "gpt-oss-120b"                  # último segmento de la ruta
+    assert routes["osint-recon"] == "llama-3.3-70b-instruct"
+    assert S.load_lab_routes(Path(tempfile.mkdtemp())) == {}   # sin fichero -> {}
 
 
 def test_budget_render():
