@@ -42,6 +42,7 @@ from intel.runner import AgentRunner, SDK_OK  # noqa: E402
 from . import actions as A                 # noqa: E402
 from . import panels as P                  # noqa: E402
 from . import state as S                   # noqa: E402
+from .commands import DataAttackCommands   # noqa: E402  (paleta de dominio en español)
 
 PY = sys.executable or "python3"
 
@@ -108,6 +109,9 @@ class DataAttackTUI(App[None]):
     # Footer: "Ctrl+P" en vez de "^p" para la paleta de comandos (atributo de Textual ≥ reciente;
     # si la versión no lo soporta, se ignora sin error — se confirma visualmente en Kali).
     COMMAND_PALETTE_DISPLAY = "Ctrl+P"
+    # Paleta (Ctrl+P): SOLO los comandos de DOMINIO en español (reemplaza los genéricos ingleses de
+    # Textual: Keys/Quit/Theme/…). Definidos en bot/tui/commands.py; los ejecuta run_palette_command.
+    COMMANDS = {DataAttackCommands}
 
     _running = False
 
@@ -187,6 +191,28 @@ class DataAttackTUI(App[None]):
 
     def action_abort(self) -> None:
         self._abort_order()
+
+    def run_palette_command(self, key: str) -> None:
+        """Despacha un comando de la paleta (bot/tui/commands.py) a su acción. Son ATAJOS a acciones
+        que ya existen; NO saltan ninguna puerta (scope/budget/aprobación siguen igual)."""
+        if key.startswith("tab:"):
+            self.query_one(TabbedContent).active = key.split(":", 1)[1]
+        elif key == "refresh":
+            self.action_refresh()
+        elif key == "focus-cmd":
+            self.query_one("#cmd", Input).focus()
+        elif key == "abort":
+            self._abort_order()
+        elif key == "rag-refresh":
+            self._run_rag_refresh(False)
+        elif key == "rag-refresh-epss":
+            self._run_rag_refresh(True)
+        elif key.startswith("approval:"):
+            self._do_action(A.set_env_var(REPO_DIR, "ORCH_APPROVAL_MODE", key.split(":", 1)[1]))
+        elif key == "quit":
+            self.exit()
+        else:
+            self._log(f"[#FF6B35]Comando de paleta desconocido: {key}[/]")
 
     def _log(self, msg: str) -> None:
         self.query_one("#log", RichLog).write(msg)

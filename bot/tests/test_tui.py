@@ -18,6 +18,7 @@ sys.path.insert(0, BOT)
 
 import tui.state as S          # noqa: E402
 import tui.actions as A        # noqa: E402
+import tui.commands as CMD     # noqa: E402  (catálogo puro; el Provider Textual es opcional)
 
 
 def _tmp_engagement(messages=None, phase="recon"):
@@ -207,6 +208,29 @@ def test_compose_delegation_and_peers():
 def test_rag_refresh_cmd():
     assert A.rag_refresh_cmd()[-1].endswith("refresh.py")
     assert "--epss-all" in A.rag_refresh_cmd(epss_all=True)
+
+
+# ── commands: catálogo de la paleta de dominio (Ctrl+P) ──────────────────────────
+def test_command_specs_cover_tabs_and_approval():
+    specs = CMD.command_specs()
+    keys = [s.key for s in specs]
+    assert len(keys) == len(set(keys))                       # claves únicas
+    for tab_id, label in CMD.TABS:                           # navegación a cada pestaña
+        assert f"tab:{tab_id}" in keys
+        assert any(s.title == f"Ir a: {label}" for s in specs)
+    for mode in A.APPROVAL_MODES:                            # un comando por modo de supervisión
+        assert f"approval:{mode}" in keys
+    for k in ("refresh", "abort", "rag-refresh", "rag-refresh-epss", "focus-cmd", "quit"):
+        assert k in keys                                     # atajos de dominio presentes
+
+
+def test_command_specs_are_spanish_and_described():
+    specs = CMD.command_specs()
+    for s in specs:
+        assert s.title.strip() and s.help.strip()            # nada vacío
+    joined = " ".join((s.title + " " + s.help).lower() for s in specs)
+    for english in ("quit", "theme", "search", "keys", "screenshot", "maximize", "palette"):
+        assert english not in joined                         # sin los genéricos ingleses (título + ayuda)
 
 
 # ── runner: ganchos aditivos (sin SDK) ───────────────────────────────────────────

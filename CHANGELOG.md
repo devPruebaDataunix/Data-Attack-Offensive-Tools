@@ -4,6 +4,20 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.13.0] - 2026-07-01
+### Added
+- **TUI v2 · Fase A.3 — paleta de comandos de dominio en español (Ctrl+P).** Nueva `bot/tui/commands.py`
+  (`CommandProvider` de Textual) que **reemplaza** la paleta por defecto (genérica y en inglés:
+  Keys/Quit/Theme/Screenshot…) por **16 comandos de dominio en español**: ir a cada una de las 7 pestañas,
+  refrescar estado, escribir una orden al Orquestador, kill-switch, refrescar el RAG (normal / recalcular
+  EPSS), fijar la supervisión (`full`/`critical`/`auto`) y salir. Son **atajos** a acciones que ya existen:
+  **no relajan ninguna puerta** (scope/budget/aprobación siguen igual).
+### Notes
+- El catálogo (`command_specs`) es lógica PURA y testeada; el envoltorio Textual (`Provider`/`search`/
+  `discover`) se importa de forma OPCIONAL para que el catálogo siga siendo testeable en el Windows de
+  desarrollo (sin Textual). Cableado en `app.py`: `COMMANDS = {DataAttackCommands}` + `run_palette_command`.
+- validate_suite **464/0/0**, test_tui **41/41** (+2). El render de la paleta se valida en Kali con captura.
+
 ## [2.12.2] - 2026-07-01
 ### Added
 - **Perfil NVIDIA LAB — clúster de AD.** `tools/routing.nvidia-lab.json` enruta ahora también
