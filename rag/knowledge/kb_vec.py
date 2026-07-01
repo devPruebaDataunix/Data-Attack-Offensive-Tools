@@ -3,7 +3,7 @@
 kb_vec.py — Almacén VECTORIAL del RAG de conocimiento (Capa 2, semántica), sobre SQLite + sqlite-vec.
 
 Mientras la Capa 1 (kb.py / kb.db) es un catálogo ESTRUCTURADO y determinista (el comando concreto),
-la Capa 2 indexa PROSA larga (HackTricks, PayloadsAllTheThings, PEASS, feeds de intel) por SIGNIFICADO:
+la Capa 2 indexa PROSA larga (HackTricks, PayloadsAllTheThings, PEASS, cyber-skills, feeds de intel) por SIGNIFICADO:
 trozos de texto + su embedding, con KNN por similitud. Responde el "CÓMO razonar/metodología".
 
 Diseño coherente con el resto del RAG: un fichero SQLite (`kb_vec.db`, gitignored, se reconstruye con
@@ -21,7 +21,7 @@ DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "kb_vec.db")
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS chunks (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    source     TEXT NOT NULL,     -- hacktricks / payloads / peass / 0dayfans / hackernews
+    source     TEXT NOT NULL,     -- hacktricks / payloads / peass / cyber-skills / 0dayfans / hackernews
     platform   TEXT,              -- linux / windows / multi / web / '' (heurística)
     doc        TEXT,              -- ruta del fichero o id del feed
     title      TEXT,              -- título del documento

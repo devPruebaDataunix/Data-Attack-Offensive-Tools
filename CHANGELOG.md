@@ -4,6 +4,30 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.12.0] - 2026-07-01
+### Added
+- **Biblioteca de skills de ciberseguridad en el RAG de conocimiento (Capa 2).** `refresh_kb.py --semantic`
+  ingiere ahora **817 skills** de [`mukul975/Anthropic-Cybersecurity-Skills`](https://github.com/mukul975/Anthropic-Cybersecurity-Skills)
+  (MITRE-mapeadas, con avisos de autorización/ROE en su prosa, **Apache-2.0**) como nueva fuente de corpus
+  `cyber-skills` —corpus PASIVO: no gatea la recuperación; el gate real sigue en scope_guard/approval—, junto a
+  HackTricks/PayloadsAllTheThings/PEASS. Amplía el *cómo* que consultan los 21 agentes vía
+  `query_kb.py --semantic` (AD/ADCS/Kerberos, evasión/C2, cloud/K8s, acceso inicial, LLM red team…),
+  **sin reentrenar** ningún modelo.
+### Changed
+- **`ingest_corpus.py` acepta `--glob`/`--branch` por fuente** y la tabla `CORPUS` de `refresh_kb.py` pasa a
+  spec (`url`/`slug` obligatorios + `glob`/`branch` opcionales): la nueva fuente indexa **solo los `SKILL.md`**
+  (no las `references/*.md`) desde la rama `main`. Las 3 fuentes previas no cambian (retrocompatible).
+- **Coherencia de docs** (verificación de obsolescencia): README (×3), `rag/knowledge/README.md`,
+  `docs/references.md` (atribución Apache-2.0), la skill `rag-technique-lookup`, `deploy/auto-deploy.sh` y
+  las cadenas de `query_kb.py`/`kb_vec.py`/`ingest_corpus.py`. ARCHITECTURE_MAP.md regenerado.
+### Notes
+- El corpus **NO se versiona en el repo** (solo se referencia la fuente para clonarla en el poblado; LAB-ONLY,
+  `kb_vec.db` gitignored). Smoke-test local de la ruta completa (glob→chunk→embed→store→recuperación KNN)
+  verde: 5 `SKILL.md` → 96 trozos, recuperación semántica score 0.75. El **poblado real** (venv
+  `rag/knowledge/.venv` + `bge-small`) se corre en Kali con `refresh_kb.py --semantic`.
+- **validate_suite 463/0/0**, verify_opencode 28/0, test_intel 28/28, test_tui 39/39. Plugin/agent-cards/
+  opencode/arch-map regenerados con la nueva versión.
+
 ## [2.11.0] - 2026-07-01
 ### Added
 - **Capacidad de Active Directory — 3 agentes nuevos (ROE-gated).** La suite pasa de 18 a **21

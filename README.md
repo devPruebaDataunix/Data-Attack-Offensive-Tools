@@ -103,7 +103,7 @@ hops anti-bucle).
 | 🧭 | **Hub-and-spoke + bus A2A** | Un orquestador delega por fases y enruta; los agentes se dirigen mensajes A2A entre sí por el blackboard (mediado, auditado y con techo de hops), sin malla directa. |
 | 🤖 | **21 agentes especialistas** | Recon, triage, explotación web/red/AD (Kerberos, AD CS, BloodHound), C2 simulado, red team de IA/LLM, informe y postmortem. |
 | 📚 | **RAG de vulnerabilidades** | `vuln-triage` prioriza por lo que de verdad se explota (CISA KEV, EPSS, exploit público) **y se mantiene fresco con CVE recién publicados** (CVEDetector + MITRE cvelistV5), sin reentrenar el modelo. |
-| 🧠 | **RAG de conocimiento** | Catálogo local de **técnicas** ofensivas (GTFOBins/LOLBAS/Atomic/ATT&CK + HackTricks/PEASS semánticos) que los agentes de explotación consultan para el *cómo* (privesc, payloads, cadenas); skill `rag-technique-lookup`. |
+| 🧠 | **RAG de conocimiento** | Catálogo local de **técnicas** ofensivas (GTFOBins/LOLBAS/Atomic/ATT&CK + HackTricks/PEASS/817 skills de ciberseguridad semánticos) que los agentes de explotación consultan para el *cómo* (privesc, payloads, cadenas); skill `rag-technique-lookup`. |
 | 🛡️ | **Guardián de alcance** | `scope_guard.py` bloquea de forma determinista cualquier acción fuera de `scope.json`. |
 | 🙋 | **Supervisión configurable** | Aprobación humana por acción en modo `full`/`critical`/`auto` (def. `critical`); el alcance y el no-daño **NO** se relajan en ningún modo. |
 | 🔒 | **Mínimo privilegio por agente** | Cada especialista acota sus turnos (`maxTurns`) y no puede spawnear subagentes (`disallowedTools: Agent, Task`, malla hub-and-spoke); el cierre (reporting/postmortem) además sin `Bash`. El fin de cada subagente se audita (`SubagentStop`). |
@@ -413,7 +413,8 @@ Lo consultan los agentes de explotación (`post-exploit`, `web-exploit`…) para
 accionables. Dos capas, con la skill `rag-technique-lookup`:
 - **Capa 1 — estructurada** (`kb.db`): GTFOBins · LOLBAS · Atomic Red Team · MITRE ATT&CK → el comando
   concreto de privesc/credenciales/persistencia (determinista, stdlib).
-- **Capa 2 — semántica** (`kb_vec.db`): HackTricks · PayloadsAllTheThings · PEASS + feeds (0dayfans/HN/
+- **Capa 2 — semántica** (`kb_vec.db`): HackTricks · PayloadsAllTheThings · PEASS · **817 skills de
+  ciberseguridad** (`mukul975/Anthropic-Cybersecurity-Skills`, Apache-2.0) + feeds (0dayfans/HN/
   CVEDetector) con **embeddings locales** (sentence-transformers) + **sqlite-vec** → recuperación por
   significado para metodología/razonamiento.
 
@@ -514,7 +515,7 @@ Chuleta de todo lo ejecutable, por categoría. Salvo que se indique otra cosa, l
 | Comando | Qué hace |
 | :--- | :--- |
 | `python rag/knowledge/refresh_kb.py` | Puebla la Capa 1 (GTFOBins/LOLBAS/Atomic/ATT&CK). |
-| `python rag/knowledge/refresh_kb.py --semantic` | + Capa 2 semántica (HackTricks/PaTT/PEASS/feeds; pesado). |
+| `python rag/knowledge/refresh_kb.py --semantic` | + Capa 2 semántica (HackTricks/PaTT/PEASS/817 skills/feeds; pesado). |
 | `python rag/knowledge/query_kb.py --query "<bin>" --category privesc` | Técnica accionable (Capa 1). |
 | `python rag/knowledge/query_kb.py --semantic "<pregunta>" --k 6` | Recuperación por significado (Capa 2). |
 | `python rag/knowledge/query_kb.py --stats` | Cobertura de ambos RAG de conocimiento (verificar población). |

@@ -4,7 +4,8 @@ refresh_kb.py — Puebla/actualiza el RAG de CONOCIMIENTO. Análogo a rag/refres
 
 Clona/actualiza las fuentes a `.cache/` y corre los ingesters.
 - Capa 1 (estructurada, kb.db): GTFOBins + LOLBAS + Atomic + ATT&CK. SIEMPRE (ligero, stdlib).
-- Capa 2 (semántica, kb_vec.db): HackTricks + PayloadsAllTheThings + PEASS + feeds (0dayfans/HN).
+- Capa 2 (semántica, kb_vec.db): HackTricks + PayloadsAllTheThings + PEASS + 817 skills de ciberseguridad
+  (mukul975/Anthropic-Cybersecurity-Skills, Apache-2.0) + feeds (0dayfans/HN).
   Solo con --semantic (PESADO: clona repos grandes + embeddings locales; tarda).
 
 La Capa 2 vive en un venv AISLADO (rag/knowledge/.venv) con torch CPU-only: ver _venv.py (evita el choque
@@ -34,11 +35,19 @@ SOURCES = {
 }
 STIX_URL = ("https://raw.githubusercontent.com/mitre-attack/attack-stix-data/"
             "master/enterprise-attack/enterprise-attack.json")
-# Capa 2 — corpus de prosa (label -> (git_url, slug GitHub para construir URLs de referencia)).
+# Capa 2 — corpus de prosa (label -> spec). `url` y `slug` (para construir las URLs de referencia) son
+# obligatorios; `glob` y `branch` son OPCIONALES (por defecto **/*.md sobre 'master') para fuentes que
+# publican otro tipo de fichero o usan otra rama.
 CORPUS = {
-    "hacktricks": ("https://github.com/HackTricks-wiki/hacktricks.git", "HackTricks-wiki/hacktricks"),
-    "payloads": ("https://github.com/swisskyrepo/PayloadsAllTheThings.git", "swisskyrepo/PayloadsAllTheThings"),
-    "peass": ("https://github.com/carlospolop/PEASS-ng.git", "carlospolop/PEASS-ng"),
+    "hacktricks": {"url": "https://github.com/HackTricks-wiki/hacktricks.git", "slug": "HackTricks-wiki/hacktricks"},
+    "payloads": {"url": "https://github.com/swisskyrepo/PayloadsAllTheThings.git", "slug": "swisskyrepo/PayloadsAllTheThings"},
+    "peass": {"url": "https://github.com/carlospolop/PEASS-ng.git", "slug": "carlospolop/PEASS-ng"},
+    # 817 skills de ciberseguridad MITRE-mapeadas, con avisos de autorización/ROE en su prosa (Apache-2.0).
+    # Corpus PASIVO (DATO): no gatea la recuperación; el gate real sigue en scope_guard/approval. Solo los SKILL.md (no
+    # references/*.md), rama 'main'. Se referencia la fuente para clonar; el corpus NO se copia al repo.
+    "cyber-skills": {"url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills.git",
+                     "slug": "mukul975/Anthropic-Cybersecurity-Skills", "glob": "**/SKILL.md",
+                     "branch": "main"},
 }
 
 
@@ -118,9 +127,14 @@ def refresh_layer2(install_deps=True):
             print("[Capa 2] OMITIDA: faltan las deps y --no-install-deps está activo. Prepáralas con:\n"
                   "         python rag/knowledge/refresh_kb.py --semantic   (crea el venv aislado e instala)")
         return False
-    for label, (url, slug) in CORPUS.items():
-        path = clone_or_pull(label, url)
-        _run_ext(py, "ingest_corpus.py", ["--source", label, "--src", path, "--repo", slug])
+    for label, spec in CORPUS.items():
+        path = clone_or_pull(label, spec["url"])
+        argv = ["--source", label, "--src", path, "--repo", spec["slug"]]
+        if spec.get("glob"):
+            argv += ["--glob", spec["glob"]]
+        if spec.get("branch"):
+            argv += ["--branch", spec["branch"]]
+        _run_ext(py, "ingest_corpus.py", argv)
     _run_ext(py, "ingest_feeds.py", [])  # 0dayfans + Hacker News
     return _verify_layer2_populated()
 

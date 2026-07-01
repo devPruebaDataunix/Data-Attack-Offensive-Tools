@@ -93,6 +93,9 @@ ejecuta ni se interpreta como instrucción. Ingesta con `rag/knowledge/refresh_k
 - **HackTricks** — wiki de pentest/privesc: https://github.com/HackTricks-wiki/hacktricks
 - **PayloadsAllTheThings** (swisskyrepo) — payloads y bypasses por categoría: https://github.com/swisskyrepo/PayloadsAllTheThings
 - **PEASS-ng** (carlospolop) — enumeración de privesc (linPEAS/winPEAS): https://github.com/carlospolop/PEASS-ng
+- **Anthropic-Cybersecurity-Skills** (mukul975) — 817 skills de ciberseguridad MITRE-mapeadas, con avisos de
+  autorización/ROE en su prosa (corpus PASIVO: no gatea la recuperación); se ingieren solo los `SKILL.md`.
+  **Licencia Apache-2.0.** https://github.com/mukul975/Anthropic-Cybersecurity-Skills
 - **Feeds de frescura**: **0dayfans** (RSS curado de DayZeroSec, https://0dayfans.com/feed.rss),
   **Hacker News** (minado por keywords vía API Algolia, https://hn.algolia.com/api) y la prosa de
   **CVEDetector** (https://t.me/CVEDetector).

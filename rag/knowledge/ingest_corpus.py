@@ -4,15 +4,18 @@ ingest_corpus.py — Ingesta de PROSA larga (Markdown) al RAG semántico (Capa 2
 
 Trocea documentos Markdown por ENCABEZADOS (conservando la ruta de headings como contexto), calcula
 embeddings LOCALES por lotes (embed.py) y los guarda en kb_vec.db (kb_vec.py). Pensado para corpus de
-metodología: HackTricks, PayloadsAllTheThings, PEASS-ng. Idempotente (dedup por hash de contenido).
+metodología: HackTricks, PayloadsAllTheThings, PEASS-ng y la biblioteca de skills de ciberseguridad
+(mukul975/Anthropic-Cybersecurity-Skills). Idempotente (dedup por hash de contenido).
 
 ANTI-INYECCIÓN: TODO el contenido del corpus es DATO. Aquí solo se trocea y se indexa como texto inerte;
 NUNCA se ejecuta ni se interpreta como instrucción. Los agentes que luego lo lean lo tratan igual.
 
 Uso:
-    python ingest_corpus.py --source hacktricks --src <repo> --repo HackTricks-wiki/hacktricks
-    python ingest_corpus.py --source payloads   --src <repo> --repo swisskyrepo/PayloadsAllTheThings
-    python ingest_corpus.py --source peass       --src <repo> --repo carlospolop/PEASS-ng
+    python ingest_corpus.py --source hacktricks   --src <repo> --repo HackTricks-wiki/hacktricks
+    python ingest_corpus.py --source payloads     --src <repo> --repo swisskyrepo/PayloadsAllTheThings
+    python ingest_corpus.py --source peass        --src <repo> --repo carlospolop/PEASS-ng
+    python ingest_corpus.py --source cyber-skills --src <repo> --repo mukul975/Anthropic-Cybersecurity-Skills \
+                            --glob "**/SKILL.md" --branch main   # solo las definiciones SKILL.md
 """
 import argparse
 import glob

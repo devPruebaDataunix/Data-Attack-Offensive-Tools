@@ -40,7 +40,7 @@ python rag/knowledge/refresh_kb.py
 ### Capa 2 — búsqueda SEMÁNTICA (metodología/prosa)
 Cuando NO sabes el binario/técnica exactos y necesitas **razonamiento/metodología** ("estoy en esta
 situación, ¿qué camino sigo?"), usa la búsqueda semántica sobre prosa (HackTricks, PayloadsAllTheThings,
-PEASS, feeds de intel). Recupera por SIGNIFICADO, no por palabra exacta:
+PEASS, 817 skills de ciberseguridad, feeds de intel). Recupera por SIGNIFICADO, no por palabra exacta:
 
 ```bash
 python rag/knowledge/query_kb.py --semantic "privesc cuando sudo permite tar" --k 6 --json

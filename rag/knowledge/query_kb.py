@@ -44,7 +44,7 @@ def score(row, terms):
 
 
 def semantic_query(args):
-    """Capa 2: recupera por SIGNIFICADO sobre kb_vec.db (prosa: HackTricks/PaTT/PEASS/feeds)."""
+    """Capa 2: recupera por SIGNIFICADO sobre kb_vec.db (prosa: HackTricks/PaTT/PEASS/cyber-skills/feeds)."""
     import _venv
     _venv.reexec_in_venv_if_available()  # si las deps viven en el venv del RAG, se re-ejecuta ahí
     try:
@@ -141,7 +141,7 @@ def main():
     ap.add_argument("--platform", default=None, help="linux/windows/multi")
     ap.add_argument("--category", default=None, help="privesc/execution/file-read/...")
     ap.add_argument("--mitre", default=None, help="ID MITRE, p.ej. T1548.001")
-    ap.add_argument("--source", default=None, help="gtfobins/attack/lolbas/... (Capa 1) o hacktricks/payloads/peass/0dayfans/hackernews (Capa 2)")
+    ap.add_argument("--source", default=None, help="gtfobins/attack/lolbas/... (Capa 1) o hacktricks/payloads/peass/cyber-skills/0dayfans/hackernews (Capa 2)")
     ap.add_argument("--limit", type=int, default=15)
     ap.add_argument("--semantic", default=None, help="consulta SEMÁNTICA en prosa (Capa 2, embeddings)")
     ap.add_argument("--k", type=int, default=8, help="nº de trozos a devolver en modo --semantic")

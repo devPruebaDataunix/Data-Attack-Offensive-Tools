@@ -226,7 +226,7 @@ except Exception: print(0)' 2>/dev/null || echo 0)"
     fi
   fi
 
-  # --- Capa 2 SEMÁNTICA (HackTricks · PayloadsAllTheThings · PEASS · feeds) — OPT-IN (--semantic-rag) ---
+  # --- Capa 2 SEMÁNTICA (HackTricks · PayloadsAllTheThings · PEASS · 817 cyber-skills · feeds) — OPT-IN (--semantic-rag) ---
   # Pesada: venv AISLADO del RAG (torch CPU-only) + embeddings locales de un corpus grande (TARDA bastante).
   # Las deps NO van al python3 del sistema (chocan con dpkg en Kali): viven en rag/knowledge/.venv; la
   # lógica está en rag/knowledge/_venv.py y los agentes consultan en runtime vía query_kb (se redirige solo).

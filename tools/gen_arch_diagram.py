@@ -174,7 +174,7 @@ def build_doc(agents):
     doc.append(f"- **Blackboard / contratos:** {', '.join(contracts) or '—'}.")
     doc.append(f"- **RAG de vulnerabilidades:** {', '.join(rag) or '—'} (KEV+EPSS+CVE recientes, alimenta a vuln-triage).")
     doc.append(f"- **RAG de conocimiento (técnicas):** {', '.join(rag_kb) or '—'} (Capa 1 estructurada "
-               f"GTFOBins/LOLBAS/Atomic/ATT&CK + Capa 2 semántica HackTricks/PaTT/PEASS/feeds; lo "
+               f"GTFOBins/LOLBAS/Atomic/ATT&CK + Capa 2 semántica HackTricks/PaTT/PEASS/817 cyber-skills/feeds; lo "
                f"consultan los agentes de explotación vía la skill `rag-technique-lookup`).")
     doc.append(f"- **Gobierno / coherencia:** `CONSTITUTION.md` (principios innegociables) · "
                f"`tools/analyze_engagement.py` (auditoría de coherencia, `/analyze` adaptado).")

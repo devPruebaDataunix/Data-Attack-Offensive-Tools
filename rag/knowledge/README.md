@@ -47,7 +47,7 @@ exactos: *"estoy en esta situación, ¿qué camino sigo?"*.
 | :-- | :-- |
 | `kb_vec.py` | store vectorial (sqlite-vec): tabla `chunks` + `vec_chunks` (KNN); dedup por hash |
 | `embed.py` | embeddings **locales** (sentence-transformers, def. `BAAI/bge-small-en-v1.5`, 384d, offline) |
-| `ingest_corpus.py` | trocea Markdown por encabezados y lo indexa: **HackTricks · PayloadsAllTheThings · PEASS** |
+| `ingest_corpus.py` | trocea Markdown por encabezados y lo indexa: **HackTricks · PayloadsAllTheThings · PEASS · 817 skills de ciberseguridad** (`mukul975/Anthropic-Cybersecurity-Skills`, solo los `SKILL.md`) |
 | `ingest_feeds.py` | intel actual: **0dayfans** (RSS) + **Hacker News** (API Algolia por keywords) |
 | `query_kb.py --semantic` | recuperación KNN para los agentes |
 
@@ -65,7 +65,7 @@ python rag/knowledge/refresh_kb.py --semantic         # Capa 1 + Capa 2 (crea el
 python rag/knowledge/refresh_kb.py --semantic-only    # solo Capa 2
 python rag/knowledge/refresh_kb.py --ensure-deps      # solo preparar el venv (no poblar)
 ```
-> **El primer poblado TARDA** (HackTricks ≈ 1.000 `.md` → decenas de miles de embeddings en CPU) y ahora
+> **El primer poblado TARDA** (HackTricks ≈ 1.000 `.md` + 817 `SKILL.md` → decenas de miles de embeddings en CPU) y ahora
 > imprime **progreso por lote** (`ficheros N/total · trozos · nuevos`). Es **incremental**: un `Ctrl+C` no
 > pierde lo ya hecho (al relanzar retoma por hash). Córrelo en `tmux`/`screen` si la sesión es remota.
 > Opcional: `export HF_TOKEN=...` evita el aviso de rate-limit al bajar el modelo de embeddings (1 vez).
@@ -77,6 +77,11 @@ python rag/knowledge/query_kb.py --semantic "kerberoasting y abuso de SPN" --pla
 ```
 
 > `kb_vec.db` está gitignored — se reconstruye con `refresh_kb.py --semantic`.
+
+> **Fuentes y licencias del corpus.** HackTricks · PayloadsAllTheThings · PEASS-ng y las **817 skills**
+> de `mukul975/Anthropic-Cybersecurity-Skills` (**Apache-2.0**) se **clonan** durante el poblado; el
+> corpus **NO** se versiona en este repo (solo se referencia la fuente para clonarla). Atribución
+> completa en [`docs/references.md`](../../docs/references.md).
 
 ## Verificar cobertura (`--stats`)
 ```bash
