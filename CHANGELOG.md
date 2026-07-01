@@ -4,6 +4,23 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.12.1] - 2026-07-01
+### Fixed
+- **Coherencia de docs — conteos que envejecieron tras v2.11.0 (18→21 agentes).** Verificación
+  exhaustiva de obsolescencia contra la config real (frontmatter de los agentes) y corrección de los
+  conteos de estado ACTUAL que habían quedado atrás:
+  - **README.md** — cobertura anti-inyección C11 "en 16 agentes" → **19** (los 3 agentes de AD añadieron
+    el bloque C11 en v2.11.0; total 19 = los 21 menos los 2 de cierre).
+  - **GUARDRAILS.md** — misma cifra C11 "en los 9 agentes" → **19** (mapa OWASP LLM01).
+  - **ARCHITECTURE.md** — "hoy 18" → **hoy 21**.
+  - **docs/config-audit.md** — "frontmatter de los 18 agentes" → **21**; "a2a solo en 11 agentes con
+    pareja" → **14** (los 7 sin pares se mantienen).
+  - **docs/assets/STYLE_GUIDE.md** — ejemplo "los 13 agentes de E2" → **16**.
+  Se **conservan** a propósito los conteos de artefactos DATADOS (CHANGELOG histórico y
+  `docs/agent-skill-audit.md`, informe de calidad de v2.1.0 con su narrativa "9 → 16"), y los conteos
+  de subconjunto correctos (perfil free "5 agentes mecánicos", perfil NVIDIA LAB "17 agentes"). Sin
+  cambios de código ni de comportamiento.
+
 ## [2.12.0] - 2026-07-01
 ### Added
 - **Biblioteca de skills de ciberseguridad en el RAG de conocimiento (Capa 2).** `refresh_kb.py --semantic`

@@ -1,6 +1,6 @@
 # Arquitectura — Cyberseg Agents
 
-## 1. Auditoría crítica del diseño original (los 11 agentes de entonces; hoy 18)
+## 1. Auditoría crítica del diseño original (los 11 agentes de entonces; hoy 21)
 
 Antes de construir se auditó si los 11 agentes podían "realizar su función y comunicarse
 entre ellos sin fisuras". Conclusión: la **taxonomía era correcta**, pero la **plomería

@@ -10,7 +10,7 @@ Confirmado contra la doc oficial de subagentes (campos de frontmatter soportados
 
 | Superficie | Estado |
 | :--- | :--- |
-| Frontmatter de los 18 agentes (`name`, `description`, `tools`, `model`, `permissionMode`, `effort`, `color`, `memory`) | **Válido** — todos los campos existen en la spec. |
+| Frontmatter de los 21 agentes (`name`, `description`, `tools`, `model`, `permissionMode`, `effort`, `color`, `memory`) | **Válido** — todos los campos existen en la spec. |
 | `model` por agente (IDs completos `claude-opus-4-8`/`-sonnet-4-6`/`-haiku-4-5`) | **Válido** (acepta IDs completos o alias). |
 | `settings.json` (`permissions`, `hooks`) | **Válido**; se añadió `$schema` y se quitaron las claves `$comment*` (los settings de proyecto son **estrictos**: un fichero que no valida se rechaza entero). |
 | Hooks (PreToolUse/PostToolUse + matchers) | **Válido**; rutas migradas a `${CLAUDE_PROJECT_DIR}` + `python3` (portabilidad). |
@@ -22,7 +22,7 @@ Confirmado contra la doc oficial de subagentes (campos de frontmatter soportados
 
 - **`effort` ausente en los 6 agentes Haiku**: los niveles de effort dependen del modelo; Haiku no
   los usa. Correcto.
-- **Bloque `a2a` solo en los 11 agentes con pareja**: los 7 sin pares pasan por el hub. Correcto.
+- **Bloque `a2a` solo en los 14 agentes con pareja**: los 7 sin pares pasan por el hub. Correcto.
 - **`memory: project` solo en `knowledge-postmortem`**: deliberado por **seguridad** — memoria
   persistente en más agentes filtraría datos entre clientes/engagements. NO se amplía.
 - **`permissionMode: default` explícito** en cada agente: válido (redundante pero explícito).

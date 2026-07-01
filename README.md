@@ -464,7 +464,7 @@ especificar antes de ejecutar, y auditar la coherencia antes de reportar.
 - **Secretos fuera del repo:** token y user-id en `bot/.env` (ignorado por git).
 - **Regla de evidencia:** sin fuente, no se explota; sin evidencia, no es un hallazgo.
 - **Gobierno por [CONSTITUTION.md](CONSTITUTION.md)** y auditoría de coherencia previa al informe.
-- **Capa de guardarraíles deterministas** (gate de alcance, validación del blackboard, anti-inyección en 16 agentes, detector de secretos, kill-switch de consumo, **validador del bus A2A** —emisor/destino conocidos + topología de pares + techo de hops—, **auditoría de subagentes**, **sanitización de la memoria de aprendizaje**, **anti-alboroto** y **anti-bucle**) mapeada a OWASP LLM Top 10 — ver [GUARDRAILS.md](GUARDRAILS.md).
+- **Capa de guardarraíles deterministas** (gate de alcance, validación del blackboard, anti-inyección en 19 agentes, detector de secretos, kill-switch de consumo, **validador del bus A2A** —emisor/destino conocidos + topología de pares + techo de hops—, **auditoría de subagentes**, **sanitización de la memoria de aprendizaje**, **anti-alboroto** y **anti-bucle**) mapeada a OWASP LLM Top 10 — ver [GUARDRAILS.md](GUARDRAILS.md).
 - **Historial de versiones** en [CHANGELOG.md](CHANGELOG.md) (SemVer) y en las [releases](https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases).
 
 ## Referencia de comandos

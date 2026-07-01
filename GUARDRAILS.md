@@ -116,7 +116,7 @@ la última columna.
 
 | Brecha | OWASP | Por qué nos afecta | Mitigación implementada | Estado |
 | :--- | :--- | :--- | :--- | :--- |
-| **Prompt injection desde el target** | **LLM01** | Los agentes ingieren contenido no confiable (banners, HTML, y en `ai-security` el output del LLM objetivo). Un target malicioso puede intentar inyectar instrucciones. `scope_guard` mitiga que *toque* algo fuera de scope, pero no que filtre datos locales. | **C11**: bloque de separación datos/instrucciones en los 9 agentes que ingieren contenido | ✅ C11 (soft) · fase 2 = clasificador local tipo Prompt Guard |
+| **Prompt injection desde el target** | **LLM01** | Los agentes ingieren contenido no confiable (banners, HTML, y en `ai-security` el output del LLM objetivo). Un target malicioso puede intentar inyectar instrucciones. `scope_guard` mitiga que *toque* algo fuera de scope, pero no que filtre datos locales. | **C11**: bloque de separación datos/instrucciones en los 19 agentes que ingieren contenido | ✅ C11 (soft) · fase 2 = clasificador local tipo Prompt Guard |
 | **Fuga de secretos en evidencia/informe** | **LLM02** | La redacción de credenciales era mediada por LLM (C8). E3-ZDR es organizativo, no forzado por código. | **C12**: `redactor.py` + hook `secret_scan.py` que bloquea claves del operador en el blackboard y sanea el informe | ✅ C12 (determinista) |
 | **Consumo no acotado / kill-switch** | **LLM10 Unbounded Consumption** | No había límite de iteraciones/coste por engagement en código (relevante con cupo Pro). El kill-switch era conceptual. | **C13**: `budget_guard.py` cuenta acciones Bash por engagement y bloquea al superar el techo | ✅ C13 (determinista) · fase 2 = `task_budget` del bot |
 

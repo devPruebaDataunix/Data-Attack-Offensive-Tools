@@ -69,7 +69,7 @@ GitHub renderiza alertas nativas — úsalas para lo importante:
 ## 6. Tablas y secciones plegables
 
 - Tablas para inventarios (agentes, zonas, tiers de riesgo).
-- `<details><summary>` para listas largas (los 13 agentes de E2, la aprobación por riesgo),
+- `<details><summary>` para listas largas (los 16 agentes de E2, la aprobación por riesgo),
   así la cabecera del README respira.
 
 ## 7. Diagramas
