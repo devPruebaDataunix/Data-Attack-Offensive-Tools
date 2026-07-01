@@ -58,7 +58,7 @@ toda la cadena a NVIDIA (no entrena s/ ToS) solo para smoke-test de cableado con
 
 ### Perfil NVIDIA LAB completo (corroborar el cableado con NVIDIA free)
 
-Para conducir **toda la cadena** (17 agentes de recon/explotación) con modelos free de NVIDIA y
+Para conducir **toda la cadena** (20 agentes de recon/explotación, incl. el clúster AD) con modelos free de NVIDIA y
 **corroborar que la suite se mueve solo con NVIDIA** sin gastar Anthropic. El perfil vive en un
 **fichero versionado** — `tools/routing.nvidia-lab.json` (única fuente de verdad; `verify_opencode.py`
 lo valida) — y cada agente va a su mejor modelo (mecánicos→`llama-3.3-70b`; razona-medio→`nemotron-super-49b`;
@@ -75,7 +75,7 @@ El `auto-deploy.sh` también lo ofrece (interactivo, o `--opencode-nvidia` no-in
 > OFICIAL del GATE se mide con Claude** (`benchmark/run_gate.py` lanza `claude`, no opencode). El espejo
 > opencode **NO ejecuta los hooks deterministas** (`scope_guard`/C1–C19) **ni el bus A2A** — es inherente
 > a opencode, no a NVIDIA. El **Orquestador** (`opencode.json`) y **`knowledge-postmortem`** (escribe a
-> memoria) se quedan en Anthropic a propósito. Los free degradan calidad y topan a ~40 RPM/modelo (con 17
+> memoria) se quedan en Anthropic a propósito. Los free degradan calidad y topan a ~40 RPM/modelo (con 20
 > agentes en paralelo puede throttlear). **LAB-ONLY**: jamás cliente, nunca E2/E3. Exporta `NVIDIA_API_KEY`
 > (el `auto-deploy.sh` la pide).
 - **Claves por entorno, sin `auth login`**: opencode lee `{env:VAR}` en runtime. Copia

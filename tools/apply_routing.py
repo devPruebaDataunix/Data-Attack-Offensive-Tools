@@ -9,7 +9,7 @@ opencode (laboratorio): el bot real de engagements y la medición OFICIAL del GA
 (scope_guard/C1-C19) ni el bus A2A — es inherente a opencode, no al provider.
 
 Perfiles:
-  nvidia-lab   -> aplica tools/routing.nvidia-lab.json: 17 agentes de recon/explotación a modelos
+  nvidia-lab   -> aplica tools/routing.nvidia-lab.json: 20 agentes de recon/explotación a modelos
                   FREE de NVIDIA NIM (corrobora el cableado sin gastar Anthropic). El Orquestador y
                   knowledge-postmortem se quedan en Anthropic.
   default      -> restaura el routing activo previo (el que hubiera antes de aplicar un perfil) desde el

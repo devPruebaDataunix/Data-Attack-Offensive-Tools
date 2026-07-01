@@ -4,6 +4,19 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.12.2] - 2026-07-01
+### Added
+- **Perfil NVIDIA LAB — clúster de AD.** `tools/routing.nvidia-lab.json` enruta ahora también
+  `ad-enum`/`kerberos`/`adcs` a NVIDIA NIM free (`openai/gpt-oss-120b`, tool-driving, igual que `netexec`):
+  el perfil pasa de **17 → 20 agentes** de recon/explotación, para poder corroborar la **cadena de AD
+  completa** con NVIDIA sin gastar Anthropic. LAB-ONLY / opt-in (`apply_routing.py nvidia-lab`); el routing
+  ACTIVO (`routing.json`, 5 agentes) y el bot de engagements siguen intactos, y el Orquestador +
+  `knowledge-postmortem` se quedan en Anthropic a propósito. `verify_opencode` **31/0**.
+### Changed
+- **docs/agent-skill-audit.md** — refrescado al estado actual con un banner "al día" (**21 agentes / 13
+  skills**; C11 en **19**), conservando el informe datado de la auditoría de calidad de v2.1.0 como registro.
+- Conteo del perfil NVIDIA LAB "17" → "20" en `routing.nvidia-lab.json`, `apply_routing.py` y `.opencode/README.md`.
+
 ## [2.12.1] - 2026-07-01
 ### Fixed
 - **Coherencia de docs — conteos que envejecieron tras v2.11.0 (18→21 agentes).** Verificación

@@ -332,20 +332,20 @@ setup_opencode_env(){
   configure_opencode_keys
 }
 
-# Opción: montar el perfil NVIDIA en el espejo opencode (17 agentes recon/explotación → modelos NVIDIA
+# Opción: montar el perfil NVIDIA en el espejo opencode (20 agentes recon/explotación → modelos NVIDIA
 # free) para CORROBORAR que la suite se conduce con NVIDIA sin gastar Anthropic. Reversible. NO es la
 # medición oficial (esa = Claude, run_gate.py): opencode no ejecuta los hooks deterministas ni el A2A.
 mount_opencode_profile(){
   local _mount="${DO_OC_NVIDIA:-0}"
   if [ "$_mount" -eq 0 ] && [ -t 0 ]; then
     local _ans=""
-    read -rp "  ¿Montar el perfil NVIDIA en el espejo opencode para corroborar el cableado (17 agentes free)? [y/N]: " _ans || true
+    read -rp "  ¿Montar el perfil NVIDIA en el espejo opencode para corroborar el cableado (20 agentes free)? [y/N]:" _ans || true
     case "$_ans" in [yYsS]) _mount=1 ;; esac
   fi
   [ "$_mount" -eq 1 ] || return 0
   step "Espejo opencode — perfil NVIDIA (corroboración, LAB-ONLY)"
   if python3 "${REPO_DIR}/tools/apply_routing.py" nvidia-lab; then
-    ok "Perfil NVIDIA montado (17 agentes). Revertir: python3 tools/apply_routing.py default"
+    ok "Perfil NVIDIA montado (20 agentes). Revertir: python3 tools/apply_routing.py default"
     warn "opencode NO ejecuta hooks (scope_guard/C1-C19) ni A2A → corrobora cableado, NO es la medición oficial (esa = Claude, run_gate.py). Exporta NVIDIA_API_KEY antes de usarlo."
   else
     warn "No pude montar el perfil NVIDIA. Reintenta: python3 tools/apply_routing.py nvidia-lab"
