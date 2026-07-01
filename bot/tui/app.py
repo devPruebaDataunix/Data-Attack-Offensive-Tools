@@ -181,7 +181,8 @@ class DataAttackTUI(App[None]):
             frm, to, role = m.get("from_agent", "?"), m.get("to_agent", "?"), m.get("role", "")
             intent = next((p.get("text", "") for p in m.get("parts", []) or []
                            if p.get("kind") == "text" and p.get("text")), "")
-            self._log(f"✉️ [b]{frm}[/] → [b]{to}[/] ({role}) {intent[:120]}")
+            self._log(f"✉️ [b]{S._esc(frm)}[/] → [b]{S._esc(to)}[/] "
+                      f"({S._esc(role)}) {S._esc(intent[:120])}")
         self._seeded = True
 
     def action_refresh(self) -> None:
@@ -352,7 +353,7 @@ class DataAttackTUI(App[None]):
             return await self.push_screen_wait(ApprovalModal(summary))
 
         async def on_verdict(verdict, finding):
-            self._log(f"{verdict.emoji} [b]{verdict.finding_id}[/] {verdict.title[:50]}")
+            self._log(f"{verdict.emoji} [b]{S._esc(verdict.finding_id)}[/] {S._esc(verdict.title[:50])}")
             self.refresh_state()
 
         model, effort, max_usd = _read_cfg()

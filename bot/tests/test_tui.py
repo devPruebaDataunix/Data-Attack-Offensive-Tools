@@ -133,6 +133,7 @@ def test_phase_render_marks_current():
 def test_phase_es_labels():
     assert S.phase_es("post-exploitation") == "post-explotación"
     assert S.phase_es("desconocida") == "desconocida"    # fase fuera del catálogo: se devuelve tal cual
+    assert S.phase_es("ex[b]") == "ex\\[b]"              # fase desconocida con markup: se escapa (defensa)
 
 
 def test_dashboard_status_empty_and_active():
@@ -165,6 +166,30 @@ def test_parse_and_render_rag():
     out = S.rag_render(store)
     assert "1622" in out and "2026.06.10" in out
     assert "sin poblar" in S.rag_render(None)
+
+
+# ── seguridad de render: escape de markup Rich en texto libre del blackboard ─────
+def test_esc_neutralizes_rich_markup():
+    assert S._esc("a[b]c") == "a\\[b]c"          # '[' -> '\[' (no abre una etiqueta Rich)
+    assert S._esc(None) == "" and S._esc("plain") == "plain"
+
+
+def test_free_text_is_escaped_in_renders():
+    # un id/dominio/key/preview con '[' NO debe inyectar markup Rich en la UI (puede venir del target)
+    h = S.header_line({"engagement_id": "E[x]", "phase": "recon"}, 1, 10, None, "critical")
+    assert "E\\[x]" in h                          # engagement_id escapado en la cabecera
+    snap = S.Snapshot(eng={"engagement_id": "E1", "phase": "recon"},
+                      scope={"in_scope": {"domains": ["a[b].com"]}})
+    d = S.dashboard_status(snap, {"real": [], "watch": [], "noise": [], "verdicts": []}, True)
+    assert "a\\[b].com" in d                      # dominio escapado
+    assert "K\\[1]" in S.budget_render(1, 10, "K[1]")         # key del presupuesto
+    assert "\\[evil]" in S.evidence_header(["[evil]"])       # nombre de engagement
+    rows = S.a2a_rows({"messages": [_msg("M1", "a", "b", "pending", 0, "x[y]z")]})
+    assert rows[0][5] == "x\\[y]z"               # preview del bus A2A escapado
+    ev = S.evidence_rows({"evidence": [{"ts": "t", "agent": "web-exploit",
+                                        "action": "probar [xss]", "target": "a[b].com",
+                                        "artifact_path": "x.txt"}]})
+    assert ev[0][2] == "probar \\[xss]" and ev[0][3] == "a\\[b].com"   # acción/target escapados
 
 
 # ── actions: escritura (override del operador) ───────────────────────────────────

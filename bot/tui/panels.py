@@ -32,7 +32,9 @@ class DashboardPanel(Vertical):
         t = self.query_one("#dash-findings", DataTable)
         t.clear()
         for v in grp["verdicts"]:
-            t.add_row(v.emoji, v.finding_id, v.severity.upper(), v.title[:40], v.target)
+            # el título/target de un finding pueden traer texto influido por el target: escapar el markup
+            t.add_row(v.emoji, v.finding_id, v.severity.upper(),
+                      S._esc(v.title[:40]), S._esc(v.target))
 
 
 class A2APanel(Vertical):

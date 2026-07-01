@@ -108,6 +108,14 @@ def _clip(s, n: int) -> str:
     return s if len(s) <= n else s[: n - 1] + "…"
 
 
+def _esc(s) -> str:
+    """Escapa el markup Rich de un texto LIBRE del blackboard (dominios, engagement_id, previews del
+    bus A2A, key del presupuesto…): un '[' abriría una etiqueta Rich y CORROMPERÍA el render — y ese
+    dato puede venir del target. Convierte '[' en '\\[' (convención de Rich para un corchete literal).
+    stdlib: NO importa `rich`, porque state.py se testea sin Textual/Rich en el Windows de desarrollo."""
+    return str("" if s is None else s).replace("[", "\\[")
+
+
 def _msg_text(m: dict) -> str:
     """Primer fragmento de texto de un mensaje A2A (parts[].kind == 'text')."""
     for p in m.get("parts", []) or []:
@@ -126,11 +134,11 @@ def a2a_rows(eng: dict) -> list[tuple]:
         status = m.get("status", "pending")
         rows.append((
             A2A_STATUS_EMOJI.get(status, "•"),
-            m.get("from_agent", "?"),
-            m.get("to_agent", "?"),
-            A2A_ROLE_ES.get(m.get("role", ""), m.get("role", "")),
+            _esc(m.get("from_agent", "?")),
+            _esc(m.get("to_agent", "?")),
+            A2A_ROLE_ES.get(m.get("role", ""), _esc(m.get("role", ""))),
             str(m.get("hops", 0)),
-            _clip(_msg_text(m), 48),
+            _esc(_clip(_msg_text(m), 48)),
         ))
     return rows
 
@@ -222,7 +230,7 @@ def budget_render(count: int, cap: int, key: str) -> str:
     color = "#3FB950" if pct < 0.8 else ("#FF6B35" if pct < 1.0 else "#FF4444")
     return (
         f"[b #00D4FF]Presupuesto de acciones (kill-switch C13)[/]\n"
-        f"engagement: {key or '—'}\n"
+        f"engagement: {_esc(key or '—')}\n"
         f"[{color}]{bar}[/] {count}/{cap}  ({pct * 100:.0f}%)\n"
         + ("[#FF4444]⚠ techo alcanzado: el orquestador se bloquea.[/]" if count > cap else
            "[#FF6B35]⚠ cerca del techo.[/]" if pct >= 0.8 else "")
@@ -232,7 +240,7 @@ def budget_render(count: int, cap: int, key: str) -> str:
 # ── Timeline de fase ─────────────────────────────────────────────────────────────
 def phase_es(phase: str) -> str:
     """Etiqueta en español de una fase (la cadena tal cual si es desconocida, '—' si vacía/ausente)."""
-    return PHASES_ES.get(phase, phase) if phase else "—"
+    return PHASES_ES.get(phase, _esc(phase)) if phase else "—"
 
 
 def phase_render(phase: str) -> str:
@@ -262,10 +270,10 @@ def evidence_rows(eng: dict) -> list[tuple]:
             continue
         rows.append((
             _clip(e.get("ts", ""), 19),
-            e.get("agent", "—"),
-            _clip(e.get("action", ""), 28),
-            _clip(e.get("target", ""), 20),
-            _clip(e.get("artifact_path") or e.get("output_hash") or "", 28),
+            _esc(e.get("agent", "—")),
+            _esc(_clip(e.get("action", ""), 28)),
+            _esc(_clip(e.get("target", ""), 20)),
+            _esc(_clip(e.get("artifact_path") or e.get("output_hash") or "", 28)),
         ))
     return rows
 
@@ -276,7 +284,7 @@ def evidence_header(engagements: list[str]) -> str:
         return ("[b #00D4FF]Evidencia[/]\n"
                 "Sin artefactos todavía — aparecerán aquí cuando un engagement genere "
                 "recon/exploit/loot/evidence.")
-    return "[b #00D4FF]Engagements con artefactos[/]: " + ", ".join(engagements)
+    return "[b #00D4FF]Engagements con artefactos[/]: " + ", ".join(_esc(e) for e in engagements)
 
 
 def engagement_dirs(repo: Path) -> list[str]:
@@ -319,7 +327,7 @@ def header_line(eng: dict, count: int, cap: int, cost: Optional[float],
     cost_txt = f"${cost:.2f}" if isinstance(cost, (int, float)) else "—"
     mode_color = {"full": "#3FB950", "critical": "#FF6B35", "auto": "#FF4444"}.get(approval_mode, "#FF6B35")
     return (
-        f"engagement: [b]{eng.get('engagement_id', '—')}[/]   "
+        f"engagement: [b]{_esc(eng.get('engagement_id', '—'))}[/]   "
         f"fase: [b]{phase_es(eng.get('phase')) if eng.get('phase') else '—'}[/]   "
         f"acciones: {count}/{cap}   "
         f"coste: {cost_txt}   "
@@ -346,12 +354,12 @@ def dashboard_status(snap: "Snapshot", grp: dict, sdk_ok: bool) -> str:
     fase = snap.eng.get("phase")
     lines = [
         "[b #00D4FF]Engagement[/]",
-        f"id:   {eid}",
+        f"id:   {_esc(eid)}",
         f"fase: {phase_es(fase) if fase else '—'}",
         "",
         "[b #00D4FF]Scope[/]",
-        f"dom: {doms}",
-        f"ip:  {ips}",
+        f"dom: {_esc(doms)}",
+        f"ip:  {_esc(ips)}",
         "",
         "[b #00D4FF]Hallazgos[/]",
         f"[#FF4444]reales:[/]  {len(grp['real'])}",

@@ -4,6 +4,22 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.14.1] - 2026-07-01
+### Fixed
+- **Escape de markup Rich en el texto libre del blackboard (TUI).** Un `[` en un `engagement_id`, dominio,
+  IP, `key` de presupuesto, preview del bus A2A, o acción/target de evidencia/finding abría una etiqueta Rich
+  y **corrompía el render** de la TUI — y ese texto puede venir del **target**. Nuevo helper `state._esc()`
+  (stdlib, sin `rich`) aplicado a **todas** las rutas de render activas: `header_line`, `dashboard_status`
+  (id/dominios/ips), `budget_render` (key), `evidence_header`, `a2a_rows` (de/a/preview), `evidence_rows`
+  (acción/target/artefacto), la tabla de findings del Panel **y la narración del log en vivo** (`app.py`: bus
+  A2A + veredictos, que interpolan los mismos datos influidos por el target). Deuda pre-existente que marcó el auditor de
+  seguridad en la Fase A.2 (paso 0 del plan de la TUI: correctness antes que cosmética).
+### Notes
+- Casi todo en `state.py` (lógica PURA) + una línea en `panels.py` (findings); tests nuevos que prueban que un
+  `[` queda neutralizado (`\\[`) en cada ruta. test_tui **45/45** (+2), validate_suite 464/0/0. El timestamp
+  `ts` (formato controlado) se deja sin escapar a propósito. `message_detail` (aún sin cablear) se escapará al
+  cablear el drill-down (Paso 4 del plan).
+
 ## [2.14.0] - 2026-07-01
 ### Added
 - **TUI v2 · Fase B (panel Agentes) — 2ª columna «modelo lab» + orden por fase.** El Roster (pestaña
