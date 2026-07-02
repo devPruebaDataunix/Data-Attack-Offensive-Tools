@@ -165,6 +165,7 @@ class DataAttackTUI(App[None]):
                       "ejecutan en la Kali. El panel sí muestra estado, hallazgos y triage.[/]")
         self.refresh_state()
         self._fetch_rag_status()
+        self._fetch_kb_status()
         self.set_interval(5.0, self.refresh_state)
 
     # ── refresco global (lector único) ───────────────────────────────────────────
@@ -196,6 +197,7 @@ class DataAttackTUI(App[None]):
     def action_refresh(self) -> None:
         self.refresh_state()
         self._fetch_rag_status()
+        self._fetch_kb_status()
         self._log(f"[{T.OK}]Estado refrescado.[/]")
 
     def action_abort(self) -> None:
@@ -328,6 +330,15 @@ class DataAttackTUI(App[None]):
             cwd=str(REPO_DIR), stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
         out, _ = await proc.communicate()
         self._rag.refresh_from(S.parse_rag_store(out.decode("utf-8", "replace")))
+
+    @work(exclusive=True, group="kbstatus")
+    async def _fetch_kb_status(self) -> None:
+        # RAG de CONOCIMIENTO (Capa 1 kb.db + Capa 2 kb_vec.db) — --stats es SQLite plano (sin venv/embedder).
+        proc = await asyncio.create_subprocess_exec(
+            PY, "rag/knowledge/query_kb.py", "--stats", "--json",
+            cwd=str(REPO_DIR), stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
+        out, _ = await proc.communicate()
+        self._rag.refresh_kb(S.parse_kb_stats(out.decode("utf-8", "replace")))
 
     @work(exclusive=True, group="ragrefresh")
     async def _run_rag_refresh(self, epss_all: bool) -> None:

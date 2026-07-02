@@ -323,6 +323,57 @@ def rag_render(store: Optional[dict]) -> str:
     )
 
 
+# ── RAG de conocimiento (Capa 1 kb.db + Capa 2 kb_vec.db) ────────────────────────
+def parse_kb_stats(json_str: str) -> Optional[dict]:
+    """Extrae el reporte de `rag/knowledge/query_kb.py --stats --json` (RAG de CONOCIMIENTO: Capa 1
+    `kb.db` estructurada + Capa 2 `kb_vec.db` semántica). None si el JSON falla o no es el reporte."""
+    try:
+        data = json.loads(json_str)
+    except ValueError:
+        return None
+    return data if isinstance(data, dict) and "capa1_kb" in data else None
+
+
+def _fmt_counts(d, top: int = 6) -> str:
+    """'clave n · clave n …' ordenado por conteo desc (top N); '—' si vacío. Escapa las claves
+    (nombres de fuente/plataforma) por defensa, aunque vengan de nuestras propias DB."""
+    if not isinstance(d, dict) or not d:
+        return "—"
+    items = sorted(d.items(), key=lambda kv: kv[1] if isinstance(kv[1], int) else 0, reverse=True)
+    return " · ".join(f"{_esc(k)} {v}" for k, v in items[:top]) + (" · …" if len(items) > top else "")
+
+
+def kb_render(rep: Optional[dict]) -> str:
+    """Render del RAG de CONOCIMIENTO (Capa 1 + Capa 2). Empty-state amable si aún no está poblado
+    (típico en el Windows de desarrollo; se puebla en Kali con refresh_kb.py)."""
+    c1 = (rep or {}).get("capa1_kb") or {}
+    c2 = (rep or {}).get("capa2_kb_vec") or {}
+    total1 = c1.get("total", 0)
+    if not rep or not total1:
+        return (f"[{T.WARN}]RAG de conocimiento sin poblar.[/]\n"
+                "Puébla con: python rag/knowledge/refresh_kb.py  (añade --semantic para la Capa 2)")
+    out = [
+        T.panel_title("RAG de conocimiento"),
+        f"Capa 1 (kb.db): {total1} técnicas",
+        f"  fuentes:    {_fmt_counts(c1.get('by_source'))}",
+        f"  plataformas:{_fmt_counts(c1.get('by_platform'))}",
+        f"  categorías: {_fmt_counts(c1.get('by_category'))}",
+    ]
+    if "total" in c2:
+        line = f"Capa 2 (kb_vec.db): {c2['total']} trozos"
+        if c2.get("embed_model"):
+            line += f"  (modelo {_esc(c2['embed_model'])})"
+        out.append(line)
+        out.append(f"  fuentes:    {_fmt_counts(c2.get('by_source'))}")
+        if isinstance(c2["total"], int) and c2["total"] == 0:
+            out.append(f"  [{T.WARN}]⚠ vacía; puébla con: refresh_kb.py --semantic[/]")
+        elif isinstance(c2["total"], int) and c2["total"] < 2000:
+            out.append(f"  [{T.WARN}]⚠ subset de prueba; repobla entero: refresh_kb.py --semantic[/]")
+    else:
+        out.append(f"Capa 2 (kb_vec.db): [{T.MUTED}]{_esc(c2.get('status') or c2.get('error') or 'no poblada')}[/]")
+    return "\n".join(out)
+
+
 # ── Estado global (cabecera) ─────────────────────────────────────────────────────
 def header_line(eng: dict, count: int, cap: int, cost: Optional[float],
                 approval_mode: str = "critical") -> str:

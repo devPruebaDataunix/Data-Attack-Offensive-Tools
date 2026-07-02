@@ -95,16 +95,20 @@ class BudgetPanel(Vertical):
 
 
 class RagPanel(VerticalScroll):
-    """Estado del RAG (última sync KEV/EPSS/…) + refresco manual."""
+    """RAG de VULNS (sync KEV/EPSS/…) + RAG de CONOCIMIENTO (Capa 1 kb.db + Capa 2 kb_vec.db) + refresco."""
 
     def compose(self) -> ComposeResult:
         yield Static("", id="rag-box")
+        yield Static("", id="kb-box")
         with Horizontal(id="rag-btns"):
             yield Button("Refrescar RAG", id="rag-refresh", variant="primary")
             yield Button("Refrescar + EPSS completo", id="rag-refresh-epss")
 
     def refresh_from(self, store) -> None:
         self.query_one("#rag-box", Static).update(S.rag_render(store))
+
+    def refresh_kb(self, rep) -> None:
+        self.query_one("#kb-box", Static).update(S.kb_render(rep))
 
 
 class EvidencePanel(Vertical):

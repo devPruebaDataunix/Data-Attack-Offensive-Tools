@@ -17,13 +17,14 @@ TabbedContent { height: 1fr; }
 #dash-findings { height: 1fr; border: round $info; }
 
 /* Resúmenes / cabeceras de paneles */
-#a2a-summary, #roster-hdr, #ev-hdr, #budget-box, #phase-box, #rag-box {
+#a2a-summary, #roster-hdr, #ev-hdr, #budget-box, #phase-box, #rag-box, #kb-box {
     padding: 0 1;
     height: auto;
 }
 #budget-box { border: round $info; }
 #phase-box { border: round $info; }
 #rag-box { border: round $info; }
+#kb-box { border: round $info; }
 
 DataTable { height: 1fr; }
 

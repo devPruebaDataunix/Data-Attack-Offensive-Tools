@@ -169,6 +169,47 @@ def test_parse_and_render_rag():
     assert "sin poblar" in S.rag_render(None)
 
 
+# ── state: RAG de CONOCIMIENTO (Capa 1 + Capa 2) — panel B.2 ─────────────────────
+def test_parse_kb_stats():
+    js = json.dumps({"capa1_kb": {"total": 500, "by_source": {"gtfobins": 300, "attack": 200}}})
+    rep = S.parse_kb_stats(js)
+    assert rep and rep["capa1_kb"]["total"] == 500
+    assert S.parse_kb_stats("no json") is None
+    assert S.parse_kb_stats(json.dumps({"otro": 1})) is None      # sin capa1_kb -> None
+
+
+def test_kb_render_populated_both_layers():
+    rep = {"capa1_kb": {"total": 512, "by_source": {"gtfobins": 300, "attack": 212},
+                        "by_platform": {"linux": 400, "multi": 112}, "by_category": {"privesc": 200}},
+           "capa2_kb_vec": {"total": 8123, "by_source": {"hacktricks": 5000, "cyber-skills": 3123},
+                            "embed_model": "bge-small-en-v1.5"}}
+    out = S.kb_render(rep)
+    assert "Capa 1 (kb.db): 512" in out and "gtfobins 300" in out
+    assert "Capa 2 (kb_vec.db): 8123" in out and "cyber-skills 3123" in out
+    assert "bge-small-en-v1.5" in out
+
+
+def test_kb_render_empty_and_capa2_unpopulated():
+    assert "sin poblar" in S.kb_render(None)                       # nada -> empty-state amable
+    assert "sin poblar" in S.kb_render({"capa1_kb": {"total": 0}})  # capa1 vacía -> empty-state
+    rep = {"capa1_kb": {"total": 10, "by_source": {"gtfobins": 10}},
+           "capa2_kb_vec": {"status": "no poblada (kb_vec.db no existe)"}}
+    out = S.kb_render(rep)
+    assert "Capa 1 (kb.db): 10" in out and "no poblada" in out     # capa2 sin poblar NO rompe el render
+
+
+def test_kb_render_capa2_subset_warns():
+    rep = {"capa1_kb": {"total": 10, "by_source": {"gtfobins": 10}},
+           "capa2_kb_vec": {"total": 5, "by_source": {"hacktricks": 5}, "embed_model": "bge"}}
+    out = S.kb_render(rep)
+    assert "subset de prueba" in out and "vacía" not in out        # 0<total<2000 -> aviso de subset
+    # total==0 es "vacía", no "subset" (un vec DB con 0 trozos está vacío, no es un subset de prueba)
+    rep0 = {"capa1_kb": {"total": 10, "by_source": {"gtfobins": 10}},
+            "capa2_kb_vec": {"total": 0, "by_source": {}, "embed_model": "bge"}}
+    out0 = S.kb_render(rep0)
+    assert "vacía" in out0 and "subset de prueba" not in out0
+
+
 # ── seguridad de render: escape de markup Rich en texto libre del blackboard ─────
 def test_esc_neutralizes_rich_markup():
     assert S._esc("a[b]c") == "a\\[b]c"          # '[' -> '\[' (no abre una etiqueta Rich)

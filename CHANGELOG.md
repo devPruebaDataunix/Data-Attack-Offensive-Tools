@@ -4,6 +4,22 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.16.0] - 2026-07-02
+### Added
+- **TUI v2 · Paso 2 (B.2) — el panel RAG muestra ahora también el RAG de CONOCIMIENTO.** Hasta ahora la pestaña
+  RAG solo mostraba el RAG de VULNERABILIDADES (CVE/KEV/EPSS); el RAG de CONOCIMIENTO (Capa 1 `kb.db` estructurada
+  + Capa 2 `kb_vec.db` semántica) NO se veía — era el «hueco grave» del análisis de la TUI. Ahora el `RagPanel`
+  añade una caja `#kb-box` que consume `rag/knowledge/query_kb.py --stats --json` y muestra: **Capa 1** (nº de
+  técnicas + desglose por fuente/plataforma/categoría) y **Capa 2** (nº de trozos + fuentes + modelo de
+  embeddings), con aviso si la Capa 2 está vacía o es un subset de prueba (<2000 trozos). Empty-state amable si aún no está
+  poblado (el caso típico en el Windows de desarrollo).
+### Notes
+- Lógica PURA en `state.py` (`parse_kb_stats` / `kb_render` / `_fmt_counts`) testeada en Windows; `app.py` añade
+  el worker `_fetch_kb_status` (usa `--stats`, que es SQLite plano: sin venv ni embedder) llamado en
+  `on_mount`/`action_refresh`, y `panels.py` la 2ª caja del `RagPanel`. Reusa la primitiva `panel_title()` y los
+  tokens de color de v2.15.0 (`$info`/`$warn`/`$muted`). test_tui **56/56** (+4), validate_suite 465/0/0. El
+  render se valida en Kali (donde el RAG de conocimiento está poblado; en Windows sale el empty-state).
+
 ## [2.15.0] - 2026-07-02
 ### Added
 - **TUI v2 · fundamentos de diseño — tokens de color + jerarquía de marca.** Nuevo `bot/tui/theme.py`
