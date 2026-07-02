@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -116,6 +117,19 @@ def _clip(s, n: int) -> str:
     return s if len(s) <= n else s[: n - 1] + "…"
 
 
+def human_ts(ts: str) -> str:
+    """ISO 8601 -> 'YYYY-MM-DD HH:MM' legible (sin microsegundos ni sufijos T/Z). Los timestamps del
+    blackboard salían crudos con microsegundos (ilegibles en las tablas). Si no parsea, devuelve el
+    texto recortado (escapado por el llamador). '—' si está vacío."""
+    s = str(ts or "").strip()
+    if not s:
+        return "—"
+    try:
+        return datetime.fromisoformat(s.replace("Z", "+00:00")).strftime("%Y-%m-%d %H:%M")
+    except ValueError:
+        return _clip(s, 16)
+
+
 def _esc(s) -> str:
     """Escapa el markup Rich de un texto LIBRE del blackboard (dominios, engagement_id, previews del
     bus A2A, key del presupuesto…): un '[' abriría una etiqueta Rich y CORROMPERÍA el render — y ese
@@ -159,12 +173,15 @@ def a2a_summary(eng: dict, scope: Optional[dict]) -> str:
         counts[m.get("status", "pending")] = counts.get(m.get("status", "pending"), 0) + 1
     hops_max = max((int(m.get("hops", 0) or 0) for m in msgs), default=0)
     ceil = max_a2a_hops(scope)
+    # Chips de estado con color (el significado no depende solo del color: cada uno lleva su emoji).
+    def _chip(color, emoji, label, n):
+        return f"[{color}]{emoji} {label}: {n}[/]"
     return (
         f"{T.panel_title('Bus A2A')}  ({len(msgs)} mensajes)\n"
-        f"⏳ {A2A_STATUS_ES['pending']}: {counts['pending']}   "
-        f"📨 {A2A_STATUS_ES['delivered']}: {counts['delivered']}\n"
-        f"✅ {A2A_STATUS_ES['done']}: {counts['done']}   "
-        f"⛔ {A2A_STATUS_ES['blocked']}: {counts['blocked']}\n"
+        f"{_chip(T.WARN, '⏳', A2A_STATUS_ES['pending'], counts['pending'])}   "
+        f"{_chip(T.INFO, '📨', A2A_STATUS_ES['delivered'], counts['delivered'])}\n"
+        f"{_chip(T.OK, '✅', A2A_STATUS_ES['done'], counts['done'])}   "
+        f"{_chip(T.DANGER, '⛔', A2A_STATUS_ES['blocked'], counts['blocked'])}\n"
         f"hops máx: {hops_max}/{ceil}"
         + (f"  [{T.DANGER}](¡cerca del techo!)[/]" if ceil and hops_max >= ceil * 0.8 else "")
     )
@@ -421,7 +438,7 @@ def evidence_rows(eng: dict) -> list[tuple]:
         if not isinstance(e, dict):
             continue
         rows.append((
-            _clip(e.get("ts", ""), 19),
+            human_ts(e.get("ts", "")),
             _esc(e.get("agent", "—")),
             _esc(_clip(e.get("action", ""), 28)),
             _esc(_clip(e.get("target", ""), 20)),
@@ -436,7 +453,9 @@ def evidence_header(engagements: list[str]) -> str:
         return (T.panel_title("Evidencia") + "\n"
                 "Sin artefactos todavía — aparecerán aquí cuando un engagement genere "
                 "recon/exploit/loot/evidence.")
-    return T.panel_title("Engagements con artefactos") + ": " + ", ".join(_esc(e) for e in engagements)
+    return (T.panel_title("Engagements con artefactos") + ": "
+            + ", ".join(_esc(e) for e in engagements)
+            + f"\n[{T.MUTED}]artefactos en engagements/<id>/ (recon · exploit · loot · evidence · report)[/]")
 
 
 def engagement_dirs(repo: Path) -> list[str]:

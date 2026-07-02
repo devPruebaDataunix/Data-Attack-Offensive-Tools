@@ -28,7 +28,7 @@ from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import (Button, Footer, Header, Input, Label, RichLog,
-                             Static, TabbedContent, TabPane)
+                             Select, Static, TabbedContent, TabPane)
 
 # El paquete intel vive en bot/ (un nivel por encima de tui/).
 BOT_DIR = Path(__file__).resolve().parent.parent
@@ -331,7 +331,11 @@ class DataAttackTUI(App[None]):
             self._log(f"[b {T.INFO}]Delegación dirigida → {agent}[/]")
             self._order_worker = self.run_order(order)
         elif bid == "act-phase-btn":
-            self._do_action(A.set_phase(REPO_DIR, self.query_one("#act-phase", Input).value.strip()))
+            phase = self.query_one("#act-phase", Select).value
+            if phase is Select.BLANK or not phase:
+                self._log(f"[{T.WARN}]Elige una fase en el desplegable primero.[/]")
+            else:
+                self._do_action(A.set_phase(REPO_DIR, str(phase)))
         elif bid == "act-a2a-btn":
             mid = self.query_one("#act-a2a-id", Input).value.strip()
             st = self.query_one("#act-a2a-status", Input).value.strip()

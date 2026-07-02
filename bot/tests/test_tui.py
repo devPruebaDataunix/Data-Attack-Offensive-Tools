@@ -71,6 +71,7 @@ def test_a2a_summary_counts_and_hops():
     eng = {"messages": [_msg("M1", "a", "b", "pending", 1), _msg("M2", "b", "a", "done", 40)]}
     out = S.a2a_summary(eng, {"constraints": {"max_a2a_hops": 50}})
     assert "pendiente: 1" in out and "hecho: 1" in out and "40/50" in out   # i18n status A2A
+    assert T.WARN in out and T.OK in out    # chips con color por estado (B2)
 
 
 def test_pending_message_ids():
@@ -172,13 +173,22 @@ def test_dashboard_status_empty_and_active():
 
 def test_evidence_header_empty_and_full():
     assert "Sin artefactos" in S.evidence_header([])
-    assert "GATE-1" in S.evidence_header(["GATE-1"])
+    full = S.evidence_header(["GATE-1"])
+    assert "GATE-1" in full and "engagements/<id>/" in full   # pista de carpeta (B2)
+
+
+def test_human_ts():
+    assert S.human_ts("2026-07-02T13:42:05.123456Z") == "2026-07-02 13:42"   # sin microsegundos ni Z
+    assert S.human_ts("2026-07-02T13:42:05+00:00") == "2026-07-02 13:42"
+    assert S.human_ts("") == "—"
+    assert S.human_ts("no-es-fecha") == "no-es-fecha"                        # no parsea -> original
 
 
 def test_evidence_rows():
     eng = {"evidence": [{"ts": "2026-01-01T00:00:00Z", "agent": "web-exploit",
                          "action": "verificar XSS", "target": "app", "artifact_path": "x/y.txt"}]}
     rows = S.evidence_rows(eng)
+    assert rows[0][0] == "2026-01-01 00:00"                                   # ts humanizado (B2)
     assert rows[0][1] == "web-exploit" and "x/y.txt" in rows[0][4]
 
 

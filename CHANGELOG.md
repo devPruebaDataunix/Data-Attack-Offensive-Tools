@@ -4,6 +4,22 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.21.0] - 2026-07-02
+### Changed
+- **TUI · Paso B2 — pulido de paneles.** Cuatro mejoras que salieron del análisis de las capturas:
+  (1) **timestamps legibles** — `state.human_ts` convierte el ISO crudo (con microsegundos, ilegible) a
+  `YYYY-MM-DD HH:MM`, aplicado a la columna `ts` del panel de Evidencia; (2) **la fase es un `Select`** en
+  el panel de Acciones (antes texto libre propenso a typos): el desplegable ofrece las fases con etiqueta en
+  español y envía la clave canónica, que `set_phase` valida; (3) **chips de color** en el resumen del bus
+  A2A (cada recuento de estado con su color de token, conservando el emoji para no depender solo del color);
+  (4) **pista de carpeta** en el panel de Evidencia (`artefactos en engagements/<id>/…`).
+### Notes
+- Lógica PURA en `state.py` (`human_ts` + chips en `a2a_summary` + `evidence_header`) testeada en Windows;
+  `panels.py`/`app.py` cablean el `Select` de fase (handler que trata `Select.BLANK`), `app.tcss` su
+  espaciado. Council 3-roles **GO sin must-fix** (verificó el `Select` contra la fuente de Textual v0.80.0
+  —`Select.BLANK`, formato de opciones, sin colisión de `Select.Changed`— y `human_ts` para Python 3.9+).
+  test_tui **72/72** (+1), validate_suite 465/0/0. El render se valida en Kali.
+
 ## [2.20.0] - 2026-07-02
 ### Changed
 - **TUI · Paso B1 — rediseño RADICAL del panel «Agentes» (master-detail por zonas E1/E2/E3).** El panel

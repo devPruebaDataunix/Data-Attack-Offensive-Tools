@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
-from textual.widgets import Button, DataTable, Input, Label, Static
+from textual.widgets import Button, DataTable, Input, Label, Select, Static
 
 from . import state as S
 from . import theme as T
@@ -185,8 +185,9 @@ class ActionsPanel(VerticalScroll):
         yield Button("Delegar", id="act-deleg", variant="primary")
 
         yield Label(T.panel_title("Override de fase"))
-        yield Input(placeholder="fase: init/recon/triage/exploitation/post-exploitation/reporting/closed",
-                    id="act-phase")
+        # Select (no texto libre): opciones = las fases del esquema con etiqueta en español; el valor
+        # enviado es la clave canónica en inglés. Evita typos que rechazaría set_phase.
+        yield Select([(S.phase_es(p), p) for p in S.PHASES], id="act-phase", prompt="Elige una fase…")
         yield Button("Cambiar fase", id="act-phase-btn")
 
         yield Label(T.panel_title("Control del bus A2A"))

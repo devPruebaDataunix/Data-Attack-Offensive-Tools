@@ -43,6 +43,7 @@ DataTable { height: 1fr; }
 /* Panel de acciones */
 ActionsPanel { padding: 0 1; }
 ActionsPanel Input { margin: 0 0 1 0; }
+ActionsPanel Select { margin: 0 0 1 0; }
 ActionsPanel Button { margin: 0 0 1 0; }
 ActionsPanel Label { padding: 1 0 0 0; }
 #act-lab-btns { height: auto; }
