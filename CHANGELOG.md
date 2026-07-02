@@ -4,6 +4,21 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.18.0] - 2026-07-02
+### Added
+- **TUI · Paso A3 — historial de órdenes ↑/↓ en la línea de orden.** Antes el `Input` #cmd era el de serie: la
+  flecha ↑ no recuperaba la orden anterior (uno de los 3 fallos que destapó la prueba contra el lab real). Ahora
+  la línea de orden es un `HistoryInput` que recuerda las órdenes enviadas y las recupera con ↑/↓ estilo shell
+  (incluidas las que el gate de scope rebota, para poder corregirlas sin reescribir). Ignora vacíos y el
+  duplicado consecutivo; ↓ pasado el final vuelve a la línea en blanco.
+### Notes
+- Lógica PURA en `state.py` (clase `CmdHistory`: `remember`/`prev`/`next`, índice past-the-end, dedup) testeada
+  en Windows; `app.py` añade la subclase `HistoryInput(Input)` que delega en `CmdHistory` y cablea ↑/↓ por
+  **BINDINGS** (no `on_key`, para no interferir con la escritura del `Input` base, que no vincula las flechas
+  verticales). Council 3-roles **GO sin must-fix** (verificó contra la fuente de Textual `>=0.80` que las
+  bindings de flechas no rompen la escritura y que fijar `cursor_position` explícito tras `value` es necesario).
+  test_tui **61/61** (+2), validate_suite 465/0/0. El render se valida en Kali.
+
 ## [2.17.0] - 2026-07-02
 ### Added
 - **TUI · Paso A1 — lock de orden OBSERVABLE + recuperable + feedback en vivo.** La prueba contra un lab real

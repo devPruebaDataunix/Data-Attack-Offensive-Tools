@@ -237,6 +237,30 @@ def test_order_status_line_idle_and_running():
     assert "sin señal" in stale                                    # marca el posible cuelgue
 
 
+# ── state: historial de órdenes ↑/↓ (A3) ────────────────────────────────────────
+def test_cmd_history_navigation():
+    h = S.CmdHistory()
+    assert h.prev() is None and h.next() is None          # vacío -> no navega (no consume la tecla)
+    h.remember("uno"); h.remember("dos")
+    assert h.prev() == "dos"                               # ↑ desde el final -> la última
+    assert h.prev() == "uno"                               # ↑ -> anterior
+    assert h.prev() == "uno"                               # ↑ en el tope -> se queda en la primera
+    assert h.next() == "dos"                               # ↓ -> siguiente
+    assert h.next() == ""                                  # ↓ pasado el final -> línea en blanco
+    assert h.next() == ""                                  # ↓ ya en blanco -> sigue en blanco
+
+
+def test_cmd_history_dedup_and_blank():
+    h = S.CmdHistory()
+    h.remember("   ")
+    assert h.items() == []                                 # en blanco no se guarda
+    h.remember("a"); h.remember("a")
+    assert h.items() == ["a"]                              # duplicado consecutivo no se repite
+    h.remember("b"); h.remember("a")
+    assert h.items() == ["a", "b", "a"]                    # no consecutivo sí se guarda
+    assert h.prev() == "a"                                 # tras remember, ↑ empieza por la última
+
+
 # ── seguridad de render: escape de markup Rich en texto libre del blackboard ─────
 def test_esc_neutralizes_rich_markup():
     assert S._esc("a[b]c") == "a\\[b]c"          # '[' -> '\[' (no abre una etiqueta Rich)

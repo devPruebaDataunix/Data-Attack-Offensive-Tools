@@ -288,6 +288,41 @@ def order_status_line(task: Optional[str], started: Optional[float], now: float,
     return "  ·  ".join(bits)
 
 
+class CmdHistory:
+    """Historial de órdenes con navegación ↑/↓ estilo shell (LÓGICA PURA, testeable sin Textual).
+    El widget HistoryInput de app.py delega aquí toda la lógica de índice/dedup; él solo pinta el valor.
+    `_idx` apunta a la posición actual; en `len(items)` = línea en blanco nueva (past-the-end)."""
+
+    def __init__(self) -> None:
+        self._items: list[str] = []
+        self._idx = 0
+
+    def remember(self, value: str) -> None:
+        """Registra una orden enviada. Ignora vacíos y el duplicado consecutivo (como una shell).
+        Deja el cursor del historial 'past-the-end' (la próxima ↑ recupera la última)."""
+        v = (value or "").strip()
+        if v and (not self._items or self._items[-1] != v):
+            self._items.append(v)
+        self._idx = len(self._items)
+
+    def prev(self) -> Optional[str]:
+        """↑ — orden anterior. None si el historial está vacío (no consumir la tecla)."""
+        if not self._items:
+            return None
+        self._idx = max(0, self._idx - 1)
+        return self._items[self._idx]
+
+    def next(self) -> Optional[str]:
+        """↓ — orden siguiente; '' (línea en blanco) al pasar del final. None si está vacío."""
+        if not self._items:
+            return None
+        self._idx = min(len(self._items), self._idx + 1)
+        return "" if self._idx >= len(self._items) else self._items[self._idx]
+
+    def items(self) -> list[str]:
+        return list(self._items)
+
+
 # ── Timeline de fase ─────────────────────────────────────────────────────────────
 def phase_es(phase: str) -> str:
     """Etiqueta en español de una fase (la cadena tal cual si es desconocida, '—' si vacía/ausente)."""

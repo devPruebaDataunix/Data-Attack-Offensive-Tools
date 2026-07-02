@@ -93,6 +93,37 @@ def _stall_timeout() -> float:
         return S.ORDER_STALL_TIMEOUT
 
 
+class HistoryInput(Input):
+    """Línea de orden con historial ↑/↓ estilo shell (el Input de Textual no lo trae). Toda la lógica
+    de índice/dedup vive en state.CmdHistory (pura, testeada); aquí solo se cablea a las flechas.
+    Se usan BINDINGS (no on_key) para NO interferir con la escritura de caracteres del Input base;
+    el Input base no vincula ↑/↓ (es de una sola línea), así que estas bindings no chocan."""
+
+    BINDINGS = [
+        Binding("up", "history_prev", "Orden anterior", show=False),
+        Binding("down", "history_next", "Orden siguiente", show=False),
+    ]
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._hist = S.CmdHistory()
+
+    def remember(self, value: str) -> None:
+        self._hist.remember(value)
+
+    def action_history_prev(self) -> None:
+        val = self._hist.prev()
+        if val is not None:                # None = historial vacío -> no hacemos nada
+            self.value = val
+            self.cursor_position = len(val)
+
+    def action_history_next(self) -> None:
+        val = self._hist.next()
+        if val is not None:                # '' (blanco) sí se aplica; None solo si está vacío
+            self.value = val
+            self.cursor_position = len(val)
+
+
 class ApprovalModal(ModalScreen[bool]):
     """Aprobación humana por acción — mapea el callback `approve` del runner."""
 
@@ -156,8 +187,9 @@ class DataAttackTUI(App[None]):
                 yield P.ActionsPanel()
         yield RichLog(id="log", highlight=True, markup=True, wrap=True)
         yield Static("", id="order-status")   # estado en vivo de la orden en curso (lock observable)
-        yield Input(placeholder="Orden al Orquestador (p.ej. 'haz recon de ...')  ·  'triage <producto>'",
-                    id="cmd")
+        yield HistoryInput(
+            placeholder="Orden al Orquestador (p.ej. 'haz recon de ...')  ·  'triage <producto>'  ·  ↑/↓ historial",
+            id="cmd")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -256,6 +288,8 @@ class DataAttackTUI(App[None]):
         if event.input.id != "cmd":
             return                       # los inputs del panel de acciones no lanzan órdenes
         task = event.value.strip()
+        if task and isinstance(event.input, HistoryInput):
+            event.input.remember(task)   # ↑/↓ recuperará esta orden (incl. las que rebota el scope)
         event.input.value = ""
         if not task:
             return
