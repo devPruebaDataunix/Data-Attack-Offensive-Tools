@@ -4,6 +4,33 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.15.0] - 2026-07-02
+### Added
+- **TUI v2 · fundamentos de diseño — tokens de color + jerarquía de marca.** Nuevo `bot/tui/theme.py`
+  como **ÚNICA fuente de color**: antes el color vivía disperso en literales hex repartidos entre `app.tcss`
+  (bordes/fondos) y el markup Rich de `state.py`/`app.py`/`panels.py` — dos sistemas desincronizados. Ahora
+  las constantes con nombre (`BRAND`/`INFO`/`OK`/`WARN`/`DANGER`/`MUTED`/`FG`/`BG`/`SURFACE`) alimentan el
+  markup, y `App.get_css_variables` las inyecta como variables CSS (`$brand`/`$info`/…) que `app.tcss`
+  referencia sin repetir el hex. Cambiar la paleta = tocar un solo fichero.
+- **Paleta = GitHub-dark + rojo DataUnix.** Los colores semánticos se anclan a la paleta GitHub que la base
+  ya usaba (peligro → coral `#f85149`, aviso → ámbar `#d29922`); el cian neón dominante (`#00D4FF`) pasa a
+  azul GitHub (`#58a6ff`) para lo informativo; y el rojo de marca (`#e02c41`) sube de 2 usos a **acento
+  primario**: identidad (wordmark), línea de orden y **fase activa** («estás aquí»). El rojo de marca y el
+  rojo de **peligro** quedan en tonos claramente distintos (no se confunden).
+- **Primitivas reutilizables:** `panel_title()` (cabecera de sección única, en vez de repetir el markup
+  inline por toda la UI) y `finding_bucket()` → `(icono, color)` **colorblind-safe** (● real / ▲ vigilar /
+  · ruido: la forma desambigua sin depender del color), cableada en el resumen de hallazgos del Panel.
+### Changed
+- **Bordes por tipo** (antes era arbitrario): paneles/estructura = `$info` · línea de orden = `$brand`
+  (marca + acción) · modal de aprobación = `$danger`. El color semántico (verde/ámbar/coral) vive ahora en
+  el CONTENIDO, no en el borde.
+### Notes
+- Refactor puro de color: NINGÚN hex de color fuera de `theme.py` (verificado por grep). `theme.py` es stdlib
+  puro (sin Textual) → testeable en Windows; los 5 módulos de la TUI compilan. test_tui **52/52** (+7:
+  tokens/CSS_VARS/`panel_title`/`finding_bucket`/fase-activa-en-marca/buckets/presupuesto), validate_suite
+  **465/0/0**. El RENDER (arranque con los tokens inyectados vía `get_css_variables` + los colores) se valida
+  en Kali con captura, como el resto de la TUI.
+
 ## [2.14.1] - 2026-07-01
 ### Fixed
 - **Escape de markup Rich en el texto libre del blackboard (TUI).** Un `[` en un `engagement_id`, dominio,

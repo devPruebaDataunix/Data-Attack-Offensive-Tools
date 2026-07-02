@@ -42,6 +42,7 @@ from intel.runner import AgentRunner, SDK_OK  # noqa: E402
 from . import actions as A                 # noqa: E402
 from . import panels as P                  # noqa: E402
 from . import state as S                   # noqa: E402
+from . import theme as T                   # noqa: E402  (tokens de color: única fuente)
 from .commands import DataAttackCommands   # noqa: E402  (paleta de dominio en español)
 
 PY = sys.executable or "python3"
@@ -115,6 +116,13 @@ class DataAttackTUI(App[None]):
 
     _running = False
 
+    def get_css_variables(self) -> dict[str, str]:
+        """Inyecta los tokens de theme.py como variables CSS ($brand/$info/…) para que app.tcss los
+        use sin repetir el hex. La ÚNICA fuente de color de la TUI = bot/tui/theme.py."""
+        variables = super().get_css_variables()
+        variables.update(T.CSS_VARS)
+        return variables
+
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         yield Static("", id="hdr")
@@ -153,7 +161,7 @@ class DataAttackTUI(App[None]):
         self._rag = self.query_one(P.RagPanel)
         self._evidence = self.query_one(P.EvidencePanel)
         if not SDK_OK:
-            self._log("[#FF6B35]Agent SDK no instalado aquí: las órdenes al Orquestador se "
+            self._log(f"[{T.WARN}]Agent SDK no instalado aquí: las órdenes al Orquestador se "
                       "ejecutan en la Kali. El panel sí muestra estado, hallazgos y triage.[/]")
         self.refresh_state()
         self._fetch_rag_status()
@@ -188,7 +196,7 @@ class DataAttackTUI(App[None]):
     def action_refresh(self) -> None:
         self.refresh_state()
         self._fetch_rag_status()
-        self._log("[#3FB950]Estado refrescado.[/]")
+        self._log(f"[{T.OK}]Estado refrescado.[/]")
 
     def action_abort(self) -> None:
         self._abort_order()
@@ -213,7 +221,7 @@ class DataAttackTUI(App[None]):
         elif key == "quit":
             self.exit()
         else:
-            self._log(f"[#FF6B35]Comando de paleta desconocido: {key}[/]")
+            self._log(f"[{T.WARN}]Comando de paleta desconocido: {key}[/]")
 
     def _log(self, msg: str) -> None:
         self.query_one("#log", RichLog).write(msg)
@@ -232,9 +240,9 @@ class DataAttackTUI(App[None]):
             return
         question = scp.scope_question(task, scp.load_scope(REPO_DIR))
         if question:
-            self._log(f"[#FF6B35]{question}[/]")
+            self._log(f"[{T.WARN}]{question}[/]")
             return
-        self._log(f"[b #00D4FF]Orden:[/] {task}")
+        self._log(f"[b {T.INFO}]Orden:[/] {task}")
         self.run_order(task)
 
     # ── botones de los paneles ────────────────────────────────────────────────────
@@ -246,15 +254,15 @@ class DataAttackTUI(App[None]):
             agent = self.query_one("#act-deleg-agent", Input).value.strip()
             obj = self.query_one("#act-deleg-obj", Input).value.strip()
             if not agent or not obj:
-                self._log("[#FF6B35]Delegación: indica agente y objetivo.[/]")
+                self._log(f"[{T.WARN}]Delegación: indica agente y objetivo.[/]")
                 return
             names = S.agent_names(S.load_cards(REPO_DIR))
             if names and agent not in names:
-                self._log(f"[#FF6B35]Agente desconocido: {agent} (revisa la pestaña Agentes).[/]")
+                self._log(f"[{T.WARN}]Agente desconocido: {agent} (revisa la pestaña Agentes).[/]")
                 return
             self.query_one("#act-deleg-obj", Input).value = ""
             order = A.compose_delegation(agent, obj)
-            self._log(f"[b #00D4FF]Delegación dirigida → {agent}[/]")
+            self._log(f"[b {T.INFO}]Delegación dirigida → {agent}[/]")
             self.run_order(order)
         elif bid == "act-phase-btn":
             self._do_action(A.set_phase(REPO_DIR, self.query_one("#act-phase", Input).value.strip()))
@@ -278,23 +286,23 @@ class DataAttackTUI(App[None]):
 
     def _do_action(self, result: "tuple[bool, str]") -> None:
         ok, msg = result
-        self._log(("[#3FB950]✓ " if ok else "[#FF4444]✗ ") + msg + "[/]")
+        self._log((f"[{T.OK}]✓ " if ok else f"[{T.DANGER}]✗ ") + msg + "[/]")
         if ok:
             self.refresh_state()
 
     def _abort_order(self) -> None:
         if self._runner is not None and self._running:
             self._runner.abort()
-            self._log("[#FF4444]⛔ Kill-switch: orden abortada — se denegará toda acción pendiente.[/]")
+            self._log(f"[{T.DANGER}]⛔ Kill-switch: orden abortada — se denegará toda acción pendiente.[/]")
         else:
-            self._log("[#6E7681]No hay ninguna orden en curso.[/]")
+            self._log(f"[{T.MUTED}]No hay ninguna orden en curso.[/]")
 
     # ── triage (RAG) ──────────────────────────────────────────────────────────────
     @work(exclusive=True, group="triage")
     async def run_triage(self, query: str) -> None:
         if not query:
             return
-        self._log(f"[b #00D4FF]Triage:[/] {query}")
+        self._log(f"[b {T.INFO}]Triage:[/] {query}")
         proc = await asyncio.create_subprocess_exec(
             PY, "rag/query_vulns.py", "--query", query, "--json", "--limit", "5",
             cwd=str(REPO_DIR), stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
@@ -302,7 +310,7 @@ class DataAttackTUI(App[None]):
         try:
             results = json.loads(out.decode("utf-8", "replace")).get("results", [])
         except ValueError:
-            self._log("[#FF4444]Sin resultados (¿RAG poblado?).[/]")
+            self._log(f"[{T.DANGER}]Sin resultados (¿RAG poblado?).[/]")
             return
         if not results:
             self._log("Sin coincidencias en el RAG.")
@@ -323,23 +331,23 @@ class DataAttackTUI(App[None]):
 
     @work(exclusive=True, group="ragrefresh")
     async def _run_rag_refresh(self, epss_all: bool) -> None:
-        self._log("[#00D4FF]Refrescando el RAG… (puede tardar)[/]")
+        self._log(f"[{T.INFO}]Refrescando el RAG… (puede tardar)[/]")
         proc = await asyncio.create_subprocess_exec(
             *A.rag_refresh_cmd(epss_all), cwd=str(REPO_DIR),
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
         await proc.communicate()
-        self._log("[#3FB950]RAG refrescado.[/]" if proc.returncode == 0
-                  else "[#FF4444]Fallo al refrescar el RAG (revisa la Kali).[/]")
+        self._log(f"[{T.OK}]RAG refrescado.[/]" if proc.returncode == 0
+                  else f"[{T.DANGER}]Fallo al refrescar el RAG (revisa la Kali).[/]")
         self._fetch_rag_status()
 
     # ── orden al Orquestador ──────────────────────────────────────────────────────
     @work(group="order")
     async def run_order(self, task: str) -> None:
         if self._running:
-            self._log("[#FF6B35]Ya hay una orden en curso; espera a que termine.[/]")
+            self._log(f"[{T.WARN}]Ya hay una orden en curso; espera a que termine.[/]")
             return
         if not SDK_OK:
-            self._log("[#FF6B35]No puedo lanzar el Orquestador aquí (Agent SDK ausente). "
+            self._log(f"[{T.WARN}]No puedo lanzar el Orquestador aquí (Agent SDK ausente). "
                       "Ejecuta la orden desde la Kali.[/]")
             return
 
@@ -365,7 +373,7 @@ class DataAttackTUI(App[None]):
         try:
             final = await runner.run(task)
         except Exception as exc:  # noqa: BLE001 - se reporta al panel, no se traga
-            self._log(f"[#FF4444]Error del runner: {exc}[/]")
+            self._log(f"[{T.DANGER}]Error del runner: {exc}[/]")
             return
         finally:
             self._running = False
@@ -373,7 +381,7 @@ class DataAttackTUI(App[None]):
             self._last_cost = runner.last_cost_usd
             self.refresh_state()
         if final:
-            self._log(f"[#3FB950]Resultado:[/] {final[:1500]}")
+            self._log(f"[{T.OK}]Resultado:[/] {final[:1500]}")
 
 
 def main() -> None:

@@ -19,6 +19,7 @@ sys.path.insert(0, BOT)
 import tui.state as S          # noqa: E402
 import tui.actions as A        # noqa: E402
 import tui.commands as CMD     # noqa: E402  (catálogo puro; el Provider Textual es opcional)
+import tui.theme as T          # noqa: E402  (tokens de color: única fuente)
 
 
 def _tmp_engagement(messages=None, phase="recon"):
@@ -190,6 +191,57 @@ def test_free_text_is_escaped_in_renders():
                                         "action": "probar [xss]", "target": "a[b].com",
                                         "artifact_path": "x.txt"}]})
     assert ev[0][2] == "probar \\[xss]" and ev[0][3] == "a\\[b].com"   # acción/target escapados
+
+
+# ── theme: tokens de color (única fuente) y primitivas ───────────────────────────
+def test_theme_tokens_are_valid_hex():
+    import re
+    hexre = re.compile(r"^#[0-9a-fA-F]{6}$")
+    for name in ("BRAND", "INFO", "OK", "WARN", "DANGER", "MUTED", "FG", "BG", "SURFACE"):
+        val = getattr(T, name)
+        assert hexre.match(val), f"{name}={val!r} no es un hex #rrggbb"
+    assert T.BRAND != T.DANGER    # el rojo de MARCA y el rojo de PELIGRO son distintos (no se confunden)
+
+
+def test_theme_css_vars_cover_tokens():
+    # cada variable CSS que inyecta app.py apunta a un token real (misma fuente para CSS y markup)
+    assert T.CSS_VARS["brand"] == T.BRAND and T.CSS_VARS["info"] == T.INFO
+    assert T.CSS_VARS["danger"] == T.DANGER and T.CSS_VARS["ok"] == T.OK
+    for name in ("brand", "info", "ok", "warn", "danger", "muted", "fg", "bg", "surface2"):
+        assert name in T.CSS_VARS and T.CSS_VARS[name].startswith("#")
+
+
+def test_panel_title_is_bold_info():
+    assert T.panel_title("Bus A2A") == f"[b {T.INFO}]Bus A2A[/]"   # cabecera única: azul info, negrita
+
+
+def test_finding_bucket_icon_and_color():
+    assert T.finding_bucket("real") == ("●", T.DANGER)
+    assert T.finding_bucket("watch") == ("▲", T.WARN)
+    assert T.finding_bucket("noise") == ("·", T.MUTED)
+    icons = {T.finding_bucket(k)[0] for k in ("real", "watch", "noise")}
+    assert len(icons) == 3       # colorblind-safe: 3 iconos DISTINTOS (el significado no es solo el color)
+
+
+def test_phase_render_active_is_brand():
+    out = S.phase_render("triage")
+    assert f"[b {T.BRAND}]● triaje[/]" in out       # fase activa: rojo de marca ("estás aquí")
+    assert f"[{T.OK}]✓ reconocimiento[/]" in out     # completada: verde
+    assert f"[{T.MUTED}]○ explotación[/]" in out     # pendiente: atenuado
+
+
+def test_dashboard_summary_uses_bucket_icons():
+    snap = S.Snapshot(eng={"engagement_id": "E-1", "phase": "recon"},
+                      scope={"in_scope": {"domains": ["a.com"]}})
+    out = S.dashboard_status(snap, {"real": [1], "watch": [], "noise": [], "verdicts": []}, True)
+    assert "● reales:" in out and "▲ vigilar:" in out and "· ruido:" in out   # iconos por bucket
+    assert T.DANGER in out and T.WARN in out                                  # con color de token
+
+
+def test_budget_render_uses_token_colors():
+    assert T.OK in S.budget_render(1, 1000, "T")          # holgado -> verde
+    assert T.WARN in S.budget_render(900, 1000, "T")      # cerca del techo -> ámbar
+    assert T.DANGER in S.budget_render(1100, 1000, "T")   # techo superado -> coral
 
 
 # ── actions: escritura (override del operador) ───────────────────────────────────

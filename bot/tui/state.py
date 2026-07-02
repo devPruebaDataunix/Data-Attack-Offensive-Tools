@@ -17,6 +17,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
+from . import theme as T
+
 # Fases del engagement (enum de contracts/engagement.schema.json), en orden. La CLAVE canónica
 # se queda en inglés (es el enum del esquema y lo que se guarda en engagement.json); solo la
 # ETIQUETA visible se traduce (i18n) — ver PHASES_ES / phase_es().
@@ -152,13 +154,13 @@ def a2a_summary(eng: dict, scope: Optional[dict]) -> str:
     hops_max = max((int(m.get("hops", 0) or 0) for m in msgs), default=0)
     ceil = max_a2a_hops(scope)
     return (
-        f"[b #00D4FF]Bus A2A[/]  ({len(msgs)} mensajes)\n"
+        f"{T.panel_title('Bus A2A')}  ({len(msgs)} mensajes)\n"
         f"⏳ {A2A_STATUS_ES['pending']}: {counts['pending']}   "
         f"📨 {A2A_STATUS_ES['delivered']}: {counts['delivered']}\n"
         f"✅ {A2A_STATUS_ES['done']}: {counts['done']}   "
         f"⛔ {A2A_STATUS_ES['blocked']}: {counts['blocked']}\n"
         f"hops máx: {hops_max}/{ceil}"
-        + ("  [#FF4444](¡cerca del techo!)[/]" if ceil and hops_max >= ceil * 0.8 else "")
+        + (f"  [{T.DANGER}](¡cerca del techo!)[/]" if ceil and hops_max >= ceil * 0.8 else "")
     )
 
 
@@ -227,13 +229,13 @@ def budget_render(count: int, cap: int, key: str) -> str:
     pct = (count / cap) if cap else 0
     filled = min(20, int(pct * 20))
     bar = "█" * filled + "░" * (20 - filled)
-    color = "#3FB950" if pct < 0.8 else ("#FF6B35" if pct < 1.0 else "#FF4444")
+    color = T.OK if pct < 0.8 else (T.WARN if pct < 1.0 else T.DANGER)
     return (
-        f"[b #00D4FF]Presupuesto de acciones (kill-switch C13)[/]\n"
+        f"{T.panel_title('Presupuesto de acciones (kill-switch C13)')}\n"
         f"engagement: {_esc(key or '—')}\n"
         f"[{color}]{bar}[/] {count}/{cap}  ({pct * 100:.0f}%)\n"
-        + ("[#FF4444]⚠ techo alcanzado: el orquestador se bloquea.[/]" if count > cap else
-           "[#FF6B35]⚠ cerca del techo.[/]" if pct >= 0.8 else "")
+        + (f"[{T.DANGER}]⚠ techo alcanzado: el orquestador se bloquea.[/]" if count > cap else
+           f"[{T.WARN}]⚠ cerca del techo.[/]" if pct >= 0.8 else "")
     )
 
 
@@ -247,17 +249,17 @@ def phase_render(phase: str) -> str:
     # El bullet va SEPARADO de la etiqueta (con un espacio) para que no se "pegue" en el render
     # (antes "○init" se leía como "oinit"). La etiqueta se muestra en español (phase_es).
     if phase not in PHASES:   # fase desconocida/ausente: nada se marca como completado
-        return "  →  ".join(f"[#6E7681]○ {phase_es(p)}[/]" for p in PHASES)
+        return "  →  ".join(f"[{T.MUTED}]○ {phase_es(p)}[/]" for p in PHASES)
     out, reached = [], True
     for p in PHASES:
         label = phase_es(p)
         if p == phase:
-            out.append(f"[b #00D4FF]● {label}[/]")
+            out.append(f"[b {T.BRAND}]● {label}[/]")   # fase activa: rojo de marca ("estás aquí")
             reached = False
         elif reached:
-            out.append(f"[#3FB950]✓ {label}[/]")
+            out.append(f"[{T.OK}]✓ {label}[/]")
         else:
-            out.append(f"[#6E7681]○ {label}[/]")
+            out.append(f"[{T.MUTED}]○ {label}[/]")
     return "  →  ".join(out)
 
 
@@ -281,10 +283,10 @@ def evidence_rows(eng: dict) -> list[tuple]:
 def evidence_header(engagements: list[str]) -> str:
     """Cabecera del panel de evidencia (empty-state amable si aún no hay artefactos)."""
     if not engagements:
-        return ("[b #00D4FF]Evidencia[/]\n"
+        return (T.panel_title("Evidencia") + "\n"
                 "Sin artefactos todavía — aparecerán aquí cuando un engagement genere "
                 "recon/exploit/loot/evidence.")
-    return "[b #00D4FF]Engagements con artefactos[/]: " + ", ".join(_esc(e) for e in engagements)
+    return T.panel_title("Engagements con artefactos") + ": " + ", ".join(_esc(e) for e in engagements)
 
 
 def engagement_dirs(repo: Path) -> list[str]:
@@ -308,9 +310,9 @@ def parse_rag_store(json_str: str) -> Optional[dict]:
 
 def rag_render(store: Optional[dict]) -> str:
     if not store:
-        return "[#FF6B35]RAG sin poblar o ilegible. Refresca con: python rag/refresh.py[/]"
+        return f"[{T.WARN}]RAG sin poblar o ilegible. Refresca con: python rag/refresh.py[/]"
     return (
-        f"[b #00D4FF]RAG de vulnerabilidades[/]\n"
+        f"{T.panel_title('RAG de vulnerabilidades')}\n"
         f"CVEs en store: {store.get('total_cves', '—')}\n"
         f"KEV: {store.get('kev_version', '—')}  (sync {store.get('kev_last_sync', '—')})\n"
         f"EPSS sync:   {store.get('epss_last_sync', '—')}\n"
@@ -325,7 +327,7 @@ def rag_render(store: Optional[dict]) -> str:
 def header_line(eng: dict, count: int, cap: int, cost: Optional[float],
                 approval_mode: str = "critical") -> str:
     cost_txt = f"${cost:.2f}" if isinstance(cost, (int, float)) else "—"
-    mode_color = {"full": "#3FB950", "critical": "#FF6B35", "auto": "#FF4444"}.get(approval_mode, "#FF6B35")
+    mode_color = {"full": T.OK, "critical": T.WARN, "auto": T.DANGER}.get(approval_mode, T.WARN)
     return (
         f"engagement: [b]{_esc(eng.get('engagement_id', '—'))}[/]   "
         f"fase: [b]{phase_es(eng.get('phase')) if eng.get('phase') else '—'}[/]   "
@@ -342,7 +344,7 @@ def dashboard_status(snap: "Snapshot", grp: dict, sdk_ok: bool) -> str:
     eid = snap.eng.get("engagement_id")
     if not eid:
         return (
-            "[b #00D4FF]Sin engagement activo[/]\n\n"
+            f"{T.panel_title('Sin engagement activo')}\n\n"
             "Todavía no hay nada en marcha.\n"
             "Lanza una orden al Orquestador en la línea de abajo\n"
             "(p. ej. [b]haz recon de ejemplo.com[/]).\n\n"
@@ -352,19 +354,22 @@ def dashboard_status(snap: "Snapshot", grp: dict, sdk_ok: bool) -> str:
     doms = ", ".join(ins.get("domains", []) or ["—"])
     ips = ", ".join((ins.get("ips", []) or []) + (ins.get("cidrs", []) or []) or ["—"])
     fase = snap.eng.get("phase")
+    r_i, r_c = T.finding_bucket("real")     # (icono, color) colorblind-safe por bucket de hallazgos
+    w_i, w_c = T.finding_bucket("watch")
+    n_i, n_c = T.finding_bucket("noise")
     lines = [
-        "[b #00D4FF]Engagement[/]",
+        T.panel_title("Engagement"),
         f"id:   {_esc(eid)}",
         f"fase: {phase_es(fase) if fase else '—'}",
         "",
-        "[b #00D4FF]Scope[/]",
+        T.panel_title("Scope"),
         f"dom: {_esc(doms)}",
         f"ip:  {_esc(ips)}",
         "",
-        "[b #00D4FF]Hallazgos[/]",
-        f"[#FF4444]reales:[/]  {len(grp['real'])}",
-        f"[#FF6B35]vigilar:[/] {len(grp['watch'])}",
-        f"ruido:   {len(grp['noise'])}",
+        T.panel_title("Hallazgos"),
+        f"[{r_c}]{r_i} reales:[/]  {len(grp['real'])}",
+        f"[{w_c}]{w_i} vigilar:[/] {len(grp['watch'])}",
+        f"[{n_c}]{n_i} ruido:[/]   {len(grp['noise'])}",
         "",
         f"motor: {motor}",
     ]

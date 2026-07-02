@@ -1,25 +1,29 @@
-/* TUI de control total — Data Attack. Paleta Dracula/DataUnix. */
-Screen { background: #0D1117; }
+/* TUI de control total — Data Attack. Tokens de color: bot/tui/theme.py (ÚNICA fuente); app.py los
+   inyecta como variables CSS ($brand/$info/$ok/$warn/$danger/$muted/$fg/$bg/$surface2) vía
+   App.get_css_variables — aquí NO se repite ningún hex.
+   BORDES POR TIPO: paneles/estructura = $info · línea de orden = $brand (marca + acción) ·
+   modal de aprobación = $danger. El color semántico (verde/ámbar/coral) vive en el CONTENIDO. */
+Screen { background: $bg; }
 
-#hdr { height: 1; color: #C9D1D9; background: #161B22; padding: 0 1; }
+#hdr { height: 1; color: $fg; background: $surface2; padding: 0 1; }
 
-/* Marca DataUnix (#e02c41): el wordmark del Header en rojo de marca = acento de identidad sobrio. */
-HeaderTitle { color: #e02c41; text-style: bold; }
+/* Marca DataUnix: el wordmark del Header en rojo de marca = acento de identidad sobrio. */
+HeaderTitle { color: $brand; text-style: bold; }
 
 TabbedContent { height: 1fr; }
 
-/* Panel (dashboard) */
-#dash-status { width: 42; height: 1fr; border: round #00D4FF; padding: 0 1; }
-#dash-findings { height: 1fr; border: round #00D4FF; }
+/* Paneles (estructura) — todos con el mismo borde $info; el significado va en el contenido. */
+#dash-status { width: 42; height: 1fr; border: round $info; padding: 0 1; }
+#dash-findings { height: 1fr; border: round $info; }
 
 /* Resúmenes / cabeceras de paneles */
 #a2a-summary, #roster-hdr, #ev-hdr, #budget-box, #phase-box, #rag-box {
     padding: 0 1;
     height: auto;
 }
-#budget-box { border: round #00D4FF; }
-#phase-box { border: round #3FB950; }
-#rag-box { border: round #00D4FF; }
+#budget-box { border: round $info; }
+#phase-box { border: round $info; }
+#rag-box { border: round $info; }
 
 DataTable { height: 1fr; }
 
@@ -32,13 +36,13 @@ ActionsPanel Input { margin: 0 0 1 0; }
 ActionsPanel Button { margin: 0 0 1 0; }
 ActionsPanel Label { padding: 1 0 0 0; }
 
-/* Log + línea de orden persistentes */
-#log { height: 8; border: round #3FB950; padding: 0 1; }
-#cmd { border: tall #e02c41; }
+/* Log (estructura, $info) + línea de orden (marca + acción, $brand) persistentes */
+#log { height: 8; border: round $info; padding: 0 1; }
+#cmd { border: tall $brand; }
 
-/* Modal de aprobación humana */
-#appr-box { background: #161B22; border: thick #FF4444; padding: 1 2; width: 76; height: auto; }
-#appr-title { color: #FF4444; text-style: bold; }
-#appr-cmd { color: #C9D1D9; padding: 1 0; }
+/* Modal de aprobación humana (peligro: para y confirma) */
+#appr-box { background: $surface2; border: thick $danger; padding: 1 2; width: 76; height: auto; }
+#appr-title { color: $danger; text-style: bold; }
+#appr-cmd { color: $fg; padding: 1 0; }
 #appr-btns { height: auto; align: center middle; }
 Button { margin: 0 2; }

@@ -14,6 +14,7 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widgets import Button, DataTable, Input, Label, Static
 
 from . import state as S
+from . import theme as T
 
 
 class DashboardPanel(Vertical):
@@ -68,8 +69,8 @@ class RosterPanel(Vertical):
 
     def refresh_from(self, snap: S.Snapshot) -> None:
         self.query_one("#roster-hdr", Static).update(
-            f"[b #00D4FF]Roster[/] — {len(snap.cards)} cards (incl. orquestador)\n"
-            "[#6E7681]modelo (bot) = Anthropic real · modelo lab = perfil NVIDIA del espejo opencode "
+            f"{T.panel_title('Roster')} — {len(snap.cards)} cards (incl. orquestador)\n"
+            f"[{T.MUTED}]modelo (bot) = Anthropic real · modelo lab = perfil NVIDIA del espejo opencode "
             "(LAB-ONLY, el bot NO lo usa; '—' = solo Anthropic)[/]")
         t = self.query_one("#roster-table", DataTable)
         t.clear()
@@ -88,8 +89,8 @@ class BudgetPanel(Vertical):
         self.query_one("#budget-box", Static).update(S.budget_render(snap.count, snap.cap, snap.key))
         cost = f"${snap.cost:.2f}" if isinstance(snap.cost, (int, float)) else "—"
         self.query_one("#phase-box", Static).update(
-            "[b #00D4FF]Fase[/]\n" + S.phase_render(snap.eng.get("phase", "")) +
-            f"\n\n[b #00D4FF]Coste última orden[/]: {cost}\n"
+            T.panel_title("Fase") + "\n" + S.phase_render(snap.eng.get("phase", "")) +
+            f"\n\n{T.panel_title('Coste última orden')}: {cost}\n"
             "Desglose histórico por agente:  ./deploy/agentsview.sh up")
 
 
@@ -129,31 +130,31 @@ class ActionsPanel(VerticalScroll):
     """Planos de ACCIÓN. Cada botón burbujea a la App, que llama a actions.py (puertas intactas)."""
 
     def compose(self) -> ComposeResult:
-        yield Label("[b #FF4444]Kill-switch[/] — aborta la orden en curso (deniega lo pendiente)")
+        yield Label(f"[b {T.DANGER}]Kill-switch[/] — aborta la orden en curso (deniega lo pendiente)")
         yield Button("⛔ ABORTAR orden en curso", id="act-abort", variant="error")
 
-        yield Label("[b #00D4FF]Delegación dirigida[/] — la ejecuta el Orquestador por el hub")
+        yield Label(f"{T.panel_title('Delegación dirigida')} — la ejecuta el Orquestador por el hub")
         yield Input(placeholder="agente (p.ej. sqlmap)", id="act-deleg-agent")
         yield Input(placeholder="objetivo concreto", id="act-deleg-obj")
         yield Button("Delegar", id="act-deleg", variant="primary")
 
-        yield Label("[b #00D4FF]Override de fase[/]")
+        yield Label(T.panel_title("Override de fase"))
         yield Input(placeholder="fase: init/recon/triage/exploitation/post-exploitation/reporting/closed",
                     id="act-phase")
         yield Button("Cambiar fase", id="act-phase-btn")
 
-        yield Label("[b #00D4FF]Control del bus A2A[/]")
+        yield Label(T.panel_title("Control del bus A2A"))
         yield Input(placeholder="message_id", id="act-a2a-id")
         yield Input(placeholder="status: pending/delivered/done/blocked", id="act-a2a-status")
         yield Button("Aplicar status", id="act-a2a-btn")
 
-        yield Label("[b #00D4FF]Modelo / effort del Orquestador[/] — efectivo en la próxima orden")
+        yield Label(f"{T.panel_title('Modelo / effort del Orquestador')} — efectivo en la próxima orden")
         yield Input(placeholder="ORCH_MODEL (claude-opus-4-8 / -sonnet-4-6 / -haiku-4-5)", id="act-model")
         yield Button("Fijar modelo", id="act-model-btn")
         yield Input(placeholder="ORCH_EFFORT (low/medium/high/xhigh/max)", id="act-effort")
         yield Button("Fijar effort", id="act-effort-btn")
 
-        yield Label("[b #FF6B35]Supervisión humana[/] (full/critical/auto) — CONSTITUTION §2; "
+        yield Label(f"[b {T.WARN}]Supervisión humana[/] (full/critical/auto) — CONSTITUTION §2; "
                     "scope/budget NO se relajan en ningún modo")
         yield Input(placeholder="ORCH_APPROVAL_MODE (full / critical / auto)", id="act-approval")
         yield Button("Fijar supervisión", id="act-approval-btn")
