@@ -4,6 +4,22 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.25.0] - 2026-07-03
+### Changed
+- **TUI · Panel principal con KPIs en cards.** Los indicadores clave (fase · hallazgos reales/vigilar/ruido ·
+  coste de la última orden) pasan de un bloque de texto a una **fila de cinco cards** con borde y color, de un
+  vistazo; debajo quedan el estado del engagement/scope y la tabla de hallazgos.
+- **TUI · Presupuesto con `ProgressBar` real.** La barra de gasto de acciones (kill-switch C13) pasa de una
+  barra ASCII (`█░`) a un `ProgressBar` de Textual; el aviso de «cerca del techo / techo alcanzado» y el
+  recuento coloreado se mantienen como texto. Se retira el comando crudo `./deploy/agentsview.sh` del panel.
+### Notes
+- Lógica PURA en `state.py`: `budget_render` → `budget_caption` (sin barra ASCII) y nuevo `dashboard_kpis`
+  (5 KPIs con icono/color colorblind-safe, texto libre escapado); `dashboard_status` adelgazado (los hallazgos
+  van ahora en las cards). `panels.py` añade el `ProgressBar` y la fila de cards; `app.tcss` su layout. Council
+  3-roles **GO sin must-fix** (verificó la API de `ProgressBar` contra la fuente de Textual 0.80.0 —sin repetir
+  el problema del kwarg `id=`—, el reparto de alto de los `Horizontal` anidados y el escape). test_tui **78/78**,
+  validate_suite 465/0/0. El render se valida en Kali.
+
 ## [2.24.0] - 2026-07-02
 ### Added
 - **TUI · registro (log) MAXIMIZABLE con `Ctrl+L`.** Durante una orden larga (p.ej. «haz toda la fase de

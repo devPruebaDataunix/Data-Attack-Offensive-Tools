@@ -12,9 +12,16 @@ HeaderTitle { color: $brand; text-style: bold; }
 
 TabbedContent { height: 1fr; }
 
-/* Paneles (estructura) — todos con el mismo borde $info; el significado va en el contenido. */
+/* Panel principal: fila de KPI cards (fase·reales·vigilar·ruido·coste) + cuerpo (estado + hallazgos). */
+#dash-kpis { height: 5; }
+.kpi { width: 1fr; height: 100%; border: round $info; padding: 0 1; content-align: center middle;
+       text-align: center; margin: 0 1 0 0; }
+#dash-body { height: 1fr; }
 #dash-status { width: 42; height: 1fr; border: round $info; padding: 0 1; }
 #dash-findings { height: 1fr; border: round $info; }
+
+/* Presupuesto: barra de progreso real del gasto de acciones */
+#budget-bar { width: 100%; margin: 0 1; }
 
 /* Resúmenes / cabeceras de paneles */
 #a2a-summary, #roster-hdr, #ev-hdr, #budget-box, #phase-box, #rag-box, #kb-box {

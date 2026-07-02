@@ -197,10 +197,10 @@ def test_network_summary_counts_and_empty():
     assert "Sin hosts" in S.network_summary({})                  # empty-state amable
 
 
-def test_budget_render():
-    out = S.budget_render(900, 1000, "T-1")
+def test_budget_caption():
+    out = S.budget_caption(900, 1000, "T-1")
     assert "900/1000" in out and "cerca del techo" in out
-    over = S.budget_render(1100, 1000, "T-1")
+    over = S.budget_caption(1100, 1000, "T-1")
     assert "techo alcanzado" in over
 
 
@@ -363,7 +363,7 @@ def test_free_text_is_escaped_in_renders():
                       scope={"in_scope": {"domains": ["a[b].com"]}})
     d = S.dashboard_status(snap, {"real": [], "watch": [], "noise": [], "verdicts": []}, True)
     assert "a\\[b].com" in d                      # dominio escapado
-    assert "K\\[1]" in S.budget_render(1, 10, "K[1]")         # key del presupuesto
+    assert "K\\[1]" in S.budget_caption(1, 10, "K[1]")        # key del presupuesto
     assert "\\[evil]" in S.evidence_header(["[evil]"])       # nombre de engagement
     rows = S.a2a_rows({"messages": [_msg("M1", "a", "b", "pending", 0, "x[y]z")]})
     assert rows[0][5] == "x\\[y]z"               # preview del bus A2A escapado
@@ -410,18 +410,21 @@ def test_phase_render_active_is_brand():
     assert f"[{T.MUTED}]○ explotación[/]" in out     # pendiente: atenuado
 
 
-def test_dashboard_summary_uses_bucket_icons():
+def test_dashboard_kpis_uses_bucket_icons():
     snap = S.Snapshot(eng={"engagement_id": "E-1", "phase": "recon"},
-                      scope={"in_scope": {"domains": ["a.com"]}})
-    out = S.dashboard_status(snap, {"real": [1], "watch": [], "noise": [], "verdicts": []}, True)
-    assert "● reales:" in out and "▲ vigilar:" in out and "· ruido:" in out   # iconos por bucket
-    assert T.DANGER in out and T.WARN in out                                  # con color de token
+                      scope={"in_scope": {"domains": ["a.com"]}}, cost=0.5)
+    kpis = S.dashboard_kpis(snap, {"real": [1], "watch": [], "noise": [], "verdicts": []})
+    assert len(kpis) == 5                                                     # fase·reales·vigilar·ruido·coste
+    joined = " ".join(kpis)
+    assert "● reales" in joined and "▲ vigilar" in joined and "· ruido" in joined
+    assert T.DANGER in joined and T.WARN in joined                            # color de token por bucket
+    assert "1" in kpis[1] and "$0.50" in kpis[4]                              # 1 real · coste formateado
 
 
-def test_budget_render_uses_token_colors():
-    assert T.OK in S.budget_render(1, 1000, "T")          # holgado -> verde
-    assert T.WARN in S.budget_render(900, 1000, "T")      # cerca del techo -> ámbar
-    assert T.DANGER in S.budget_render(1100, 1000, "T")   # techo superado -> coral
+def test_budget_caption_uses_token_colors():
+    assert T.OK in S.budget_caption(1, 1000, "T")          # holgado -> verde
+    assert T.WARN in S.budget_caption(900, 1000, "T")      # cerca del techo -> ámbar
+    assert T.DANGER in S.budget_caption(1100, 1000, "T")   # techo superado -> coral
 
 
 # ── actions: escritura (override del operador) ───────────────────────────────────

@@ -424,17 +424,17 @@ def agent_detail(card: Optional[dict], lab_routes: Optional[dict] = None) -> str
 
 
 # ── Presupuesto / kill-switch ────────────────────────────────────────────────────
-def budget_render(count: int, cap: int, key: str) -> str:
+def budget_caption(count: int, cap: int, key: str) -> str:
+    """Texto del presupuesto (SIN barra ASCII: la barra visual la pinta un ProgressBar en el panel).
+    El color va en el recuento/aviso según cercanía al techo."""
     pct = (count / cap) if cap else 0
-    filled = min(20, int(pct * 20))
-    bar = "█" * filled + "░" * (20 - filled)
     color = T.OK if pct < 0.8 else (T.WARN if pct < 1.0 else T.DANGER)
     return (
         f"{T.panel_title('Presupuesto de acciones (kill-switch C13)')}\n"
         f"engagement: {_esc(key or '—')}\n"
-        f"[{color}]{bar}[/] {count}/{cap}  ({pct * 100:.0f}%)\n"
-        + (f"[{T.DANGER}]⚠ techo alcanzado: el orquestador se bloquea.[/]" if count > cap else
-           f"[{T.WARN}]⚠ cerca del techo.[/]" if pct >= 0.8 else "")
+        f"[{color}]{count}/{cap}  ({pct * 100:.0f}%)[/]"
+        + (f"\n[{T.DANGER}]⚠ techo alcanzado: el orquestador se bloquea.[/]" if count > cap else
+           f"\n[{T.WARN}]⚠ cerca del techo.[/]" if pct >= 0.8 else "")
     )
 
 
@@ -684,9 +684,8 @@ def dashboard_status(snap: "Snapshot", grp: dict, sdk_ok: bool) -> str:
     doms = ", ".join(ins.get("domains", []) or ["—"])
     ips = ", ".join((ins.get("ips", []) or []) + (ins.get("cidrs", []) or []) or ["—"])
     fase = snap.eng.get("phase")
-    r_i, r_c = T.finding_bucket("real")     # (icono, color) colorblind-safe por bucket de hallazgos
-    w_i, w_c = T.finding_bucket("watch")
-    n_i, n_c = T.finding_bucket("noise")
+    # Los hallazgos (reales/vigilar/ruido) se muestran ahora en las KPI cards (dashboard_kpis); aquí
+    # queda el bloque de engagement + scope + motor.
     lines = [
         T.panel_title("Engagement"),
         f"id:   {_esc(eid)}",
@@ -696,14 +695,26 @@ def dashboard_status(snap: "Snapshot", grp: dict, sdk_ok: bool) -> str:
         f"dom: {_esc(doms)}",
         f"ip:  {_esc(ips)}",
         "",
-        T.panel_title("Hallazgos"),
-        f"[{r_c}]{r_i} reales:[/]  {len(grp['real'])}",
-        f"[{w_c}]{w_i} vigilar:[/] {len(grp['watch'])}",
-        f"[{n_c}]{n_i} ruido:[/]   {len(grp['noise'])}",
-        "",
         f"motor: {motor}",
     ]
     return "\n".join(lines)
+
+
+def dashboard_kpis(snap: "Snapshot", grp: dict) -> list[str]:
+    """Cinco KPIs para las cards del Panel (orden fijo: fase · reales · vigilar · ruido · coste), cada
+    uno con su icono/color colorblind-safe. El panel los mapea a 5 cards por índice."""
+    r_i, r_c = T.finding_bucket("real")
+    w_i, w_c = T.finding_bucket("watch")
+    n_i, n_c = T.finding_bucket("noise")
+    fase = phase_es(snap.eng.get("phase")) if snap.eng.get("phase") else "—"
+    cost = f"${snap.cost:.2f}" if isinstance(snap.cost, (int, float)) else "—"
+    return [
+        f"[{T.MUTED}]fase[/]\n[b {T.BRAND}]{_esc(fase)}[/]",
+        f"[{r_c}]{r_i} reales[/]\n[b {r_c}]{len(grp['real'])}[/]",
+        f"[{w_c}]{w_i} vigilar[/]\n[b {w_c}]{len(grp['watch'])}[/]",
+        f"[{n_c}]{n_i} ruido[/]\n[b {n_c}]{len(grp['noise'])}[/]",
+        f"[{T.MUTED}]coste últ.[/]\n[b]{cost}[/]",
+    ]
 
 
 # ── Snapshot (una sola lectura por refresco, compartida por todos los paneles) ───

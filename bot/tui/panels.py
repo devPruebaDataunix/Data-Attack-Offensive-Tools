@@ -11,17 +11,21 @@ from __future__ import annotations
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
-from textual.widgets import Button, DataTable, Input, Label, Select, Static
+from textual.widgets import (Button, DataTable, Input, Label, ProgressBar,
+                             Select, Static)
 
 from . import state as S
 from . import theme as T
 
 
 class DashboardPanel(Vertical):
-    """Estado del engagement + tabla de hallazgos (el panel original)."""
+    """KPIs en cards (fase · reales · vigilar · ruido · coste) + estado del engagement + hallazgos."""
 
     def compose(self) -> ComposeResult:
-        with Horizontal():
+        with Horizontal(id="dash-kpis"):
+            for i in range(5):
+                yield Static("", id=f"kpi-{i}", classes="kpi")
+        with Horizontal(id="dash-body"):
             yield Static("", id="dash-status")
             yield DataTable(id="dash-findings")
 
@@ -29,6 +33,8 @@ class DashboardPanel(Vertical):
         self.query_one("#dash-findings", DataTable).add_columns("", "ID", "Sev", "Título", "Target")
 
     def refresh_from(self, snap: S.Snapshot, grp: dict, sdk_ok: bool) -> None:
+        for i, card in enumerate(S.dashboard_kpis(snap, grp)):
+            self.query_one(f"#kpi-{i}", Static).update(card)
         self.query_one("#dash-status", Static).update(S.dashboard_status(snap, grp, sdk_ok))
         t = self.query_one("#dash-findings", DataTable)
         t.clear()
@@ -120,19 +126,21 @@ class RosterPanel(Vertical):
 
 
 class BudgetPanel(Vertical):
-    """Presupuesto/kill-switch + timeline de fase + coste de la última orden."""
+    """Presupuesto/kill-switch (ProgressBar real) + timeline de fase + coste de la última orden."""
 
     def compose(self) -> ComposeResult:
         yield Static("", id="budget-box")
+        yield ProgressBar(total=100, show_eta=False, id="budget-bar")
         yield Static("", id="phase-box")
 
     def refresh_from(self, snap: S.Snapshot) -> None:
-        self.query_one("#budget-box", Static).update(S.budget_render(snap.count, snap.cap, snap.key))
+        self.query_one("#budget-box", Static).update(S.budget_caption(snap.count, snap.cap, snap.key))
+        bar = self.query_one("#budget-bar", ProgressBar)
+        bar.update(total=max(1, snap.cap), progress=min(snap.count, snap.cap))
         cost = f"${snap.cost:.2f}" if isinstance(snap.cost, (int, float)) else "—"
         self.query_one("#phase-box", Static).update(
             T.panel_title("Fase") + "\n" + S.phase_render(snap.eng.get("phase", "")) +
-            f"\n\n{T.panel_title('Coste última orden')}: {cost}\n"
-            "Desglose histórico por agente:  ./deploy/agentsview.sh up")
+            f"\n\n{T.panel_title('Coste última orden')}: {cost}")
 
 
 class RagPanel(VerticalScroll):
