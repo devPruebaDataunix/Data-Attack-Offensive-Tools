@@ -178,15 +178,19 @@ class DataAttackTUI(App[None]):
         Binding("q", "quit", "Salir", key_display="q"),
         Binding("r", "refresh", "Refrescar", key_display="r"),
         Binding("ctrl+k", "abort", "Kill-switch", key_display="Ctrl+K"),
+        # Ctrl+L: maximiza/restaura el REGISTRO (log) para leer toda la narración sin que el auto-scroll
+        # te arrastre al final (el panel Textual no se redimensiona con el ratón como una terminal).
+        Binding("ctrl+l", "toggle_log", "Registro", key_display="Ctrl+L"),
+        # Renombra la etiqueta del command-palette a español SIN desactivarlo: un Binding propio con
+        # action="command_palette" reemplaza el de sistema (Textual de-duplica por ACCIÓN, no por id).
+        # OJO: nada de kwarg id= aquí — no existe en Binding hasta Textual 0.82 y el pin es >=0.80.
+        Binding("ctrl+p", "command_palette", "paleta", key_display="Ctrl+P"),
         # Teclas 1–8: salto directo a cada pestaña (no interfieren con la escritura: el Input consume
         # los dígitos cuando tiene el foco; estas solo actúan si el foco NO está en un campo de texto).
         *[Binding(str(i), f"show_tab({i})", show=False) for i in range(1, 9)],
     ]
     # Orden de las pestañas (= app.compose y commands.TABS). La tecla N va a TAB_IDS[N-1].
     TAB_IDS = ["tab-dash", "tab-a2a", "tab-roster", "tab-net", "tab-budget", "tab-rag", "tab-ev", "tab-act"]
-    # Footer: "Ctrl+P" en vez de "^p" para la paleta de comandos (atributo de Textual ≥ reciente;
-    # si la versión no lo soporta, se ignora sin error — se confirma visualmente en Kali).
-    COMMAND_PALETTE_DISPLAY = "Ctrl+P"
     # Paleta (Ctrl+P): SOLO los comandos de DOMINIO en español (reemplaza los genéricos ingleses de
     # Textual: Keys/Quit/Theme/…). Definidos en bot/tui/commands.py; los ejecuta run_palette_command.
     COMMANDS = {DataAttackCommands}
@@ -220,7 +224,7 @@ class DataAttackTUI(App[None]):
                 yield P.EvidencePanel()
             with TabPane("Acciones", id="tab-act"):
                 yield P.ActionsPanel()
-        yield RichLog(id="log", highlight=True, markup=True, wrap=True)
+        yield RichLog(id="log", highlight=True, markup=True, wrap=True, max_lines=2000)
         yield Static("", id="order-status")   # estado en vivo de la orden en curso (lock observable)
         yield HistoryInput(
             placeholder="Orden al Orquestador (p.ej. 'haz recon de ...')  ·  'triage <producto>'  ·  ↑/↓ historial",
@@ -250,6 +254,7 @@ class DataAttackTUI(App[None]):
         self._budget = self.query_one(P.BudgetPanel)
         self._rag = self.query_one(P.RagPanel)
         self._evidence = self.query_one(P.EvidencePanel)
+        self._actions = self.query_one(P.ActionsPanel)
         if not SDK_OK:
             self._log(f"[{T.WARN}]Agent SDK no instalado aquí: las órdenes al Orquestador se "
                       "ejecutan en la Kali. El panel sí muestra estado, hallazgos y triage.[/]")
@@ -271,6 +276,7 @@ class DataAttackTUI(App[None]):
         self._network.refresh_from(snap)
         self._budget.refresh_from(snap)
         self._evidence.refresh_from(snap, S.engagement_dirs(REPO_DIR))
+        self._actions.refresh_from(snap)   # puebla el Select de agente una vez (catálogo estático)
         # Bus A2A: narra en el log los mensajes nuevos (el primer refresco solo los registra).
         for m in snap.eng.get("messages", []) or []:
             mid = m.get("message_id") if isinstance(m, dict) else None
@@ -298,6 +304,16 @@ class DataAttackTUI(App[None]):
     def action_show_tab(self, n: int) -> None:
         if 1 <= n <= len(self.TAB_IDS):
             self.query_one(TabbedContent).active = self.TAB_IDS[n - 1]
+
+    def action_toggle_log(self) -> None:
+        """Maximiza/restaura el registro (Ctrl+L). Al maximizar PAUSA el auto-scroll (para leer la
+        historia sin que un hito nuevo te arrastre al final) y le da el foco; al restaurar lo reanuda."""
+        log = self.query_one("#log", RichLog)
+        maxed = self.screen.has_class("logmax")
+        self.screen.set_class(not maxed, "logmax")
+        log.auto_scroll = maxed          # entra a maximizado -> False (leer) · sale -> True (seguir)
+        if not maxed:
+            log.focus()
 
     def show_detail(self, title: str, body: str) -> None:
         """Abre el modal de detalle (drill-down). Lo invocan los paneles vía self.app.show_detail(...)."""
@@ -359,15 +375,12 @@ class DataAttackTUI(App[None]):
         elif bid == "act-lab-run":
             self._lab_scope_flow(launch=True)
         elif bid == "act-deleg":
-            agent = self.query_one("#act-deleg-agent", Input).value.strip()
+            agent = self.query_one("#act-deleg-agent", Select).value
             obj = self.query_one("#act-deleg-obj", Input).value.strip()
-            if not agent or not obj:
-                self._log(f"[{T.WARN}]Delegación: indica agente y objetivo.[/]")
+            if agent is Select.BLANK or not agent or not obj:
+                self._log(f"[{T.WARN}]Delegación: elige un agente e indica el objetivo.[/]")
                 return
-            names = S.agent_names(S.load_cards(REPO_DIR))
-            if names and agent not in names:
-                self._log(f"[{T.WARN}]Agente desconocido: {agent} (revisa la pestaña Agentes).[/]")
-                return
+            agent = str(agent)   # el Select solo ofrece agentes válidos del catálogo (sin typos)
             self.query_one("#act-deleg-obj", Input).value = ""
             order = A.compose_delegation(agent, obj)
             self._log(f"[b {T.INFO}]Delegación dirigida → {agent}[/]")

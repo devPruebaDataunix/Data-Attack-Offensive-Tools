@@ -4,6 +4,28 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.24.0] - 2026-07-02
+### Added
+- **TUI · registro (log) MAXIMIZABLE con `Ctrl+L`.** Durante una orden larga (p.ej. «haz toda la fase de
+  reconocimiento») el log era un panel fijo de 8 líneas con auto-scroll: la narración se iba por arriba y no
+  había forma de leerla ni de agrandar el panel (una TUI no se redimensiona con el ratón como una terminal).
+  Ahora `Ctrl+L` **maximiza el registro** a casi pantalla completa y **pausa el auto-scroll** para poder
+  desplazarse por TODA la narración sin que un hito nuevo arrastre al final; se pulsa otra vez para restaurar
+  (y reanudar el seguimiento). El log gana foco al maximizar y conserva `max_lines=2000` de historia.
+### Changed
+- **La delegación dirigida usa un `Select` de agente** (antes texto libre): el desplegable se puebla una vez
+  con el catálogo real de agentes (sin el orquestador), evitando typos.
+- **Footer: la paleta de comandos se etiqueta «paleta»** (antes «palette» en inglés) — un `Binding` propio de
+  `ctrl+p → command_palette` reemplaza el de sistema por etiqueta, sin desactivar la paleta ni duplicarla.
+- **Panel Agentes: la tabla de la zona E2** (16 agentes) tiene `max-height` y scrollea dentro de su caja, para
+  que las cuatro zonas (Orquestador/E1/E2/E3) quepan sin scroll del contenedor.
+### Notes
+- Cambios de `app.py` (binding + `action_toggle_log` + `RichLog(max_lines=…)`), `panels.py` (`ActionsPanel`
+  puebla el Select en `refresh_from` una vez, guardado por `_agents_loaded`) y `app.tcss` (`.logmax` + cap E2).
+  Council 3-roles **NO-GO→GO** tras el único must-fix: quitar el kwarg `id=` del `Binding` (no existe hasta
+  Textual 0.82 y el pin es `>=0.80` → habría roto el arranque; la de-dup del palette es por acción, no por id).
+  test_tui **78/78**, validate_suite 465/0/0. El render se valida en Kali.
+
 ## [2.23.0] - 2026-07-02
 ### Added
 - **TUI · Paso D — interactividad.** (1) **Teclas 1–8** saltan directamente a cada pestaña (Panel, Bus A2A,

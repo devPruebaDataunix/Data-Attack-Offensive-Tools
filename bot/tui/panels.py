@@ -209,7 +209,21 @@ class NetworkPanel(VerticalScroll):
 
 
 class ActionsPanel(VerticalScroll):
-    """Planos de ACCIÓN. Cada botón burbujea a la App, que llama a actions.py (puertas intactas)."""
+    """Planos de ACCIÓN. Cada botón burbujea a la App, que llama a actions.py (puertas intactas).
+    El desplegable de agente se puebla una vez con el catálogo real (refresh_from)."""
+
+    def on_mount(self) -> None:
+        self._agents_loaded = False
+
+    def refresh_from(self, snap: S.Snapshot) -> None:
+        # Puebla el Select de agente UNA vez (el catálogo es estático; repoblar reiniciaría la
+        # selección del operador). Excluye al orquestador (no se delega en él).
+        if self._agents_loaded or not snap.cards:
+            return
+        names = [n for n in S.agent_names(snap.cards) if n != "orchestrator"]
+        if names:
+            self.query_one("#act-deleg-agent", Select).set_options([(n, n) for n in names])
+            self._agents_loaded = True
 
     def compose(self) -> ComposeResult:
         yield Label(f"[b {T.DANGER}]Kill-switch[/] — aborta la orden en curso (deniega lo pendiente)")
@@ -227,7 +241,7 @@ class ActionsPanel(VerticalScroll):
             yield Button("Definir alcance + LANZAR lab", id="act-lab-run", variant="primary")
 
         yield Label(f"{T.panel_title('Delegación dirigida')} — la ejecuta el Orquestador por el hub")
-        yield Input(placeholder="agente (p.ej. sqlmap)", id="act-deleg-agent")
+        yield Select([], id="act-deleg-agent", prompt="Elige un agente…")
         yield Input(placeholder="objetivo concreto", id="act-deleg-obj")
         yield Button("Delegar", id="act-deleg", variant="primary")
 

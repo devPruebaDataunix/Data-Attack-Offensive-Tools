@@ -35,7 +35,9 @@ DataTable { height: 1fr; }
 #roster-detail-wrap { width: 2fr; border: round $info; margin: 0 0 0 1; }
 #roster-detail { height: auto; padding: 0 1; }
 .roster-zone-title { height: 1; padding: 0 1; color: $fg; }
-.roster-zone-tbl { height: auto; margin: 0 0 1 0; }   /* override del DataTable:1fr global */
+/* height auto (override del DataTable:1fr global) con tope: E2 (16 filas) scrollea DENTRO de su
+   caja para que las 4 zonas (orq/E1/E2/E3) quepan sin scroll del contenedor; zonas pequeñas caben. */
+.roster-zone-tbl { height: auto; max-height: 12; margin: 0 0 1 0; }
 
 /* Pestaña Red (multi-host): resumen + 3 tablas apiladas (hosts/pivots/credenciales) que se
    scrollean. height auto en las tablas hace override del DataTable:1fr global (id > tipo). */
@@ -57,6 +59,10 @@ ActionsPanel Label { padding: 1 0 0 0; }
 #log { height: 8; border: round $info; padding: 0 1; }
 #order-status { height: 1; padding: 0 1; background: $surface2; }
 #cmd { border: tall $brand; }
+
+/* Registro maximizado (Ctrl+L): las pestañas se encogen y el log llena la pantalla para leer todo. */
+.logmax TabbedContent { height: 3; }
+.logmax #log { height: 1fr; }
 
 /* Modal de detalle (drill-down, solo lectura) */
 #detail-box { background: $surface2; border: round $info; padding: 1 2; width: 84; height: 80%; }
