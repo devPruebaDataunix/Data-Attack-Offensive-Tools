@@ -7,6 +7,8 @@ Clona/actualiza las fuentes a `.cache/` y corre los ingesters.
 - Capa 2 (semántica, kb_vec.db): HackTricks + PayloadsAllTheThings + PEASS + 817 skills de ciberseguridad
   (mukul975/Anthropic-Cybersecurity-Skills, Apache-2.0) + feeds (0dayfans/HN).
   Solo con --semantic (PESADO: clona repos grandes + embeddings locales; tarda).
+  OPT-IN (off por defecto): fuentes marcadas `optin` (p.ej. `exploitarium` = PoCs 0-day SIN LICENCIA,
+  ROE-only, corpus NO redistribuido) solo se indexan con --with=<label> o KB_OPTIN_SOURCES=<label>.
 
 La Capa 2 vive en un venv AISLADO (rag/knowledge/.venv) con torch CPU-only: ver _venv.py (evita el choque
 pip/dpkg de Kali y el stack CUDA). `--semantic` lo crea/usa solo; los agentes consultan vía query_kb.
@@ -17,6 +19,7 @@ Uso:
     python rag/knowledge/refresh_kb.py --semantic-only  # solo Capa 2
     python rag/knowledge/refresh_kb.py --semantic --no-install-deps  # Capa 2 sin crear/instalar el venv
     python rag/knowledge/refresh_kb.py --ensure-deps    # solo prepara el venv de la Capa 2 (no puebla)
+    python rag/knowledge/refresh_kb.py --semantic --with=exploitarium   # + RAG de 0-day (opt-in, ROE)
 """
 import os
 import runpy
@@ -48,17 +51,48 @@ CORPUS = {
     "cyber-skills": {"url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills.git",
                      "slug": "mukul975/Anthropic-Cybersecurity-Skills", "glob": "**/SKILL.md",
                      "branch": "main"},
+    # OPT-IN + ROE — RAG de exploits 0-day. Archivo de PoCs de exploits + writeups de vuln-research de
+    # vulnerabilidades POTENCIALMENTE NO REPORTADAS (0-day/n-day). Lo consultan vuln-triage (correlación
+    # servicio/versión → ¿hay PoC?) y los agentes de vector (web-exploit/network-exploit/metasploit).
+    # ⚠ SIN LICENCIA (all rights reserved): NO se redistribuye — el corpus va gitignored y SOLO se indexa
+    # localmente en Kali; aquí solo se REFERENCIA la fuente para clonar. Es DATO PASIVO: NO relaja ninguna
+    # puerta (scope_guard/approval siguen) y §3 "sin fuente no se explota" + verificación siguen obligando.
+    # Úsalo SOLO bajo ROE que autorice explotación (el autor pide divulgación responsable, no abuso).
+    # `pin` fija un commit conocido (el repo sin licencia puede cambiar/desaparecer); quítalo o actualízalo
+    # para traer 0-days nuevos. OPT-IN (off por defecto): habilítalo con --with=exploitarium o
+    # KB_OPTIN_SOURCES=exploitarium. Solo indexa los writeups .md (no el código PoC crudo).
+    "exploitarium": {"url": "https://github.com/bikini/exploitarium.git",
+                     "slug": "bikini/exploitarium", "glob": "**/*.md", "branch": "main",
+                     "optin": True, "pin": "da60c85abdb354e1160009e7aa8c36941094a865"},
 }
 
 
-def clone_or_pull(name, url):
+def clone_or_pull(name, url, pin=None):
+    """Clona/actualiza `url` en .cache/<name>. Si `pin` (un commit), NO hace pull: fija ese commit
+    (fetch dirigido + checkout) para un snapshot reproducible (fuentes sin licencia/volátiles)."""
     dst = os.path.join(CACHE, name)
     if os.path.isdir(os.path.join(dst, ".git")):
-        subprocess.run(["git", "-C", dst, "pull", "--ff-only"], check=False)
+        if not pin:
+            subprocess.run(["git", "-C", dst, "pull", "--ff-only"], check=False)
     else:
         os.makedirs(CACHE, exist_ok=True)
         subprocess.run(["git", "clone", "--depth", "1", url, dst], check=False)
+    if pin:
+        # el clone shallow puede no contener el commit fijado -> fetch dirigido (GitHub lo permite)
+        subprocess.run(["git", "-C", dst, "fetch", "--depth", "1", "origin", pin], check=False)
+        subprocess.run(["git", "-C", dst, "checkout", pin], check=False)
     return dst
+
+
+def _optin_labels(argv):
+    """Fuentes OPT-IN habilitadas: de --with=a,b y/o la env KB_OPTIN_SOURCES (coma). Vacío = ninguna
+    (las fuentes marcadas `optin` quedan OMITIDAS por defecto — p.ej. exploitarium, sin licencia/0-day)."""
+    labels = set()
+    for a in argv:
+        if a.startswith("--with="):
+            labels |= {x.strip() for x in a.split("=", 1)[1].split(",") if x.strip()}
+    labels |= {x.strip() for x in os.environ.get("KB_OPTIN_SOURCES", "").split(",") if x.strip()}
+    return labels
 
 
 def run(module, argv):
@@ -116,7 +150,7 @@ def _run_ext(py, module, argv):
         print(f"[!] {module} falló: {e} (continúo).")
 
 
-def refresh_layer2(install_deps=True):
+def refresh_layer2(install_deps=True, optin=frozenset()):
     print("=== Refresco RAG de conocimiento — Capa 2 (semántica/embeddings) ===")
     py = _venv.python_with_semantic_deps(install=install_deps)
     if py is None:
@@ -128,7 +162,11 @@ def refresh_layer2(install_deps=True):
                   "         python rag/knowledge/refresh_kb.py --semantic   (crea el venv aislado e instala)")
         return False
     for label, spec in CORPUS.items():
-        path = clone_or_pull(label, spec["url"])
+        if spec.get("optin") and label not in optin:
+            print(f"[Capa 2] fuente opt-in '{label}' OMITIDA (habilítala con --with={label} "
+                  f"o KB_OPTIN_SOURCES={label}).")
+            continue
+        path = clone_or_pull(label, spec["url"], pin=spec.get("pin"))
         argv = ["--source", label, "--src", path, "--repo", spec["slug"]]
         if spec.get("glob"):
             argv += ["--glob", spec["glob"]]
@@ -176,7 +214,7 @@ def main():
     if do_l1:
         refresh_layer1()
     if do_l2:
-        layer2_ok = refresh_layer2(install_deps)
+        layer2_ok = refresh_layer2(install_deps, optin=_optin_labels(argv))
     print("=== Hecho ===")
     # Si se pidió la Capa 2 y no quedó poblada, salir con error: el CRON dispara aviso (no rota en silencio)
     # y el deploy entra en su rama de warn en vez de dar un falso "poblada".

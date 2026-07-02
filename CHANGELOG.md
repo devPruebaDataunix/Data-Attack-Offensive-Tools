@@ -4,6 +4,29 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.26.0] - 2026-07-03
+### Added
+- **RAG de conocimiento · fuente OPT-IN de exploits 0-day (`exploitarium`).** El RAG de CONOCIMIENTO
+  (Capa 2 semántica) admite una fuente nueva **opt-in** con el archivo público de PoCs de exploits y
+  writeups de vuln-research `bikini/exploitarium` — pensada para que **`vuln-triage`** (correlación
+  servicio/versión → ¿hay PoC?) y los agentes de vector (**`web-exploit`/`network-exploit`/`metasploit`**)
+  descubran técnicas/PoCs frescos. Se indexan solo los writeups (`**/*.md`), etiquetados `by_source:
+  exploitarium` (filtrables), con el commit **fijado** (`pin`). Está **desactivada por defecto**: se habilita
+  con `refresh_kb.py --semantic --with=exploitarium` (o `KB_OPTIN_SOURCES=exploitarium`).
+### Security
+- **Sin licencia → no se redistribuye.** El repo fuente no tiene licencia (all rights reserved): el corpus
+  **nunca** se versiona (el clon en `.cache/` y el `kb_vec.db` están gitignored) — el repo solo **referencia**
+  la URL para clonar en la Kali del operador. Es **DATO PASIVO**: no relaja ninguna puerta (scope_guard/
+  approval/budget siguen), y §3 «sin fuente no se explota» + verificación + divulgación responsable siguen
+  obligando. Contenido 0-day → **ROE-only** (la responsabilidad de habilitarlo recae en el operador). El
+  código PoC crudo se excluye (solo se indexan los `.md`).
+### Notes
+- Cambio acotado a `rag/knowledge/refresh_kb.py`: entrada `optin`+`pin` en `CORPUS`, gating `_optin_labels`
+  (`--with=` / `KB_OPTIN_SOURCES`), y checkout del commit fijado en `clone_or_pull` (fetch dirigido +
+  detached HEAD reproducible). Council 3-roles **GO sin must-fix** (verificó con `git check-ignore` que el
+  corpus nunca entra en git, el opt-in off por defecto, la idempotencia del pin y que ninguna puerta se
+  relaja). validate_suite 465/0/0. El poblado real se hace en Kali con `--semantic --with=exploitarium`.
+
 ## [2.25.0] - 2026-07-03
 ### Changed
 - **TUI · Panel principal con KPIs en cards.** Los indicadores clave (fase · hallazgos reales/vigilar/ruido ·
