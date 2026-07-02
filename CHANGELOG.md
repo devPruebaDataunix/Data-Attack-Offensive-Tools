@@ -4,6 +4,21 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.27.0] - 2026-07-03
+### Added
+- **Instalador · flag `--exploitarium`** en `deploy/auto-deploy.sh`. La fuente 0-day opt-in añadida en v2.26.0
+  no tenía forma de habilitarse en el despliegue (había que correr `refresh_kb.py --with=` a mano). Ahora
+  `sudo ./deploy/auto-deploy.sh --exploitarium` la habilita en la población de la Capa 2 **y** en el cron de
+  ingesta pasiva. Implica `--semantic-rag` (exploitarium es una fuente de la Capa 2) y muestra un aviso de
+  licencia/ROE al habilitarla. **Sigue off por defecto**: sin el flag, el despliegue no toca exploitarium.
+### Notes
+- Cambio acotado a `deploy/auto-deploy.sh` (usage + `DO_EXPLOITARIUM` + bloque Capa 2 con `--with=exploitarium`
+  condicional + propagación al cron). Auditoría de coherencia: `setup.sh` (delega en auto-deploy sin flags, por
+  diseño), `lib.sh`/`verify.sh` (solo deps, agnósticos a fuentes) no requieren cambios. El cron re-indexa el
+  snapshot **fijado** (no trae 0-days nuevos hasta bumpear el `pin`). Council 3-roles **GO sin must-fix**
+  (verificó el default seguro off, el word-splitting bajo `set -Eeuo pipefail`, y que el chown cubre el clon en
+  `.cache/`). `bash -n` OK, validate_suite 465/0/0.
+
 ## [2.26.0] - 2026-07-03
 ### Added
 - **RAG de conocimiento · fuente OPT-IN de exploits 0-day (`exploitarium`).** El RAG de CONOCIMIENTO
