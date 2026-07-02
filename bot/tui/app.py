@@ -19,6 +19,7 @@ import asyncio
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 from textual import work
@@ -78,6 +79,18 @@ def _approval_mode() -> "str | None":
     """Modo de supervisión de bot/.env (o entorno). None => el runner lo resuelve (scope/critical)."""
     env = _load_env()
     return (env.get("ORCH_APPROVAL_MODE") or os.environ.get("ORCH_APPROVAL_MODE") or "").strip() or None
+
+
+def _stall_timeout() -> float:
+    """Segundos SIN señal del SDK tras los que la TUI auto-recupera el lock. Override por env
+    ORCH_STALL_TIMEOUT (bot/.env o entorno) para afinar en Kali si aparece un escaneo largo legítimo
+    de un solo comando (sin señales intermedias); default = state.ORDER_STALL_TIMEOUT. Inválido/≤0 => default."""
+    raw = (os.environ.get("ORCH_STALL_TIMEOUT") or _load_env().get("ORCH_STALL_TIMEOUT") or "").strip()
+    try:
+        v = float(raw)
+        return v if v > 0 else S.ORDER_STALL_TIMEOUT
+    except ValueError:
+        return S.ORDER_STALL_TIMEOUT
 
 
 class ApprovalModal(ModalScreen[bool]):
@@ -142,6 +155,7 @@ class DataAttackTUI(App[None]):
             with TabPane("Acciones", id="tab-act"):
                 yield P.ActionsPanel()
         yield RichLog(id="log", highlight=True, markup=True, wrap=True)
+        yield Static("", id="order-status")   # estado en vivo de la orden en curso (lock observable)
         yield Input(placeholder="Orden al Orquestador (p.ej. 'haz recon de ...')  ·  'triage <producto>'",
                     id="cmd")
         yield Footer()
@@ -153,6 +167,14 @@ class DataAttackTUI(App[None]):
         self._seeded = False
         self._runner: "AgentRunner | None" = None
         self._last_cost: "float | None" = None
+        # Lock de orden OBSERVABLE (A1): metadatos de la orden en curso. `_order_token` es un objeto
+        # único por invocación que evita que una orden ya reemplazada (exclusive) limpie el lock de la
+        # nueva (defensa contra la carrera del finally). "en curso" == `_running`.
+        self._order_task: "str | None" = None
+        self._order_started: "float | None" = None   # reloj monotónico
+        self._order_token: "object | None" = None
+        self._order_worker = None                    # Worker Textual (para cancelarlo en la recuperación)
+        self._stall_timeout = _stall_timeout()       # umbral de auto-recuperación (env ORCH_STALL_TIMEOUT)
         # Refs de paneles (todos viven montados aunque su pestaña esté oculta).
         self._dash = self.query_one(P.DashboardPanel)
         self._a2a = self.query_one(P.A2APanel)
@@ -167,6 +189,7 @@ class DataAttackTUI(App[None]):
         self._fetch_rag_status()
         self._fetch_kb_status()
         self.set_interval(5.0, self.refresh_state)
+        self.set_interval(2.0, self._order_tick)   # refresco fino del estado de la orden + auto-timeout
 
     # ── refresco global (lector único) ───────────────────────────────────────────
     def refresh_state(self) -> None:
@@ -245,7 +268,7 @@ class DataAttackTUI(App[None]):
             self._log(f"[{T.WARN}]{question}[/]")
             return
         self._log(f"[b {T.INFO}]Orden:[/] {task}")
-        self.run_order(task)
+        self._order_worker = self.run_order(task)
 
     # ── botones de los paneles ────────────────────────────────────────────────────
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -265,7 +288,7 @@ class DataAttackTUI(App[None]):
             self.query_one("#act-deleg-obj", Input).value = ""
             order = A.compose_delegation(agent, obj)
             self._log(f"[b {T.INFO}]Delegación dirigida → {agent}[/]")
-            self.run_order(order)
+            self._order_worker = self.run_order(order)
         elif bid == "act-phase-btn":
             self._do_action(A.set_phase(REPO_DIR, self.query_one("#act-phase", Input).value.strip()))
         elif bid == "act-a2a-btn":
@@ -293,11 +316,60 @@ class DataAttackTUI(App[None]):
             self.refresh_state()
 
     def _abort_order(self) -> None:
-        if self._runner is not None and self._running:
-            self._runner.abort()
-            self._log(f"[{T.DANGER}]⛔ Kill-switch: orden abortada — se denegará toda acción pendiente.[/]")
+        # Kill-switch (Ctrl+K / botón / paleta): recuperación MANUAL e instantánea del lock.
+        if self._running:
+            self._release_lock("kill-switch del operador")
         else:
             self._log(f"[{T.MUTED}]No hay ninguna orden en curso.[/]")
+
+    def _release_lock(self, reason: str) -> None:
+        """Recuperación del lock de orden: aborta el runner (deny cooperativo), CANCELA el worker (para
+        desatascar un `await` colgado) y libera el lock DURAMENTE aunque el finally del worker no llegue
+        a correr. Manual (Ctrl+K) o automática (auto-timeout por inactividad del SDK). Idempotente."""
+        if not self._running:
+            return
+        if self._runner is not None:
+            self._runner.abort()
+            self._last_cost = self._runner.last_cost_usd   # conserva el coste parcial si lo hubo
+        w = self._order_worker
+        if w is not None:
+            try:
+                w.cancel()
+            except Exception:  # noqa: BLE001 - cancelar un worker ya terminado no debe romper la TUI
+                pass
+        # Liberación dura: si el worker sigue vivo, su finally verá un token distinto y NO tocará nada.
+        self._running = False
+        self._order_token = None
+        self._order_task = None
+        self._order_started = None
+        self._runner = None
+        self._order_worker = None
+        self._update_order_status()
+        self.refresh_state()
+        self._log(f"[{T.DANGER}]⛔ Orden liberada: {reason} — se deniega toda acción pendiente.[/]")
+        try:
+            self.notify(f"Orden liberada: {reason}", severity="warning", timeout=5)
+        except Exception:  # noqa: BLE001 - notify es cosmético; nunca debe romper la recuperación
+            pass
+
+    def _update_order_status(self) -> None:
+        """Pinta la barra #order-status con el estado en vivo de la orden (task/elapsed/turnos/coste)."""
+        turns = getattr(self._runner, "live_turns", None)
+        cost = getattr(self._runner, "last_cost_usd", None)
+        beat = getattr(self._runner, "last_beat", None)
+        self.query_one("#order-status", Static).update(
+            S.order_status_line(self._order_task, self._order_started, time.monotonic(),
+                                turns=turns, cost=cost, last_beat=beat, timeout=self._stall_timeout))
+
+    def _order_tick(self) -> None:
+        """Tick de 2 s: refresca el estado en vivo y AUTO-RECUPERA el lock si el SDK lleva demasiado
+        tiempo sin dar señal (cuelgue silencioso). La recuperación manual (Ctrl+K) es instantánea."""
+        if not self._running:
+            return
+        self._update_order_status()
+        beat = getattr(self._runner, "last_beat", None)
+        if S.order_stale(self._order_started, beat, time.monotonic(), self._stall_timeout):
+            self._release_lock("sin señal del SDK (auto-recuperación por inactividad)")
 
     # ── triage (RAG) ──────────────────────────────────────────────────────────────
     @work(exclusive=True, group="triage")
@@ -352,18 +424,32 @@ class DataAttackTUI(App[None]):
         self._fetch_rag_status()
 
     # ── orden al Orquestador ──────────────────────────────────────────────────────
-    @work(group="order")
+    # exclusive=True: una nueva orden CANCELA la anterior en curso (nunca se rechaza en falso). Con un
+    # solo worker en el grupo "order" nunca corren dos Orquestadores sobre el mismo blackboard.
+    @work(exclusive=True, group="order")
     async def run_order(self, task: str) -> None:
-        if self._running:
-            self._log(f"[{T.WARN}]Ya hay una orden en curso; espera a que termine.[/]")
-            return
         if not SDK_OK:
             self._log(f"[{T.WARN}]No puedo lanzar el Orquestador aquí (Agent SDK ausente). "
                       "Ejecuta la orden desde la Kali.[/]")
             return
+        if self._running:   # el exclusive ya está cancelando la anterior; solo informamos
+            self._log(f"[{T.WARN}]↻ Reemplazo la orden anterior en curso por esta nueva.[/]")
+
+        token = object()   # identidad única de ESTA orden (para el guard anti-carrera del finally)
+        self._order_token = token
+        self._order_task = task
+        self._order_started = time.monotonic()
+        self._running = True
+        self._update_order_status()
+        self._log(f"[b {T.BRAND}]▶️ orden lanzada:[/] {S._esc(task)}")
+        try:
+            self.notify(f"Orden lanzada: {task[:60]}", timeout=4)
+        except Exception:  # noqa: BLE001 - notify es cosmético
+            pass
 
         async def emit(text):
             self._log(text)
+            self._update_order_status()   # feedback vivo: cada hito refresca turnos/coste/elapsed
 
         async def status(text):
             self.sub_title = (text or "")[:60]
@@ -376,22 +462,29 @@ class DataAttackTUI(App[None]):
             self.refresh_state()
 
         model, effort, max_usd = _read_cfg()
-        self._running = True
         runner = AgentRunner(REPO_DIR, emit, status, approve, on_verdict,
                              model=model, effort=effort, max_usd=max_usd,
                              approval_mode=_approval_mode())
         self._runner = runner
+        final = None
         try:
             final = await runner.run(task)
         except Exception as exc:  # noqa: BLE001 - se reporta al panel, no se traga
             self._log(f"[{T.DANGER}]Error del runner: {exc}[/]")
-            return
         finally:
-            self._running = False
-            self._runner = None
-            self._last_cost = runner.last_cost_usd
-            self.refresh_state()
-        if final:
+            # Solo libero el lock si SIGO siendo la orden vigente: si otra orden me reemplazó (exclusive)
+            # o el operador me liberó (Ctrl+K), el token ya cambió y NO debo pisar su estado.
+            if self._order_token is token:
+                self._running = False
+                self._order_token = None
+                self._order_task = None
+                self._order_started = None
+                self._runner = None
+                self._last_cost = runner.last_cost_usd
+                self._order_worker = None
+                self._update_order_status()
+                self.refresh_state()
+        if final and self._order_token is None:   # no ensuciar el log si ya arrancó otra orden encima
             self._log(f"[{T.OK}]Resultado:[/] {final[:1500]}")
 
 

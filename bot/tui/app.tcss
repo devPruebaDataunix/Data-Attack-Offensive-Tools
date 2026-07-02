@@ -37,8 +37,9 @@ ActionsPanel Input { margin: 0 0 1 0; }
 ActionsPanel Button { margin: 0 0 1 0; }
 ActionsPanel Label { padding: 1 0 0 0; }
 
-/* Log (estructura, $info) + línea de orden (marca + acción, $brand) persistentes */
+/* Log (estructura, $info) + estado de la orden en curso + línea de orden persistentes */
 #log { height: 8; border: round $info; padding: 0 1; }
+#order-status { height: 1; padding: 0 1; background: $surface2; }
 #cmd { border: tall $brand; }
 
 /* Modal de aprobación humana (peligro: para y confirma) */

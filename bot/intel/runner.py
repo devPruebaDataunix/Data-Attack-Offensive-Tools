@@ -96,8 +96,19 @@ class AgentRunner:
         # Telemetría de la última orden (la consume la TUI; el bot la ignora). Aditivo.
         self.last_cost_usd: Optional[float] = None
         self.last_turns: Optional[int] = None
+        # Telemetría EN VIVO (la lee la TUI en su tick para el feedback y el auto-timeout del lock; el
+        # bot la ignora). started_at/last_beat en reloj MONOTÓNICO; live_turns cuenta AssistantMessage.
+        # last_beat = 0.0 hasta que arranca run(); la TUI cae a started_at mientras no haya señal.
+        self.started_at: Optional[float] = None
+        self.last_beat: float = 0.0
+        self.live_turns: int = 0
         # Kill-switch cooperativo: si el operador aborta, el gate deniega TODA acción siguiente.
         self._aborted = False
+
+    def _beat(self) -> None:
+        """Marca actividad del SDK (última narración/tool/resultado). La TUI usa last_beat para saber
+        que la orden sigue viva y NO disparar la auto-recuperación del lock (state.order_stale)."""
+        self.last_beat = time.monotonic()
 
     def abort(self) -> None:
         """Aborta la orden en curso: a partir de aquí el gate deniega cualquier herramienta.
@@ -200,6 +211,7 @@ class AgentRunner:
 
     # ---- ejecución ------------------------------------------------------------
     async def run(self, task: str) -> str:
+        self.started_at = self.last_beat = time.monotonic()   # arranque del reloj de vida de la orden
         if not SDK_OK:
             return await self._run_fallback(task)
         await self._scan(seed=True)   # baseline: no re-alertar lo ya existente
@@ -213,7 +225,9 @@ class AgentRunner:
         return self._final
 
     async def _handle(self, msg):
+        self._beat()   # cualquier mensaje del SDK = señal de vida (para el auto-timeout del lock)
         if isinstance(msg, AssistantMessage):
+            self.live_turns += 1
             sub = self._subagents.get(getattr(msg, "parent_tool_use_id", None) or "")
             for b in msg.content:
                 if isinstance(b, ToolUseBlock):

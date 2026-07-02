@@ -50,6 +50,12 @@ APPROVAL_MODE_ES = {"full": "completa", "critical": "crítica", "auto": "automá
 DEFAULT_MAX_ACTIONS = 1000   # igual que budget_guard.py (DEFAULT_MAX)
 DEFAULT_MAX_A2A_HOPS = 50    # igual que blackboard.py (DEFAULT_MAX_A2A_HOPS)
 
+# Segundos SIN señal del SDK (última narración/tool) tras los que una orden se considera COLGADA y
+# la TUI la auto-recupera (libera el lock). Generoso a propósito: un escaneo largo de un solo comando
+# puede no emitir señales durante minutos. La recuperación MANUAL (Ctrl+K) es instantánea y primaria;
+# esto es solo la red de seguridad para un cuelgue silencioso del SDK (el caso real de tokenaso).
+ORDER_STALL_TIMEOUT = 300.0
+
 
 # ── lecturas crudas ────────────────────────────────────────────────────────────
 def read_json(path: Path) -> Optional[dict]:
@@ -237,6 +243,49 @@ def budget_render(count: int, cap: int, key: str) -> str:
         + (f"[{T.DANGER}]⚠ techo alcanzado: el orquestador se bloquea.[/]" if count > cap else
            f"[{T.WARN}]⚠ cerca del techo.[/]" if pct >= 0.8 else "")
     )
+
+
+# ── Orden en curso (observabilidad + recuperación del lock) ──────────────────────
+# PURO: recibe 'now'/'started'/'last_beat' en reloj MONOTÓNICO (los pasa app.py); así se testea sin
+# Textual ni tiempo real. El lock de orden vive en app.py; aquí solo se RENDERIZA y se decide staleness.
+def fmt_duration(seconds: float) -> str:
+    """Duración humana mm:ss (o h:mm:ss si ≥1h). Negativo/borde -> 00:00."""
+    s = int(max(0, seconds))
+    h, rem = divmod(s, 3600)
+    m, sec = divmod(rem, 60)
+    return f"{h}:{m:02d}:{sec:02d}" if h else f"{m:02d}:{sec:02d}"
+
+
+def order_stale(started: Optional[float], last_beat: Optional[float], now: float,
+                timeout: float = ORDER_STALL_TIMEOUT) -> bool:
+    """True si la orden lleva más de `timeout` s SIN señal. Mide desde la última señal del SDK
+    (`last_beat`: última narración/tool) o, si aún no hubo ninguna, desde el arranque (`started`).
+    Así una orden que sigue narrando NO se considera colgada aunque lleve mucho rato."""
+    if started is None:
+        return False
+    ref = last_beat if (isinstance(last_beat, (int, float)) and last_beat > 0) else started
+    return (now - ref) > timeout
+
+
+def order_status_line(task: Optional[str], started: Optional[float], now: float,
+                      turns: Optional[int] = None, cost: Optional[float] = None,
+                      last_beat: Optional[float] = None,
+                      timeout: float = ORDER_STALL_TIMEOUT) -> str:
+    """Línea de estado de la orden en curso para la barra bajo el log. Empty-state amable si no hay
+    orden. Marca staleness (sin señal) para avisar de un posible cuelgue. Escapa el texto libre."""
+    if not task or started is None:
+        return f"[{T.MUTED}]· sin orden en curso[/]"
+    bits = [f"[b {T.BRAND}]▶ orden en curso[/]",
+            f"[{T.INFO}]{_esc(_clip(task, 60))}[/]",
+            f"⏱ {fmt_duration(now - started)}"]
+    if isinstance(turns, int) and turns > 0:
+        bits.append(f"{turns} turnos")
+    if isinstance(cost, (int, float)) and cost:
+        bits.append(f"${cost:.2f}")
+    if order_stale(started, last_beat, now, timeout):
+        ref = last_beat if (isinstance(last_beat, (int, float)) and last_beat > 0) else started
+        bits.append(f"[{T.DANGER}]⚠ sin señal {fmt_duration(now - ref)} — Ctrl+K para liberar[/]")
+    return "  ·  ".join(bits)
 
 
 # ── Timeline de fase ─────────────────────────────────────────────────────────────

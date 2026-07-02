@@ -210,6 +210,33 @@ def test_kb_render_capa2_subset_warns():
     assert "vacía" in out0 and "subset de prueba" not in out0
 
 
+# ── state: orden en curso (observabilidad + recuperación del lock) — A1 ──────────
+def test_fmt_duration():
+    assert S.fmt_duration(0) == "00:00"
+    assert S.fmt_duration(62) == "01:02"
+    assert S.fmt_duration(3723) == "1:02:03"      # ≥1h -> h:mm:ss
+    assert S.fmt_duration(-5) == "00:00"          # borde negativo -> 00:00
+
+
+def test_order_stale():
+    assert S.order_stale(None, None, 100.0) is False              # sin orden -> nunca stale
+    assert S.order_stale(0.0, None, 10.0, timeout=300.0) is False  # arranque reciente, sin beats
+    assert S.order_stale(0.0, None, 400.0, timeout=300.0) is True  # sin beats y pasó el timeout
+    assert S.order_stale(0.0, 390.0, 400.0, timeout=300.0) is False  # beat reciente -> NO stale
+    assert S.order_stale(0.0, 5.0, 400.0, timeout=300.0) is True   # último beat viejo -> stale
+
+
+def test_order_status_line_idle_and_running():
+    assert "sin orden" in S.order_status_line(None, None, 100.0)   # empty-state amable
+    out = S.order_status_line("haz recon de a[b].com", started=0.0, now=65.0,
+                              turns=3, cost=0.12, last_beat=60.0)
+    assert "orden en curso" in out and "01:05" in out              # elapsed 65s -> 01:05
+    assert "3 turnos" in out and "$0.12" in out
+    assert "a\\[b].com" in out                                     # texto libre escapado (markup Rich)
+    stale = S.order_status_line("x", started=0.0, now=400.0, last_beat=5.0, timeout=300.0)
+    assert "sin señal" in stale                                    # marca el posible cuelgue
+
+
 # ── seguridad de render: escape de markup Rich en texto libre del blackboard ─────
 def test_esc_neutralizes_rich_markup():
     assert S._esc("a[b]c") == "a\\[b]c"          # '[' -> '\[' (no abre una etiqueta Rich)
@@ -383,6 +410,10 @@ def test_runner_cost_attrs_and_abort():
 
     r = AgentRunner(Path(BOT), emit=noop, status=noop, approve=noop, on_verdict=noop)
     assert r.last_cost_usd is None and r.last_turns is None
+    # telemetría en vivo (A1): arranca en cero; _beat() marca actividad para el auto-timeout del lock
+    assert r.live_turns == 0 and r.last_beat == 0.0 and r.started_at is None
+    r._beat()
+    assert r.last_beat > 0.0
     assert r._aborted is False
     r.abort()
     assert r._aborted is True

@@ -4,6 +4,33 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.17.0] - 2026-07-02
+### Added
+- **TUI · Paso A1 — lock de orden OBSERVABLE + recuperable + feedback en vivo.** La prueba contra un lab real
+  destapó un lock fantasma: si el Orquestador arrancaba y se colgaba en silencio, `_running` quedaba en `True`
+  y toda orden nueva rebotaba con «Ya hay una orden en curso» sin haberla. Ahora `run_order` es
+  `@work(exclusive=True)`: una orden nueva **cancela** la anterior en vez de rechazarse en falso, y con un único
+  worker en el grupo nunca corren dos Orquestadores sobre el mismo blackboard. Un `token` único por invocación
+  protege el lock de carreras del `finally` (una orden reemplazada no pisa el estado de la nueva).
+- **Recuperación del lock.** El kill-switch (Ctrl+K / botón / paleta) libera el lock **al instante**: aborta el
+  runner (deny cooperativo de acciones pendientes) y cancela el worker aunque el SDK esté colgado. Como red de
+  seguridad, un **auto-timeout** libera el lock tras 300 s SIN señal del SDK (configurable por env
+  `ORCH_STALL_TIMEOUT`); la vía manual es la primaria e instantánea.
+- **Feedback en vivo.** Nueva barra `#order-status` bajo el log con el estado de la orden en curso:
+  `▶ orden en curso · <tarea> · ⏱ mm:ss · N turnos · $coste`, con aviso de «sin señal» si se cuelga.
+  Eco inmediato `▶️ orden lanzada` + `notify()` al lanzar (antes no había señal hasta que el SDK narraba).
+### Changed
+- **Telemetría en vivo en el runner (aditiva).** `AgentRunner` expone `started_at` / `last_beat` / `live_turns`
+  y un `_beat()` que marca actividad en cada mensaje del SDK; la TUI la lee en un tick de 2 s para el feedback
+  y el auto-timeout. Es de solo-lectura para la TUI: el bot de Telegram la ignora (no cambia su comportamiento).
+### Notes
+- Lógica PURA en `state.py` (`fmt_duration` / `order_stale` / `order_status_line` + constante
+  `ORDER_STALL_TIMEOUT`) testeada en Windows; `app.py` añade el cableado Textual (`_release_lock` /
+  `_update_order_status` / `_order_tick` + `run_order` reescrito) y `app.tcss` la barra `#order-status`.
+  Council 3-roles **GO sin must-fix** (verificó la corrección de la carrera del token, la API de Textual
+  contra el pin `textual>=0.80` y que ninguna puerta —scope/budget/aprobación— se relaja). test_tui **59/59**
+  (+3), validate_suite 465/0/0. El render se valida en Kali.
+
 ## [2.16.0] - 2026-07-02
 ### Added
 - **TUI v2 · Paso 2 (B.2) — el panel RAG muestra ahora también el RAG de CONOCIMIENTO.** Hasta ahora la pestaña
