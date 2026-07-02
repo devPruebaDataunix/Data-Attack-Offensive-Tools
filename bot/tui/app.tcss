@@ -36,6 +36,7 @@ ActionsPanel { padding: 0 1; }
 ActionsPanel Input { margin: 0 0 1 0; }
 ActionsPanel Button { margin: 0 0 1 0; }
 ActionsPanel Label { padding: 1 0 0 0; }
+#act-lab-btns { height: auto; }
 
 /* Log (estructura, $info) + estado de la orden en curso + línea de orden persistentes */
 #log { height: 8; border: round $info; padding: 0 1; }

@@ -4,6 +4,34 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.19.0] - 2026-07-02
+### Added
+- **TUI · Paso A2 — arranque de lab desde la TUI (objetivo → alcance → autogestión).** El panel de Acciones
+  añade una sección «Arranque de lab»: el operador escribe uno o varios objetivos (IP / CIDR / dominio), un
+  `engagement id` opcional y el modo de supervisión, y con un botón la TUI **escribe `contracts/scope.json`**
+  (de forma atómica, con **backup `.bak`** gitignored y **auditoría** en `engagement.evidence[]`) y fija el
+  `approval_mode`. El segundo botón, «Definir alcance + LANZAR lab», además arranca el engagement completo
+  (recon → … → informe) en un paso. Antes el alcance solo se definía fuera de la TUI (`deploy/setup.sh`), lo
+  que obligaba a copiar la IP a mano entre terminales (uno de los 3 fallos que destapó la prueba real).
+- **Confirmación explícita** antes de escribir el alcance (modal): escribir `scope.json` es tocar la frontera
+  de confianza, así que se muestra un resumen (objetivos / supervisión / engagement) y se exige confirmar.
+### Security
+- **Ninguna puerta se relaja.** El OPERADOR (proceso Python de la TUI que escribe con `atomic_write`) es un
+  actor distinto de la tool `Write` del agente (que sigue denegada en `settings.json`) — es el human-in-the-loop
+  de la CONSTITUTION. `no_dos` / `no_social_engineering` / `no_data_exfiltration_real` se **fuerzan a `True`**
+  aunque el scope previo los trajera en `False`; los guards deterministas (scope_guard/budget_guard) siguen
+  decidiendo en runtime; `approval_mode=auto` solo quita la aprobación HUMANA por acción, no desactiva ningún
+  guard. **Se rechazan CIDRs demasiado amplios / la ruta por defecto** (`0.0.0.0/0`, `/8`… ; umbral `/16` IPv4,
+  `/64` IPv6) para que un error de tecleo no abra el alcance a rangos enormes (Regla 0). Un lab **no hereda**
+  `client` / `out_of_scope` / `authorization` de un engagement anterior (higiene de datos de cliente); solo
+  preserva los caps operativos no peligrosos (`max_actions` / `max_a2a_hops`).
+### Notes
+- Lógica PURA en `actions.py` (`classify_targets` / `build_lab_scope` / `set_lab_scope` / `_audit_operator` /
+  `compose_lab_run`) testeada en Windows; `app.py` añade el worker `_lab_scope_flow` (`exclusive=True`, con
+  modal de confirmación) y `panels.py` la sección del panel. Council 3-roles **GO** tras aplicar su único
+  must-fix (rechazo de CIDR amplio + aislamiento de datos de cliente); verificó el espejo de scope_guard y que
+  ningún invariante de no-daño se relaja. test_tui **69/69** (+8), validate_suite 465/0/0. Se valida en Kali.
+
 ## [2.18.0] - 2026-07-02
 ### Added
 - **TUI · Paso A3 — historial de órdenes ↑/↓ en la línea de orden.** Antes el `Input` #cmd era el de serie: la

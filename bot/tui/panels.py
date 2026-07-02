@@ -137,6 +137,17 @@ class ActionsPanel(VerticalScroll):
         yield Label(f"[b {T.DANGER}]Kill-switch[/] — aborta la orden en curso (deniega lo pendiente)")
         yield Button("⛔ ABORTAR orden en curso", id="act-abort", variant="error")
 
+        yield Label(f"{T.panel_title('Arranque de lab (objetivo → alcance → autogestión)')} — define el "
+                    "alcance y, si quieres, lanza el engagement completo en un paso")
+        yield Input(placeholder="objetivo(s): IP / CIDR / dominio, separados por coma (p.ej. 172.17.0.2)",
+                    id="act-lab-targets")
+        yield Input(placeholder="engagement id (opcional; por defecto LAB-<objetivo>)", id="act-lab-eid")
+        yield Input(placeholder="supervisión al operar (auto / critical / full; por defecto auto)",
+                    id="act-lab-approval")
+        with Horizontal(id="act-lab-btns"):
+            yield Button("Definir alcance", id="act-lab-scope", variant="warning")
+            yield Button("Definir alcance + LANZAR lab", id="act-lab-run", variant="primary")
+
         yield Label(f"{T.panel_title('Delegación dirigida')} — la ejecuta el Orquestador por el hub")
         yield Input(placeholder="agente (p.ej. sqlmap)", id="act-deleg-agent")
         yield Input(placeholder="objetivo concreto", id="act-deleg-obj")

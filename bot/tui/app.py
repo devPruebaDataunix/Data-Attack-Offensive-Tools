@@ -125,15 +125,18 @@ class HistoryInput(Input):
 
 
 class ApprovalModal(ModalScreen[bool]):
-    """Aprobación humana por acción — mapea el callback `approve` del runner."""
+    """Aprobación/confirmación humana modal (Autorizar/Denegar → bool). La usa el callback `approve` del
+    runner (acción que toca el target) y también la confirmación de escritura de scope (title propio)."""
 
-    def __init__(self, summary: str) -> None:
+    def __init__(self, summary: str,
+                 title: str = "⚠  Acción que toca el target — ¿autorizar?") -> None:
         super().__init__()
         self._summary = summary
+        self._title = title
 
     def compose(self) -> ComposeResult:
         with Vertical(id="appr-box"):
-            yield Label("⚠  Acción que toca el target — ¿autorizar?", id="appr-title")
+            yield Label(self._title, id="appr-title")
             yield Static(self._summary, id="appr-cmd")
             with Horizontal(id="appr-btns"):
                 yield Button("Autorizar", variant="success", id="yes")
@@ -309,6 +312,10 @@ class DataAttackTUI(App[None]):
         bid = event.button.id or ""
         if bid == "act-abort":
             self._abort_order()
+        elif bid == "act-lab-scope":
+            self._lab_scope_flow(launch=False)
+        elif bid == "act-lab-run":
+            self._lab_scope_flow(launch=True)
         elif bid == "act-deleg":
             agent = self.query_one("#act-deleg-agent", Input).value.strip()
             obj = self.query_one("#act-deleg-obj", Input).value.strip()
@@ -404,6 +411,45 @@ class DataAttackTUI(App[None]):
         beat = getattr(self._runner, "last_beat", None)
         if S.order_stale(self._order_started, beat, time.monotonic(), self._stall_timeout):
             self._release_lock("sin señal del SDK (auto-recuperación por inactividad)")
+
+    # ── arranque de lab: objetivo → scope.json (+ lanzar) ─────────────────────────
+    @work(exclusive=True, group="labscope")
+    async def _lab_scope_flow(self, launch: bool) -> None:
+        """Define el alcance del lab desde la TUI: pre-valida, PIDE CONFIRMACIÓN (escribir scope.json es
+        tocar la frontera de confianza), escribe (atómico + backup + auditado) y, si se pidió, lanza el
+        engagement completo por run_order (todas las puertas siguen activas). NO relaja ninguna puerta."""
+        targets = self.query_one("#act-lab-targets", Input).value.strip()
+        eid = self.query_one("#act-lab-eid", Input).value.strip()
+        approval = self.query_one("#act-lab-approval", Input).value.strip() or "auto"
+        if not targets:
+            self._log(f"[{T.WARN}]Arranque de lab: indica al menos un objetivo (IP/CIDR/dominio).[/]")
+            return
+        # pre-valida SIN escribir para mostrar un resumen fiel en el modal de confirmación
+        ok, res = A.build_lab_scope(targets, eid, approval, base=S.load_scope(REPO_DIR))
+        if not ok:
+            self._log(f"[{T.DANGER}]✗ {res}[/]")
+            return
+        summary = (f"Se ESCRIBIRÁ contracts/scope.json (con backup .bak):\n"
+                   f"  objetivos:   {S._esc(targets)}\n"
+                   f"  supervisión: {approval}\n"
+                   f"  engagement:  {S._esc(res['engagement_id'])}\n"
+                   + ("\n▶ y se LANZARÁ el lab completo de inmediato." if launch
+                      else "\n(no se lanza nada; solo se define el alcance)"))
+        confirmed = await self.push_screen_wait(
+            ApprovalModal(summary, title="⚠  Vas a definir el ALCANCE (scope.json) — ¿confirmar?"))
+        if not confirmed:
+            self._log(f"[{T.MUTED}]Arranque de lab cancelado; el alcance no se ha tocado.[/]")
+            return
+        ok, msg = A.set_lab_scope(REPO_DIR, targets, eid, approval)
+        self._do_action((ok, msg))
+        if not ok:
+            return
+        for wid in ("#act-lab-targets", "#act-lab-eid", "#act-lab-approval"):
+            self.query_one(wid, Input).value = ""
+        if launch:
+            order = A.compose_lab_run(targets)
+            self._log(f"[b {T.BRAND}]▶️ lanzando el lab completo (supervisión {approval})…[/]")
+            self._order_worker = self.run_order(order)
 
     # ── triage (RAG) ──────────────────────────────────────────────────────────────
     @work(exclusive=True, group="triage")

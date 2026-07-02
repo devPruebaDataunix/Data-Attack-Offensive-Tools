@@ -402,6 +402,91 @@ def test_rag_refresh_cmd():
     assert "--epss-all" in A.rag_refresh_cmd(epss_all=True)
 
 
+# ── actions: arranque de lab (objetivo → scope.json, A2) ─────────────────────────
+def test_classify_targets():
+    ips, cidrs, domains, bad = A.classify_targets("172.17.0.2, 10.0.0.0/24, ejemplo.com, ; ")
+    assert ips == ["172.17.0.2"] and cidrs == ["10.0.0.0/24"] and domains == ["ejemplo.com"]
+    assert bad == []
+    _, _, _, bad2 = A.classify_targets("no_valido, 999.1.1.1")
+    assert "no_valido" in bad2 and "999.1.1.1" in bad2       # dominio falso e IP fuera de rango
+    ips3, _, _, _ = A.classify_targets("1.1.1.1, 1.1.1.1")    # sin duplicados, conserva orden
+    assert ips3 == ["1.1.1.1"]
+
+
+def test_classify_targets_rejects_broad_cidr():
+    # un CIDR de ruta por defecto / demasiado amplio abriría scope_guard a rangos enormes -> se rechaza
+    _, cidrs, _, bad = A.classify_targets("10.0.0.0/24, 0.0.0.0/0, ::/0, 10.0.0.0/8, 172.16.0.0/12")
+    assert cidrs == ["10.0.0.0/24"]                          # solo el /24 de lab sobrevive
+    for broad in ("0.0.0.0/0", "::/0", "10.0.0.0/8", "172.16.0.0/12"):
+        assert broad in bad
+    _, cidrs6, _, _ = A.classify_targets("fd00::/64")        # /64 IPv6 sí es aceptable
+    assert cidrs6 == ["fd00::/64"]
+
+
+def test_build_lab_scope_valid_and_forces_no_harm():
+    ok, sc = A.build_lab_scope("172.17.0.2", "TOKENASO", "auto")
+    assert ok
+    assert sc["in_scope"]["ips"] == ["172.17.0.2"] and sc["engagement_id"] == "TOKENASO"
+    assert sc["constraints"]["approval_mode"] == "auto"
+    # no-daño NUNCA se relaja desde el panel: forzado a True aunque no se pida
+    assert sc["constraints"]["no_dos"] is True
+    assert sc["constraints"]["no_social_engineering"] is True
+    assert sc["constraints"]["no_data_exfiltration_real"] is True
+
+
+def test_build_lab_scope_default_eid_and_rejections():
+    ok, sc = A.build_lab_scope("10.10.10.5", "", "auto")
+    assert ok and sc["engagement_id"] == "LAB-10.10.10.5"     # eid por defecto desde el 1er objetivo
+    bad_mode, m1 = A.build_lab_scope("10.10.10.5", "x", "turbo")
+    assert not bad_mode and "supervisión" in m1
+    no_t, _ = A.build_lab_scope("   ", "x", "auto")
+    assert not no_t                                           # sin objetivos válidos
+    bad_eid, _ = A.build_lab_scope("10.10.10.5", "bad id!", "auto")
+    assert not bad_eid                                        # eid con caracteres inválidos
+
+
+def test_build_lab_scope_forces_no_dos_and_isolates_client_data():
+    ok, sc = A.build_lab_scope("10.0.0.1", "L", "critical",
+                               base={"client": "ACME Corp",
+                                     "constraints": {"no_dos": False, "max_actions": 250},
+                                     "out_of_scope": {"ips": ["10.0.0.9"], "domains": [], "notes": "n"}})
+    assert ok
+    assert sc["constraints"]["no_dos"] is True                # peligroso -> se fuerza, no se relaja
+    assert sc["constraints"]["max_actions"] == 250            # cap operativo no peligroso -> se preserva
+    assert sc["constraints"]["approval_mode"] == "critical"
+    # higiene de datos: un lab NO hereda client ni out_of_scope de un engagement anterior
+    assert sc["client"] == "L"
+    assert sc["out_of_scope"] == {"domains": [], "ips": [], "notes": ""}
+
+
+def test_set_lab_scope_writes_backup_and_audits():
+    d = _tmp_engagement()                                     # crea contracts/engagement.json válido
+    (d / "contracts" / "scope.json").write_text(
+        '{"engagement_id":"OLD","in_scope":{"ips":["1.1.1.1"]}}', encoding="utf-8")
+    ok, msg = A.set_lab_scope(d, "172.17.0.2, 10.0.0.0/24", "TOKENASO", "auto")
+    assert ok, msg
+    sc = json.loads((d / "contracts" / "scope.json").read_text(encoding="utf-8"))
+    assert sc["in_scope"]["ips"] == ["172.17.0.2"] and sc["in_scope"]["cidrs"] == ["10.0.0.0/24"]
+    assert sc["constraints"]["approval_mode"] == "auto"
+    bak = json.loads((d / "contracts" / "scope.json.bak").read_text(encoding="utf-8"))
+    assert bak["engagement_id"] == "OLD"                      # backup del scope anterior
+    eng = json.loads((d / "contracts" / "engagement.json").read_text(encoding="utf-8"))
+    assert any(e.get("agent") == "operator" and "set_lab_scope" in e.get("action", "")
+               for e in eng.get("evidence", []))             # auditado en evidence[]
+
+
+def test_set_lab_scope_rejects_invalid_without_writing():
+    d = _tmp_engagement()
+    ok, _ = A.set_lab_scope(d, "no-es-target", "x", "auto")
+    assert not ok
+    assert not (d / "contracts" / "scope.json").exists()      # no escribe nada si es inválido
+
+
+def test_compose_lab_run_mentions_scope_and_targets():
+    t = A.compose_lab_run("172.17.0.2")
+    assert "172.17.0.2" in t and "scope.json" in t.lower() and "AGENTS.md" in t
+
+
 # ── commands: catálogo de la paleta de dominio (Ctrl+P) ──────────────────────────
 def test_command_specs_cover_tabs_and_approval():
     specs = CMD.command_specs()
