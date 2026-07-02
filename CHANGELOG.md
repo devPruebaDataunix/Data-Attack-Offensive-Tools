@@ -4,6 +4,26 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.23.0] - 2026-07-02
+### Added
+- **TUI · Paso D — interactividad.** (1) **Teclas 1–8** saltan directamente a cada pestaña (Panel, Bus A2A,
+  Agentes, Red, Presupuesto, RAG, Evidencia, Acciones); no interfieren con la escritura (el campo de texto
+  consume los dígitos cuando tiene el foco). (2) **Drill-down del bus A2A**: seleccionar un mensaje (Enter o
+  clic) abre un modal con su detalle completo (`message_detail`: emisor→destino, rol, status/hops, refs y las
+  partes del mensaje). El modal se cierra con Esc o el botón.
+### Fixed
+- **Escape de markup Rich en `message_detail`** (mismo patrón que v2.14.1). El volcado del mensaje A2A que
+  ahora pinta el modal interpolaba campos de texto libre (`from`/`to`/`role`/`parts`) sin escapar; como esos
+  datos pueden venir influidos por el target, un `[` habría roto el render del modal (Rich). Se escapan todos
+  los campos libres (lo cazó el council al cablear el drill-down — era la deuda anotada desde v2.14.1).
+### Notes
+- Lógica PURA en `state.py` (`a2a_message_ids` + `message_detail` escapado) testeada en Windows (incluido un
+  caso de markup que blinda la regresión); `app.py` añade `DetailModal`, las bindings 1–8 (`action_show_tab`)
+  y `show_detail`; `panels.py` cablea la selección de fila del `A2APanel` (`cursor_type="row"` +
+  `on_data_table_row_selected` → `self.app.show_detail`, sin import circular); `app.tcss` el modal. Council
+  3-roles **NO-GO→GO** tras aplicar el único must-fix (el escape de `message_detail`). test_tui **78/78** (+2),
+  validate_suite 465/0/0. El render se valida en Kali.
+
 ## [2.22.0] - 2026-07-02
 ### Added
 - **TUI · Paso C — pestaña «Red» (multi-host).** Nueva pestaña que superficie el estado multi-host que el

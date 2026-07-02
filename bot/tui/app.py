@@ -25,7 +25,7 @@ from pathlib import Path
 from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import (Button, Footer, Header, Input, Label, RichLog,
                              Select, Static, TabbedContent, TabPane)
@@ -124,6 +124,31 @@ class HistoryInput(Input):
             self.cursor_position = len(val)
 
 
+class DetailModal(ModalScreen[None]):
+    """Modal de solo-lectura para el drill-down (p.ej. el detalle de un mensaje del bus A2A). Se cierra
+    con Esc o el botón. El cuerpo ya viene con markup escapado desde state.py."""
+
+    BINDINGS = [Binding("escape", "close", "Cerrar", key_display="Esc")]
+
+    def __init__(self, title: str, body: str) -> None:
+        super().__init__()
+        self._title = title
+        self._body = body
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="detail-box"):
+            yield Label(self._title, id="detail-title")
+            with VerticalScroll(id="detail-scroll"):
+                yield Static(self._body, id="detail-body")
+            yield Button("Cerrar", id="detail-close", variant="primary")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss()
+
+    def action_close(self) -> None:
+        self.dismiss()
+
+
 class ApprovalModal(ModalScreen[bool]):
     """Aprobación/confirmación humana modal (Autorizar/Denegar → bool). La usa el callback `approve` del
     runner (acción que toca el target) y también la confirmación de escritura de scope (title propio)."""
@@ -153,7 +178,12 @@ class DataAttackTUI(App[None]):
         Binding("q", "quit", "Salir", key_display="q"),
         Binding("r", "refresh", "Refrescar", key_display="r"),
         Binding("ctrl+k", "abort", "Kill-switch", key_display="Ctrl+K"),
+        # Teclas 1–8: salto directo a cada pestaña (no interfieren con la escritura: el Input consume
+        # los dígitos cuando tiene el foco; estas solo actúan si el foco NO está en un campo de texto).
+        *[Binding(str(i), f"show_tab({i})", show=False) for i in range(1, 9)],
     ]
+    # Orden de las pestañas (= app.compose y commands.TABS). La tecla N va a TAB_IDS[N-1].
+    TAB_IDS = ["tab-dash", "tab-a2a", "tab-roster", "tab-net", "tab-budget", "tab-rag", "tab-ev", "tab-act"]
     # Footer: "Ctrl+P" en vez de "^p" para la paleta de comandos (atributo de Textual ≥ reciente;
     # si la versión no lo soporta, se ignora sin error — se confirma visualmente en Kali).
     COMMAND_PALETTE_DISPLAY = "Ctrl+P"
@@ -264,6 +294,14 @@ class DataAttackTUI(App[None]):
 
     def action_abort(self) -> None:
         self._abort_order()
+
+    def action_show_tab(self, n: int) -> None:
+        if 1 <= n <= len(self.TAB_IDS):
+            self.query_one(TabbedContent).active = self.TAB_IDS[n - 1]
+
+    def show_detail(self, title: str, body: str) -> None:
+        """Abre el modal de detalle (drill-down). Lo invocan los paneles vía self.app.show_detail(...)."""
+        self.push_screen(DetailModal(title, body))
 
     def run_palette_command(self, key: str) -> None:
         """Despacha un comando de la paleta (bot/tui/commands.py) a su acción. Son ATAJOS a acciones

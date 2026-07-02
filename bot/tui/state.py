@@ -165,6 +165,12 @@ def a2a_rows(eng: dict) -> list[tuple]:
     return rows
 
 
+def a2a_message_ids(eng: dict) -> list[str]:
+    """message_id de cada mensaje, en el MISMO orden y con el MISMO filtro que a2a_rows (para usarlos
+    como key de fila y cablear el drill-down: fila seleccionada -> message_detail)."""
+    return [m.get("message_id", "") for m in eng.get("messages", []) or [] if isinstance(m, dict)]
+
+
 def a2a_summary(eng: dict, scope: Optional[dict]) -> str:
     """Resumen del bus: recuento por status + hops máx / techo."""
     msgs = [m for m in eng.get("messages", []) or [] if isinstance(m, dict)]
@@ -188,21 +194,25 @@ def a2a_summary(eng: dict, scope: Optional[dict]) -> str:
 
 
 def message_detail(eng: dict, message_id: str) -> str:
-    """Volcado legible de un mensaje A2A por message_id (para el modal de detalle)."""
+    """Volcado legible de un mensaje A2A por message_id (para el modal de detalle). ESCAPA todo el texto
+    libre: los campos del mensaje (from/to/role/parts) traen datos influidos por el target y el modal los
+    pinta con markup Rich — un '[' sin escapar rompería el render (mismo bug que se cazó en v2.14.1)."""
     for m in eng.get("messages", []) or []:
         if isinstance(m, dict) and m.get("message_id") == message_id:
             parts = "\n".join(
-                f"  · {p.get('kind', '?')}: {_clip(p.get('text') or p.get('data') or '', 300)}"
+                f"  · {_esc(p.get('kind', '?'))}: {_esc(_clip(p.get('text') or p.get('data') or '', 300))}"
                 for p in m.get("parts", []) or [] if isinstance(p, dict)
             )
             return (
-                f"message_id: {m.get('message_id')}\n"
-                f"{m.get('from_agent', '?')} → {m.get('to_agent', '?')}  ({m.get('role', '')})\n"
-                f"status: {m.get('status', 'pending')}   hops: {m.get('hops', 0)}\n"
-                f"ref_finding: {m.get('ref_finding', '—')}   ref_message: {m.get('ref_message', '—')}\n"
+                f"message_id: {_esc(m.get('message_id'))}\n"
+                f"{_esc(m.get('from_agent', '?'))} → {_esc(m.get('to_agent', '?'))}  "
+                f"({_esc(m.get('role', ''))})\n"
+                f"status: {_esc(m.get('status', 'pending'))}   hops: {_esc(m.get('hops', 0))}\n"
+                f"ref_finding: {_esc(m.get('ref_finding', '—'))}   "
+                f"ref_message: {_esc(m.get('ref_message', '—'))}\n"
                 f"parts:\n{parts or '  (sin partes)'}"
             )
-    return f"Mensaje {message_id} no encontrado."
+    return f"Mensaje {_esc(message_id)} no encontrado."
 
 
 def pending_message_ids(eng: dict) -> list[str]:

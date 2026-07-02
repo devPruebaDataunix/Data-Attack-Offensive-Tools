@@ -39,21 +39,31 @@ class DashboardPanel(Vertical):
 
 
 class A2APanel(Vertical):
-    """Inspector del bus A2A: resumen + tabla de mensajes."""
+    """Inspector del bus A2A: resumen + tabla de mensajes. Seleccionar una fila (Enter/clic) abre el
+    detalle del mensaje (drill-down sobre state.message_detail)."""
 
     def compose(self) -> ComposeResult:
         yield Static("", id="a2a-summary")
         yield DataTable(id="a2a-table")
 
     def on_mount(self) -> None:
-        self.query_one("#a2a-table", DataTable).add_columns("", "de", "a", "rol", "hops", "mensaje")
+        self._eng: dict = {}
+        t = self.query_one("#a2a-table", DataTable)
+        t.add_columns("", "de", "a", "rol", "hops", "mensaje")
+        t.cursor_type = "row"       # selección por fila -> drill-down (RowSelected)
 
     def refresh_from(self, snap: S.Snapshot) -> None:
+        self._eng = snap.eng
         self.query_one("#a2a-summary", Static).update(S.a2a_summary(snap.eng, snap.scope))
         t = self.query_one("#a2a-table", DataTable)
         t.clear()
-        for row in S.a2a_rows(snap.eng):
-            t.add_row(*row)
+        for mid, row in zip(S.a2a_message_ids(snap.eng), S.a2a_rows(snap.eng)):
+            t.add_row(*row, key=mid or None)   # key = message_id (para el drill-down)
+
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        mid = event.row_key.value if event.row_key else None
+        if mid:
+            self.app.show_detail("Mensaje A2A", S.message_detail(self._eng, mid))
 
 
 class RosterPanel(Vertical):

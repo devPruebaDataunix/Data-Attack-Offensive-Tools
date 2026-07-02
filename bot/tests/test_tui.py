@@ -74,6 +74,13 @@ def test_a2a_summary_counts_and_hops():
     assert T.WARN in out and T.OK in out    # chips con color por estado (B2)
 
 
+def test_a2a_message_ids_align_with_rows():
+    eng = {"messages": [_msg("M1", "a", "b"), "basura", _msg("M2", "c", "d")]}
+    ids = S.a2a_message_ids(eng)
+    assert ids == ["M1", "M2"]                       # ignora los no-dict, igual que a2a_rows
+    assert len(ids) == len(S.a2a_rows(eng))          # misma longitud/orden -> zip seguro (drill-down)
+
+
 def test_pending_message_ids():
     eng = {"messages": [_msg("M1", "a", "b", "pending"), _msg("M2", "b", "a", "done")]}
     assert S.pending_message_ids(eng) == ["M1"]
@@ -84,6 +91,14 @@ def test_message_detail():
     out = S.message_detail(eng, "M1")
     assert "M1" in out and "detalle xyz" in out
     assert "no encontrado" in S.message_detail(eng, "NOPE")
+
+
+def test_message_detail_escapes_markup():
+    # el cuerpo del mensaje (parts) puede traer datos del target: un '[' NO debe romper el modal Rich
+    eng = {"messages": [_msg("M1", "a", "b", "pending", 0, "probar [xss] en http://a[b].com")]}
+    out = S.message_detail(eng, "M1")
+    assert "\\[xss]" in out and "a\\[b].com" in out          # texto libre del mensaje escapado
+    assert "\\[evil]" in S.message_detail({}, "[evil]")      # el id no encontrado también se escapa
 
 
 # ── state: roster, presupuesto, fase, evidencia, RAG ─────────────────────────────
