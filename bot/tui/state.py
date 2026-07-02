@@ -194,40 +194,106 @@ def pending_message_ids(eng: dict) -> list[str]:
 
 
 # ── Roster de agentes ────────────────────────────────────────────────────────────
-def _roster_sort_key(card: dict) -> tuple:
-    """Orden del Roster: el orquestador PRIMERO, luego por fase del engagement, y alfabético
-    dentro de cada fase (antes salían mezclados alfabéticamente)."""
-    phase = card.get("phase", "")
-    if phase == "orchestrator":
-        rank = -1
-    elif phase in PHASES:
-        rank = PHASES.index(phase)
-    else:
-        rank = len(PHASES)   # fases fuera del catálogo, al final
-    return (rank, card.get("name", ""))
-
-
-def roster_rows(cards: list[dict], lab_routes: Optional[dict] = None) -> list[tuple]:
-    """Filas del roster: (name, fase, modelo bot, modelo lab, #peers, descripción), ordenadas por fase
-    (orquestador primero). `modelo lab` viene del perfil NVIDIA LAB (o '—' si el agente no se enruta ahí:
-    el bot es 100% Anthropic; el perfil lab es un espejo opencode que el bot NO usa)."""
-    lab_routes = lab_routes or {}
-    rows = []
-    for c in sorted((c for c in cards if isinstance(c, dict)), key=_roster_sort_key):
-        model = (c.get("model") or "—").replace("claude-", "")
-        rows.append((
-            c.get("name", "?"),
-            phase_es(c.get("phase")),   # i18n: misma etiqueta española que el resto de la UI
-            model,
-            lab_routes.get(c.get("name", ""), "—"),   # 2ª col: modelo del perfil lab (NVIDIA) o '—'
-            str(len(c.get("a2a_peers", []) or [])),
-            _clip(c.get("description", ""), 60),
-        ))
-    return rows
-
-
+# El roster plano (roster_rows/_roster_sort_key) fue REEMPLAZADO por el panel Agentes master-detail
+# por zonas (zone_of / roster_by_zone / agent_detail, más abajo). Aquí solo queda el catálogo de
+# nombres que usa la validación de la delegación dirigida.
 def agent_names(cards: list[dict]) -> list[str]:
     return [c.get("name", "") for c in cards if isinstance(c, dict) and c.get("name")]
+
+
+# ── Zonas de agentes E1/E2/E3 (panel Agentes master-detail) ──────────────────────
+# MISMO modelo que ARCHITECTURE_MAP (tools/gen_arch_diagram.py): E1 Recon (sin datos de cliente, riesgo
+# bajo) · E2 Explotación (acceso al target, riesgo alto) · E3 Cierre (datos de cliente, riesgo medio).
+# El Orquestador va aparte. zone_of es PURA/testeable y reproduce E1=recon / E2=triage+exploitation+
+# post-exploitation / E3=reporting (cuadra con los conteos E1=3/E2=16/E3=2 del mapa).
+_ZONE_META = {
+    "orch": ("🧭", "Orquestador"),
+    "E1": ("🟦", "E1 · Reconocimiento"),
+    "E2": ("🟥", "E2 · Explotación"),
+    "E3": ("🟩", "E3 · Cierre"),
+    "otro": ("·", "Otros"),
+}
+ZONE_ORDER = ["orch", "E1", "E2", "E3", "otro"]
+
+
+def zone_of(phase: str) -> str:
+    """Zona de un agente por su fase, idéntico al mapeo de ARCHITECTURE_MAP: E1=recon ·
+    E2=triage/exploitation/post-exploitation · E3=reporting · orchestrator='orch' · resto='otro'."""
+    if phase == "orchestrator":
+        return "orch"
+    if phase == "recon":
+        return "E1"
+    if phase in ("triage", "exploitation", "post-exploitation"):
+        return "E2"
+    if phase == "reporting":
+        return "E3"
+    return "otro"
+
+
+def zone_label(zone: str) -> str:
+    icon, label = _ZONE_META.get(zone, _ZONE_META["otro"])
+    return f"{icon} {label}"
+
+
+def roster_by_zone(cards: list[dict], lab_routes: Optional[dict] = None) -> list[tuple]:
+    """Agrupa las cards por zona para el panel Agentes master-detail. Devuelve
+    [(zone, [(name, faseES, modelo_bot, modelo_lab, npeers), …]), …] en ZONE_ORDER, alfabético dentro
+    de cada zona; OMITE zonas vacías. Filas COMPACTAS (sin descripción: esa va en la ficha de detalle)."""
+    lab_routes = lab_routes or {}
+    buckets: dict = {z: [] for z in ZONE_ORDER}
+    for c in cards:
+        if not isinstance(c, dict):
+            continue
+        z = zone_of(c.get("phase", ""))
+        model = (c.get("model") or "—").replace("claude-", "")
+        buckets[z].append((
+            c.get("name", "?"),
+            phase_es(c.get("phase")),
+            model,
+            lab_routes.get(c.get("name", ""), "—"),
+            str(len(c.get("a2a_peers", []) or [])),
+        ))
+    out = []
+    for z in ZONE_ORDER:
+        rows = sorted(buckets[z], key=lambda r: r[0])
+        if rows:
+            out.append((z, rows))
+    return out
+
+
+def find_card(cards: list[dict], name: Optional[str]) -> Optional[dict]:
+    if not name:
+        return None
+    for c in cards:
+        if isinstance(c, dict) and c.get("name") == name:
+            return c
+    return None
+
+
+def agent_detail(card: Optional[dict], lab_routes: Optional[dict] = None) -> str:
+    """Ficha COMPLETA del agente resaltado (descripción SIN truncar + zona + modelos + capacidades +
+    peers + tools). Empty-state amable si no hay ninguno resaltado. Resuelve el truncado del roster."""
+    if not isinstance(card, dict):
+        return f"[{T.MUTED}]Resalta un agente en una tabla para ver su ficha completa.[/]"
+    lab_routes = lab_routes or {}
+    name = card.get("name", "?")
+    z = zone_of(card.get("phase", ""))
+    model = (card.get("model") or "—").replace("claude-", "")
+    lab = lab_routes.get(name, "—")
+    peers = ", ".join(card.get("a2a_peers", []) or []) or "—"
+    caps = ", ".join(card.get("capabilities", []) or []) or "—"
+    tools = ", ".join(card.get("tools", []) or []) or "—"
+    return "\n".join([
+        T.panel_title(_esc(name)),
+        f"zona: {zone_label(z)}   fase: {phase_es(card.get('phase'))}",
+        f"modelo (bot): {_esc(model)}   ·   modelo lab: {_esc(lab)}",
+        "",
+        f"[b]Qué hace:[/] {_esc(card.get('description', '—'))}",
+        "",
+        f"[b]Capacidades A2A:[/] {_esc(caps)}",
+        f"[b]Peers A2A:[/] {_esc(peers)}",
+        f"[b]Tools:[/] {_esc(tools)}",
+    ])
 
 
 # ── Presupuesto / kill-switch ────────────────────────────────────────────────────

@@ -86,24 +86,9 @@ def test_message_detail():
 
 
 # ── state: roster, presupuesto, fase, evidencia, RAG ─────────────────────────────
-def test_roster_rows():
-    cards = [{"name": "sqlmap", "phase": "exploitation", "model": "claude-sonnet-4-6",
-              "a2a_peers": ["web-exploit"], "description": "SQLi"}]
-    rows = S.roster_rows(cards, {"sqlmap": "gpt-oss-120b"})
-    assert rows[0][0] == "sqlmap" and rows[0][2] == "sonnet-4-6"
-    assert rows[0][1] == "explotación"   # i18n: la fase del Roster también en español
-    assert rows[0][3] == "gpt-oss-120b"  # 2ª col: modelo del perfil lab (NVIDIA)
-    assert rows[0][4] == "1"             # #peers, desplazado por la columna lab
-    assert S.roster_rows(cards)[0][3] == "—"   # sin ruta lab -> '—' (el bot es 100% Anthropic)
-    assert S.agent_names(cards) == ["sqlmap"]
-
-
-def test_roster_rows_order_orchestrator_first_then_phase():
-    cards = [{"name": "sqlmap", "phase": "exploitation"},
-             {"name": "orchestrator", "phase": "orchestrator"},
-             {"name": "osint-recon", "phase": "recon"}]
-    order = [r[0] for r in S.roster_rows(cards)]
-    assert order == ["orchestrator", "osint-recon", "sqlmap"]   # orquestador, luego por fase
+def test_agent_names():
+    cards = [{"name": "sqlmap", "phase": "exploitation"}, {"phase": "recon"}]
+    assert S.agent_names(cards) == ["sqlmap"]   # ignora cards sin nombre (validación de delegación)
 
 
 def test_load_lab_routes():
@@ -116,6 +101,44 @@ def test_load_lab_routes():
     assert routes["sqlmap"] == "gpt-oss-120b"                  # último segmento de la ruta
     assert routes["osint-recon"] == "llama-3.3-70b-instruct"
     assert S.load_lab_routes(Path(tempfile.mkdtemp())) == {}   # sin fichero -> {}
+
+
+# ── state: panel Agentes por zonas E1/E2/E3 (master-detail, B1) ──────────────────
+def test_zone_of():
+    assert S.zone_of("recon") == "E1"                       # E1 = recon
+    assert S.zone_of("triage") == "E2" and S.zone_of("exploitation") == "E2"
+    assert S.zone_of("post-exploitation") == "E2"           # E2 = triage/exploitation/post-exploitation
+    assert S.zone_of("reporting") == "E3"                   # E3 = reporting
+    assert S.zone_of("orchestrator") == "orch"
+    assert S.zone_of("any") == "otro" and S.zone_of("") == "otro"
+
+
+def test_roster_by_zone_groups_and_counts():
+    cards = [
+        {"name": "orchestrator", "phase": "orchestrator"},
+        {"name": "osint-recon", "phase": "recon", "model": "claude-haiku-4-5"},
+        {"name": "sqlmap", "phase": "exploitation", "a2a_peers": ["web-exploit"]},
+        {"name": "vuln-triage", "phase": "triage"},
+        {"name": "reporting", "phase": "reporting"},
+    ]
+    grouped = S.roster_by_zone(cards, {"sqlmap": "gpt-oss-120b"})
+    assert [z for z, _ in grouped] == ["orch", "E1", "E2", "E3"]   # ZONE_ORDER, sin zonas vacías
+    d = dict(grouped)
+    assert [r[0] for r in d["E2"]] == ["sqlmap", "vuln-triage"]    # alfabético dentro de la zona
+    assert d["E2"][0][3] == "gpt-oss-120b"                         # 4ª col: modelo lab
+    assert d["E1"][0][2] == "haiku-4-5"                            # modelo bot sin 'claude-'
+
+
+def test_agent_detail_full_description():
+    desc = "Explota inyecciones SQL con sqlmap y confirma el vector antes de escalar. " * 3
+    card = {"name": "sqlmap", "phase": "exploitation", "model": "claude-sonnet-4-6",
+            "a2a_peers": ["web-exploit"], "description": desc,
+            "capabilities": ["confirmar-sqli"], "tools": ["Bash"]}
+    out = S.agent_detail(card, {"sqlmap": "gpt-oss-120b"})
+    assert desc in out                                            # descripción COMPLETA, SIN truncar
+    assert "sqlmap" in out and "E2" in out and "gpt-oss-120b" in out
+    assert "web-exploit" in out and "confirmar-sqli" in out
+    assert "Resalta un agente" in S.agent_detail(None)            # empty-state amable
 
 
 def test_budget_render():

@@ -57,25 +57,56 @@ class A2APanel(Vertical):
 
 
 class RosterPanel(Vertical):
-    """Catálogo de los 21 agentes (+orquestador) desde agent-cards.json."""
+    """Agentes agrupados por ZONA E1/E2/E3 (master) + ficha COMPLETA del agente resaltado (detalle).
+    Resuelve el truncado/ilegibilidad del roster plano anterior: la descripción va ENTERA en la ficha
+    (derecha), no en una celda cortada. Una tabla por zona (orquestador · E1🟦 · E2🟥 · E3🟩); al
+    resaltar una fila (RowHighlighted) se muestra su ficha. Toda la lógica es de state.py (pura)."""
+
+    _ZONES = ["orch", "E1", "E2", "E3", "otro"]
 
     def compose(self) -> ComposeResult:
         yield Static("", id="roster-hdr")
-        yield DataTable(id="roster-table")
+        with Horizontal(id="roster-body"):
+            with VerticalScroll(id="roster-zones"):
+                for z in self._ZONES:
+                    yield Static("", id=f"roster-title-{z}", classes="roster-zone-title")
+                    yield DataTable(id=f"roster-tbl-{z}", classes="roster-zone-tbl")
+            with VerticalScroll(id="roster-detail-wrap"):
+                yield Static("", id="roster-detail")
 
     def on_mount(self) -> None:
-        self.query_one("#roster-table", DataTable).add_columns(
-            "agente", "fase", "modelo (bot)", "modelo lab", "peers", "descripción")
+        self._cards: list = []
+        self._lab: dict = {}
+        for z in self._ZONES:
+            t = self.query_one(f"#roster-tbl-{z}", DataTable)
+            t.add_columns("agente", "fase", "modelo (bot)", "modelo lab", "peers")
+            t.cursor_type = "row"       # resaltado por FILA -> dispara RowHighlighted al navegar
+        self.query_one("#roster-detail", Static).update(S.agent_detail(None))
 
     def refresh_from(self, snap: S.Snapshot) -> None:
+        self._cards = snap.cards
+        self._lab = snap.lab_routes
         self.query_one("#roster-hdr", Static).update(
-            f"{T.panel_title('Roster')} — {len(snap.cards)} cards (incl. orquestador)\n"
-            f"[{T.MUTED}]modelo (bot) = Anthropic real · modelo lab = perfil NVIDIA del espejo opencode "
-            "(LAB-ONLY, el bot NO lo usa; '—' = solo Anthropic)[/]")
-        t = self.query_one("#roster-table", DataTable)
-        t.clear()
-        for row in S.roster_rows(snap.cards, snap.lab_routes):
-            t.add_row(*row)
+            f"{T.panel_title('Agentes por zona')} — {len(snap.cards)} (incl. orquestador)\n"
+            f"[{T.MUTED}]E1🟦 recon · E2🟥 explotación · E3🟩 cierre · modelo (bot)=Anthropic real · "
+            "modelo lab=perfil NVIDIA (LAB-ONLY, el bot NO lo usa) · resalta una fila para ver su ficha[/]")
+        grouped = dict(S.roster_by_zone(snap.cards, snap.lab_routes))
+        for z in self._ZONES:
+            title = self.query_one(f"#roster-title-{z}", Static)
+            tbl = self.query_one(f"#roster-tbl-{z}", DataTable)
+            rows = grouped.get(z, [])
+            title.display = tbl.display = bool(rows)   # oculta las zonas vacías (típicamente 'otro')
+            if not rows:
+                continue
+            title.update(f"[b]{S.zone_label(z)}[/] ({len(rows)})")
+            tbl.clear()
+            for r in rows:
+                tbl.add_row(*r, key=r[0])              # key = nombre del agente (para la ficha)
+
+    def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
+        name = event.row_key.value if event.row_key else None
+        self.query_one("#roster-detail", Static).update(
+            S.agent_detail(S.find_card(self._cards, name), self._lab))
 
 
 class BudgetPanel(Vertical):

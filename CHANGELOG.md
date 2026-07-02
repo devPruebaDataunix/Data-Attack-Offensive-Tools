@@ -4,6 +4,27 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.20.0] - 2026-07-02
+### Changed
+- **TUI · Paso B1 — rediseño RADICAL del panel «Agentes» (master-detail por zonas E1/E2/E3).** El panel
+  era una tabla plana con la descripción **truncada a 60 caracteres** («…»): ilegible y sin agrupar. Ahora es
+  un **master-detail**: a la izquierda una **tabla por zona** (🧭 Orquestador · E1🟦 Reconocimiento · E2🟥
+  Explotación · E3🟩 Cierre), y a la derecha la **ficha COMPLETA del agente resaltado** (descripción entera SIN
+  truncar + zona + modelo bot/lab + capacidades A2A + peers + tools). Resaltar una fila (`RowHighlighted`)
+  actualiza la ficha. Las zonas siguen el MISMO modelo que `ARCHITECTURE_MAP` (E1=recon · E2=triage/
+  exploitation/post-exploitation · E3=reporting; conteos E1=3/E2=16/E3=2).
+### Removed
+- El roster plano (`state.roster_rows` / `_roster_sort_key`) queda **eliminado** (código muerto tras el
+  rediseño), junto con sus dos tests; la lógica de orden/agrupación vive ahora en `roster_by_zone`.
+### Notes
+- Lógica PURA nueva en `state.py` (`zone_of` / `zone_label` / `roster_by_zone` / `find_card` / `agent_detail`)
+  testeada en Windows; `panels.py` reescribe `RosterPanel` a master-detail (una `DataTable` por zona con
+  `cursor_type="row"` + panel de detalle; `on_data_table_row_highlighted` lee `row_key.value`), y `app.tcss`
+  añade el layout (`.roster-zone-tbl { height: auto }` hace override del `DataTable { height: 1fr }` global).
+  Council 3-roles **GO sin must-fix** (verificó la API de Textual `>=0.80` —RowHighlighted/row_key/display/
+  especificidad CSS— y que `zone_of` reproduce exactamente los conteos de `ARCHITECTURE_MAP`). test_tui
+  **71/71**, validate_suite 465/0/0. El render se valida en Kali.
+
 ## [2.19.0] - 2026-07-02
 ### Added
 - **TUI · Paso A2 — arranque de lab desde la TUI (objetivo → alcance → autogestión).** El panel de Acciones

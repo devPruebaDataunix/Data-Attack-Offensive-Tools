@@ -28,6 +28,15 @@ TabbedContent { height: 1fr; }
 
 DataTable { height: 1fr; }
 
+/* Panel Agentes — master-detail por zonas E1/E2/E3. Izquierda: tablas por zona (apiladas,
+   height auto -> se scrollea el contenedor). Derecha: ficha COMPLETA del agente resaltado. */
+#roster-body { height: 1fr; }
+#roster-zones { width: 3fr; }
+#roster-detail-wrap { width: 2fr; border: round $info; margin: 0 0 0 1; }
+#roster-detail { height: auto; padding: 0 1; }
+.roster-zone-title { height: 1; padding: 0 1; color: $fg; }
+.roster-zone-tbl { height: auto; margin: 0 0 1 0; }   /* override del DataTable:1fr global */
+
 /* Botones del RAG */
 #rag-btns { height: auto; padding: 1 0; }
 
