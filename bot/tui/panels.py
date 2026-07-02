@@ -161,6 +161,43 @@ class EvidencePanel(Vertical):
             t.add_row(*row)
 
 
+class NetworkPanel(VerticalScroll):
+    """Pestaña Red — topología multi-host: hosts (frontera de ataque), pivots (túneles) y credenciales
+    (SIEMPRE referenciadas; el secreto vive en loot/, fuera de git). Todo el render es de state.py."""
+
+    def compose(self) -> ComposeResult:
+        yield Static("", id="net-summary")
+        yield Static("", id="net-hosts-title")
+        yield DataTable(id="net-hosts")
+        yield Static("", id="net-pivots-title")
+        yield DataTable(id="net-pivots")
+        yield Static("", id="net-creds-title")
+        yield DataTable(id="net-creds")
+
+    def on_mount(self) -> None:
+        self.query_one("#net-hosts", DataTable).add_columns(
+            "host", "tipo", "scope", "acceso", "alcance", "defensas")
+        self.query_one("#net-pivots", DataTable).add_columns(
+            "pivot", "herramienta", "vía", "estado", "alcanza")
+        self.query_one("#net-creds", DataTable).add_columns(
+            "cred", "principal", "tipo", "privilegio", "origen", "validada")
+
+    def refresh_from(self, snap: S.Snapshot) -> None:
+        self.query_one("#net-summary", Static).update(S.network_summary(snap.eng))
+        self.query_one("#net-hosts-title", Static).update(T.panel_title("Hosts (frontera de ataque)"))
+        self.query_one("#net-pivots-title", Static).update(T.panel_title("Pivots (túneles)"))
+        self.query_one("#net-creds-title", Static).update(T.panel_title("Credenciales (referenciadas)"))
+        self._fill("#net-hosts", S.network_rows(snap.eng))
+        self._fill("#net-pivots", S.pivot_rows(snap.eng))
+        self._fill("#net-creds", S.credential_rows(snap.eng))
+
+    def _fill(self, selector: str, rows: list) -> None:
+        t = self.query_one(selector, DataTable)
+        t.clear()
+        for r in rows:
+            t.add_row(*r)
+
+
 class ActionsPanel(VerticalScroll):
     """Planos de ACCIÓN. Cada botón burbujea a la App, que llama a actions.py (puertas intactas)."""
 

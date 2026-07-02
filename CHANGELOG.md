@@ -4,6 +4,26 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.22.0] - 2026-07-02
+### Added
+- **TUI · Paso C — pestaña «Red» (multi-host).** Nueva pestaña que superficie el estado multi-host que el
+  blackboard ya generaba pero la TUI no mostraba: (1) **Hosts** (la frontera de ataque) con `asset` / tipo /
+  en_scope / **nivel de acceso coloreado** (root/admin/system/domain-admin = peligro = host comprometido) /
+  `reachable_via` (direct o pivot) / resumen de **defensas** (WAF/IDS/honeypot/… con confianza); (2) **Pivots**
+  (túneles) con herramienta / vía / **estado coloreado** (up/planned/down) / CIDR que alcanzan; (3)
+  **Credenciales**. La pestaña se añade a la paleta de comandos (Ctrl+P → «Ir a: Red»).
+### Security
+- **Las credenciales van SIEMPRE referenciadas.** La tabla muestra `cred_id` / principal / tipo / privilegio /
+  origen / nº de validaciones — **nunca** el secreto ni su ruta (`secret_ref`): el material vive en
+  `engagements/<id>/loot/` fuera de git (lo imponen `memory_guard`/`secret_scan`). Los pivots tampoco exponen
+  su `proxy` ni `established_by`. Todo dato libre del blackboard se escapa (markup Rich) antes de pintarse.
+### Notes
+- Lógica PURA en `state.py` (`network_rows` / `pivot_rows` / `credential_rows` / `network_summary` +
+  `_defenses_summary`) testeada en Windows; `panels.py` añade `NetworkPanel`, `app.py` la pestaña + el
+  refresco, `app.tcss` el layout, y `commands.py` la entrada de la paleta. Council 3-roles **GO sin must-fix**
+  (verificó la NO-fuga de secretos, el escape de markup, la API de Textual y la coherencia de la paleta).
+  test_tui **76/76** (+4), validate_suite 465/0/0. El render se valida en Kali.
+
 ## [2.21.0] - 2026-07-02
 ### Changed
 - **TUI · Paso B2 — pulido de paneles.** Cuatro mejoras que salieron del análisis de las capturas:

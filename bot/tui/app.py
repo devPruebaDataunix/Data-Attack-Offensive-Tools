@@ -180,6 +180,8 @@ class DataAttackTUI(App[None]):
                 yield P.A2APanel()
             with TabPane("Agentes", id="tab-roster"):
                 yield P.RosterPanel()
+            with TabPane("Red", id="tab-net"):
+                yield P.NetworkPanel()
             with TabPane("Presupuesto", id="tab-budget"):
                 yield P.BudgetPanel()
             with TabPane("RAG", id="tab-rag"):
@@ -214,6 +216,7 @@ class DataAttackTUI(App[None]):
         self._dash = self.query_one(P.DashboardPanel)
         self._a2a = self.query_one(P.A2APanel)
         self._roster = self.query_one(P.RosterPanel)
+        self._network = self.query_one(P.NetworkPanel)
         self._budget = self.query_one(P.BudgetPanel)
         self._rag = self.query_one(P.RagPanel)
         self._evidence = self.query_one(P.EvidencePanel)
@@ -235,6 +238,7 @@ class DataAttackTUI(App[None]):
         self._dash.refresh_from(snap, grp, SDK_OK)
         self._a2a.refresh_from(snap)
         self._roster.refresh_from(snap)
+        self._network.refresh_from(snap)
         self._budget.refresh_from(snap)
         self._evidence.refresh_from(snap, S.engagement_dirs(REPO_DIR))
         # Bus A2A: narra en el log los mensajes nuevos (el primer refresco solo los registra).

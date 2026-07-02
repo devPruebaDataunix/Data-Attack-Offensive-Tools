@@ -278,6 +278,106 @@ def roster_by_zone(cards: list[dict], lab_routes: Optional[dict] = None) -> list
     return out
 
 
+# ── Red multi-host (pestaña "Red") ────────────────────────────────────────────────
+# El estado multi-host vive en el blackboard (targets[] con access_level/reachable_via/defenses,
+# pivots[], credentials[]). Esta pestaña lo SUPERFICIE. INVARIANTE: las credenciales van SIEMPRE
+# referenciadas — el secreto (secret_ref) vive en engagements/<id>/loot/ fuera de git y NO se muestra.
+_ACCESS_COLOR = {   # nivel de acceso -> color (host comprometido = peligro; 'none' = atenuado)
+    "none": T.MUTED, "user": T.WARN, "root": T.DANGER, "admin": T.DANGER,
+    "system": T.DANGER, "domain-admin": T.DANGER,
+}
+_PIVOT_COLOR = {"up": T.OK, "planned": T.WARN, "down": T.DANGER}
+_DEF_ICON = {"waf": "🛡", "ids": "📡", "ips": "📡", "honeypot": "🍯", "tarpit": "🐌",
+             "edr": "🛡", "ratelimit": "⏱", "unknown": "?"}
+
+
+def _defenses_summary(defenses) -> str:
+    """Resumen compacto de las defensas de un host: 'icono tipo·confianza' por cada una ('—' si none)."""
+    if not isinstance(defenses, list) or not defenses:
+        return "—"
+    out = []
+    for d in defenses:
+        if isinstance(d, dict):
+            icon = _DEF_ICON.get(d.get("type", "unknown"), "?")
+            conf = str(d.get("confidence", ""))[:1]   # l / m / h
+            out.append(f"{icon}{_esc(d.get('type', ''))}·{conf}")
+    return " ".join(out) or "—"
+
+
+def network_rows(eng: dict) -> list[tuple]:
+    """Filas de la tabla de hosts (frontera de ataque): (asset, tipo, scope, acceso, alcance, defensas).
+    El nivel de acceso va coloreado: root/admin/system/domain-admin = peligro (host comprometido)."""
+    rows = []
+    for t in eng.get("targets", []) or []:
+        if not isinstance(t, dict):
+            continue
+        acc = t.get("access_level", "none") or "none"
+        color = _ACCESS_COLOR.get(acc, T.FG)
+        rows.append((
+            _esc(_clip(t.get("asset", "?"), 32)),
+            _esc(t.get("asset_type", "—")),
+            "✓" if t.get("in_scope") else "✗",
+            f"[{color}]{_esc(acc)}[/]",
+            _esc(t.get("reachable_via", "direct") or "direct"),
+            _defenses_summary(t.get("defenses")),
+        ))
+    return rows
+
+
+def pivot_rows(eng: dict) -> list[tuple]:
+    """Filas de la tabla de pivots (túneles): (pivot_id, herramienta, vía, estado, alcanza)."""
+    rows = []
+    for p in eng.get("pivots", []) or []:
+        if not isinstance(p, dict):
+            continue
+        st = p.get("status", "planned")
+        color = _PIVOT_COLOR.get(st, T.MUTED)
+        rows.append((
+            _esc(_clip(p.get("pivot_id", "?"), 16)),
+            _esc(p.get("tool", "—")),
+            _esc(_clip(p.get("via_target", "—"), 16)),
+            f"[{color}]{_esc(st)}[/]",
+            _esc(_clip(", ".join(p.get("reaches_cidr", []) or []), 28)),
+        ))
+    return rows
+
+
+def credential_rows(eng: dict) -> list[tuple]:
+    """Filas de la tabla de credenciales: (cred_id, principal, tipo, privilegio, origen, #validada).
+    NUNCA muestra el secreto ni su ruta (secret_ref): en el blackboard solo hay la REFERENCIA; el
+    valor vive en engagements/<id>/loot/ fuera de git (lo imponen memory_guard/secret_scan)."""
+    rows = []
+    for c in eng.get("credentials", []) or []:
+        if not isinstance(c, dict):
+            continue
+        rows.append((
+            _esc(_clip(c.get("cred_id", "?"), 16)),
+            _esc(_clip(c.get("principal", "—"), 20)),
+            _esc(c.get("type", "—")),
+            _esc(c.get("privilege", "unknown")),
+            _esc(_clip(c.get("source_target", "—"), 16)),
+            str(len(c.get("validated_on", []) or [])),
+        ))
+    return rows
+
+
+def network_summary(eng: dict) -> str:
+    """Cabecera de la pestaña Red: hosts totales / comprometidos / pivots activos / credenciales.
+    Empty-state amable si aún no hay hosts."""
+    targets = [t for t in eng.get("targets", []) or [] if isinstance(t, dict)]
+    if not targets:
+        return (T.panel_title("Red (multi-host)") + "\n"
+                "Sin hosts todavía — aparecerán al hacer recon; los internos, al pivotar.")
+    owned = sum(1 for t in targets if (t.get("access_level") or "none") != "none")
+    pivots = [p for p in eng.get("pivots", []) or [] if isinstance(p, dict)]
+    up = sum(1 for p in pivots if p.get("status") == "up")
+    creds = len([c for c in eng.get("credentials", []) or [] if isinstance(c, dict)])
+    return (f"{T.panel_title('Red (multi-host)')}  "
+            f"hosts: {len(targets)}   [{T.DANGER}]comprometidos: {owned}[/]   "
+            f"[{T.OK}]pivots activos: {up}/{len(pivots)}[/]   credenciales: {creds}\n"
+            f"[{T.MUTED}]credenciales SIEMPRE referenciadas · el secreto vive en loot/ (fuera de git)[/]")
+
+
 def find_card(cards: list[dict], name: Optional[str]) -> Optional[dict]:
     if not name:
         return None

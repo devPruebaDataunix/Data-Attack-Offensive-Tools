@@ -37,6 +37,11 @@ DataTable { height: 1fr; }
 .roster-zone-title { height: 1; padding: 0 1; color: $fg; }
 .roster-zone-tbl { height: auto; margin: 0 0 1 0; }   /* override del DataTable:1fr global */
 
+/* Pestaña Red (multi-host): resumen + 3 tablas apiladas (hosts/pivots/credenciales) que se
+   scrollean. height auto en las tablas hace override del DataTable:1fr global (id > tipo). */
+#net-summary, #net-hosts-title, #net-pivots-title, #net-creds-title { height: auto; padding: 0 1; }
+#net-hosts, #net-pivots, #net-creds { height: auto; margin: 0 0 1 0; }
+
 /* Botones del RAG */
 #rag-btns { height: auto; padding: 1 0; }
 

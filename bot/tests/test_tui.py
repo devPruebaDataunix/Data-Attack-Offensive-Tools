@@ -142,6 +142,46 @@ def test_agent_detail_full_description():
     assert "Resalta un agente" in S.agent_detail(None)            # empty-state amable
 
 
+# ── state: pestaña Red multi-host (Paso C) ───────────────────────────────────────
+def test_network_rows():
+    eng = {"targets": [
+        {"asset": "10.0.0.5", "asset_type": "ip", "in_scope": True, "access_level": "root",
+         "reachable_via": "direct", "defenses": [{"type": "waf", "confidence": "high"}]},
+        {"asset": "10.0.0.9", "asset_type": "ip", "in_scope": True}]}
+    rows = S.network_rows(eng)
+    assert rows[0][0] == "10.0.0.5" and rows[0][2] == "✓"
+    assert "root" in rows[0][3] and T.DANGER in rows[0][3]        # comprometido -> peligro (color)
+    assert "waf" in rows[0][5]                                    # defensas resumidas
+    assert "none" in rows[1][3] and rows[1][4] == "direct"        # defaults: acceso none, alcance direct
+
+
+def test_pivot_rows():
+    eng = {"pivots": [{"pivot_id": "P1", "tool": "ligolo-ng", "via_target": "10.0.0.5",
+                       "status": "up", "reaches_cidr": ["10.1.0.0/24"]}]}
+    rows = S.pivot_rows(eng)
+    assert rows[0][0] == "P1" and rows[0][1] == "ligolo-ng"
+    assert "up" in rows[0][3] and T.OK in rows[0][3] and "10.1.0.0/24" in rows[0][4]
+
+
+def test_credential_rows_never_leaks_secret():
+    eng = {"credentials": [{"cred_id": "C1", "principal": "admin", "type": "ntlm-hash",
+                            "secret_ref": "loot/hash.txt", "source_target": "10.0.0.5",
+                            "privilege": "admin", "validated_on": ["10.0.0.9"]}]}
+    r = S.credential_rows(eng)[0]
+    assert r[0] == "C1" and r[1] == "admin" and r[2] == "ntlm-hash" and r[3] == "admin"
+    assert r[4] == "10.0.0.5" and r[5] == "1"                     # origen + nº de hosts validados
+    assert "loot/hash.txt" not in " ".join(str(x) for x in r)    # NUNCA el secret_ref en la tabla
+
+
+def test_network_summary_counts_and_empty():
+    eng = {"targets": [{"asset": "a", "access_level": "root"}, {"asset": "b"}],
+           "pivots": [{"pivot_id": "P1", "status": "up"}],
+           "credentials": [{"cred_id": "C1"}]}
+    out = S.network_summary(eng)
+    assert "hosts: 2" in out and "comprometidos: 1" in out and "pivots activos: 1/1" in out
+    assert "Sin hosts" in S.network_summary({})                  # empty-state amable
+
+
 def test_budget_render():
     out = S.budget_render(900, 1000, "T-1")
     assert "900/1000" in out and "cerca del techo" in out

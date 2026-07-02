@@ -31,6 +31,7 @@ TABS: list[tuple[str, str]] = [
     ("tab-dash", "Panel"),
     ("tab-a2a", "Bus A2A"),
     ("tab-roster", "Agentes"),
+    ("tab-net", "Red"),
     ("tab-budget", "Presupuesto"),
     ("tab-rag", "RAG"),
     ("tab-ev", "Evidencia"),
