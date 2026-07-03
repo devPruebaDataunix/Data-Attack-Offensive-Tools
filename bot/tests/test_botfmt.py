@@ -85,6 +85,62 @@ def test_findings_card_unknown_phase_no_double_escape():
     assert "weird\\[x\\]" in out                              # exactamente un escape MD2
 
 
+def _agent_card(name, phase, model="claude-haiku-4-5", peers=None, tools=None):
+    return {"name": name, "phase": phase, "model": model, "description": f"desc de {name}",
+            "a2a_peers": peers or [], "tools": tools or [], "capabilities": []}
+
+
+def test_agents_card_groups_by_zone():
+    cards = [_agent_card("osint-recon", "recon"),
+             _agent_card("web-exploit", "exploitation", model="claude-opus-4-8", peers=["sqlmap"]),
+             _agent_card("reporting", "reporting")]
+    out = B.agents_card(cards)
+    assert "Roster de agentes" in out and "3 agentes" in out
+    assert "osint-recon" in out and "web-exploit" in out     # nombres en code (guion sin escapar)
+    assert "opus" in out                                     # modelo sin prefijo claude- (esc en normal)
+    assert "Reconocimiento" in out and "Explotación" in out  # etiquetas de zona
+    assert "1 A2A" in out                                    # web-exploit tiene 1 par A2A
+
+
+def test_agents_card_empty():
+    assert "Sin roster" in B.agents_card([])
+
+
+def test_agent_card_rich_and_not_found():
+    card = _agent_card("adcs", "exploitation", model="claude-sonnet-4-6",
+                       peers=["kerberos"], tools=["Bash", "Read"])
+    out = B.agent_card(card)
+    assert "adcs" in out and "sonnet-4-6" in out             # nombre + modelo en code (literal)
+    assert "Explotación" in out                              # zona derivada de la fase
+    assert "kerberos" in out and "Bash" in out               # peers A2A + tools en code
+    assert "Agente no encontrado" in B.agent_card(None)
+
+
+def test_help_card_lists_key_commands():
+    out = B.help_card()
+    for cmd in ("/status", "/agents", "/agent", "/kill", "/cve", "/scope", "/report"):
+        assert cmd in out
+    assert "control inteligente" in out
+
+
+def _unescaped(s, ch):
+    return sum(1 for i, c in enumerate(s) if c == ch and (i == 0 or s[i - 1] != "\\"))
+
+
+def test_cards_with_metacharacters_dont_break_md2():
+    # Blindaje anti-regresión del escaper (nit del council): una card con TODOS los metacaracteres MD2
+    # + campos None/no-str no debe romper el parseo ni dejar un code span abierto.
+    nasty = "a*_[]()~`>#+-=|{}.!b"
+    card = {"name": nasty, "phase": "exploitation", "model": None, "description": nasty,
+            "a2a_peers": [nasty, 123], "tools": [nasty], "capabilities": None}
+    detail = B.agent_card(card)
+    listing = B.agents_card([card])
+    for out in (detail, listing):
+        assert isinstance(out, str) and out                  # no crashea ni sale vacío
+        assert _unescaped(out, "`") % 2 == 0                 # todo code span abre y cierra
+    assert "\\*" in detail                                    # el '*' del contenido fue escapado (esc corrió)
+
+
 # ── runner standalone ───────────────────────────────────────────────────────────
 def _all_tests():
     return [(n, f) for n, f in sorted(globals().items())

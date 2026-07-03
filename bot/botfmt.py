@@ -151,3 +151,77 @@ def findings_card(grp: dict, eng: dict) -> str:
     if not real and not watch:
         body += ["", F.italic("Sin hallazgos reales ni de vigilancia todavía.")]
     return F.card("Hallazgos", body, icon="🧩")
+
+
+# ── /agents — roster por zonas E1/E2/E3 (desde el dict CRUDO de agent-cards.json) ─
+def agents_card(cards: list, lab_routes=None) -> str:
+    """Roster por zonas desde las cards CRUDAS. Reutiliza `S.roster_by_zone` (datos PUROS) — NO el
+    render Rich `agent_detail`/roster de la TUI. Cada agente: nombre · modelo Anthropic · nº pares A2A."""
+    if not cards:
+        return F.card("Sin roster", F.esc("No se pudo leer contracts/agent-cards.json."), icon="👥")
+    groups = S.roster_by_zone(cards, lab_routes or {})
+    total = sum(len(rows) for _, rows in groups)
+    body = [F.italic(f"{total} agentes · usa /agent <nombre> para la ficha")]
+    for zone, rows in groups:
+        body += ["", F.bold(S.zone_label(zone))]
+        for name, _fase, model, _lab, npeers in rows:
+            frag = F.code(name) + F.esc(f" · {model}")
+            if npeers and npeers != "0":
+                frag += F.esc(f" · {npeers} A2A")
+            body.append(F.bullet(frag))
+    return F.card("Roster de agentes", body, icon="👥")
+
+
+# ── /agent <nombre> — ficha de UN agente (desde su card CRUDA) ────────────────────
+def agent_card(card: Optional[dict]) -> str:
+    """Ficha de un agente desde su card CRUDA (name/description/phase/model/tools/a2a_peers/capabilities);
+    NO reutiliza el `agent_detail` Rich de la TUI. `None` -> tarjeta 'no encontrado'."""
+    if not card:
+        return F.card("Agente no encontrado",
+                      F.esc("No hay ningún agente con ese nombre. Usa /agents para ver el roster."),
+                      icon="👥")
+    model = (card.get("model") or "—").replace("claude-", "")
+    body = [
+        F.italic(S._clip(card.get("description") or "—", 320)),
+        "",
+        F.kv("zona", F.esc(S.zone_label(S.zone_of(card.get("phase", "")))))
+        + "   " + F.kv("fase", F.esc(S.phase_label(card.get("phase", "")))),
+        F.kv("modelo", F.code(model)),
+    ]
+    if card.get("tools"):
+        body.append(F.kv("tools", _codelist(card["tools"], 12)))
+    if card.get("a2a_peers"):
+        body.append(F.kv("A2A", _codelist(card["a2a_peers"], 12)))
+    if card.get("capabilities"):
+        body.append(F.kv("capacidades", _codelist(card["capabilities"], 10)))
+    return F.card(card.get("name", "agente"), body, icon="👥")
+
+
+# ── /help y /start — referencia de comandos (MD2; sustituye al HELP legacy) ───────
+def help_card() -> str:
+    """Ayuda rica en MarkdownV2 (antes: constante HELP en Markdown legacy). La comparten /help y /start."""
+    body = [
+        F.italic("Háblame en lenguaje normal («haz recon de app.cliente.com», «prioriza los CVE de "
+                 "ese Apache», «genera el informe»): te pido confirmación, aviso por hito en vivo y solo "
+                 "escalo alertas reales."),
+        "",
+        F.bold("Estado"),
+        F.bullet(F.code("/status") + F.esc(" — entorno + orden en curso")),
+        F.bullet(F.code("/health") + F.esc(" — versiones del toolchain")),
+        F.bullet(F.code("/findings") + F.esc(" — hallazgos (real / vigilar / ruido)")),
+        F.bullet(F.code("/scope") + F.esc(" — alcance y restricciones")),
+        "",
+        F.bold("Agentes y conocimiento"),
+        F.bullet(F.code("/agents") + F.esc(" — roster por zonas E1/E2/E3")),
+        F.bullet(F.code("/agent <nombre>") + F.esc(" — ficha de un agente")),
+        F.bullet(F.code("/triage <producto>") + F.esc(" — CVE priorizados (KEV/MSF/CVSS)")),
+        F.bullet(F.code("/cve <id>") + F.esc(" — ficha de un CVE")),
+        F.bullet(F.code("/refresh") + F.esc(" — actualiza el RAG (2º plano)")),
+        "",
+        F.bold("Órdenes"),
+        F.bullet(F.code("/kill") + F.esc(" — aborta la orden en curso (kill-switch)")),
+        F.bullet(F.code("/report") + F.esc(" — genera y envía el informe")),
+        "",
+        F.italic("Las puertas —alcance, presupuesto, aprobación— se aplican SIEMPRE, mande quien mande."),
+    ]
+    return F.card("Data Attack — control inteligente", body, icon="🧭")

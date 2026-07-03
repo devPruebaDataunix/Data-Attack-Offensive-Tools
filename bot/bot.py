@@ -210,34 +210,16 @@ async def editv2(msg, md2_text):
 
 
 # ── Comandos básicos ─────────────────────────────────────────────────────────
-HELP = (
-    "*Data Attack — control inteligente*\n"
-    "Háblame en lenguaje normal: _\"haz recon de app.cliente.com\"_, _\"prioriza los CVE de "
-    "ese Apache\"_, _\"genera el informe\"_. Te pido confirmación, te aviso por hito en vivo, "
-    "y solo escalo las alertas reales.\n\n"
-    "/status — salud del sistema y estado de la orden en curso\n"
-    "/kill — aborta la orden en curso (kill-switch)\n"
-    "/health — versiones del toolchain\n"
-    "/agents — lista de agentes\n"
-    "/triage `<producto> [versión]` — CVEs priorizados (KEV/MSF/CVSS)\n"
-    "/cve `<CVE-id>` — detalle de un CVE\n"
-    "/refresh — actualiza el RAG (en segundo plano)\n"
-    "/findings — hallazgos clasificados (real / vigilar / ruido)\n"
-    "/report — genera y envía el informe\n"
-    "/scope — muestra el alcance actual\n"
-)
-
-
 @authorized
 async def start(update, ctx):
     mode = "Agent SDK (streaming)" if SDK_OK else "claude -p (degradado)"
-    await update.message.reply_text(f"🛡️ *Data Attack* en línea — motor: {mode}.\n\n" + HELP,
-                                    parse_mode="Markdown")
+    welcome = F.card("Data Attack en línea", F.kv("motor", F.esc(mode)), icon="🛡️")
+    await sayv2(ctx.bot, update.effective_chat.id, welcome + "\n\n" + BF.help_card())
 
 
 @authorized
 async def help_cmd(update, ctx):
-    await update.message.reply_text(HELP, parse_mode="Markdown")
+    await sayv2(ctx.bot, update.effective_chat.id, BF.help_card())
 
 
 @authorized
@@ -281,14 +263,21 @@ async def health(update, ctx):
 
 @authorized
 async def agents(update, ctx):
-    files = sorted((REPO_DIR / ".claude" / "agents").rglob("*.md"))
-    names = []
-    for f in files:
-        for line in f.read_text(encoding="utf-8").splitlines():
-            if line.startswith("name:"):
-                names.append(line.split(":", 1)[1].strip())
-                break
-    await update.message.reply_text(f"*{len(names)} agentes:*\n" + ", ".join(names), parse_mode="Markdown")
+    await sayv2(ctx.bot, update.effective_chat.id, BF.agents_card(S.load_cards(REPO_DIR)))
+
+
+@authorized
+async def agent(update, ctx):
+    """Ficha de UN agente por nombre: /agent <nombre> (roster completo con /agents)."""
+    chat_id = update.effective_chat.id
+    if not ctx.args:
+        await sayv2(ctx.bot, chat_id, F.card(
+            "Uso: /agent <nombre>",
+            F.esc("Ejemplo: /agent web-exploit · lista completa con /agents."), icon="👥"))
+        return
+    name = ctx.args[0].strip().lstrip("@").lower()
+    card = next((c for c in S.load_cards(REPO_DIR) if str(c.get("name", "")).lower() == name), None)
+    await sayv2(ctx.bot, chat_id, BF.agent_card(card))
 
 
 @authorized
@@ -576,6 +565,7 @@ def main():
     app.add_handler(CommandHandler("abort", kill))
     app.add_handler(CommandHandler("health", health))
     app.add_handler(CommandHandler("agents", agents))
+    app.add_handler(CommandHandler("agent", agent))
     app.add_handler(CommandHandler("triage", triage))
     app.add_handler(CommandHandler("cve", cve))
     app.add_handler(CommandHandler("refresh", refresh))

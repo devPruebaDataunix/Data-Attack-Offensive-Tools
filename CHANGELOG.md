@@ -4,6 +4,22 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.31.0] - 2026-07-03
+### Added
+- **Bot · `/agents` rico + `/agent <nombre>` + `/help`/`/start` en MarkdownV2 (A1+A2).** `/agents` pasa de un
+  volcado de nombres a un **roster por zonas E1/E2/E3** (nombre · modelo Anthropic · nº de pares A2A), leído del
+  dict CRUDO de `contracts/agent-cards.json` vía `state.roster_by_zone` (datos puros, NO el render Rich de la TUI).
+  Nuevo **`/agent <nombre>`**: ficha de un agente (descripción, zona/fase, modelo, tools, pares A2A, capacidades).
+- **`/help` y `/start` unificados en MarkdownV2** (`botfmt.help_card()`), sustituyendo la constante `HELP` en
+  Markdown legacy que compartían; `/start` conserva el motor activo (Agent SDK vs degradado). Sube el listón de
+  calidad a nivel `/start` en toda la ayuda.
+### Notes
+- Presentación pura en `bot/botfmt.py` (`agents_card`/`agent_card`/`help_card`) sobre la capa `tgfmt` ya vetada
+  (v2.29.0): todo texto crudo pasa por `esc()`/`code()`; sin reusar renders Rich de `state.py` (aviso dx). Handlers
+  finos (leen datos con `state.py`, formatean aquí). Council (abogado del diablo) GO sin must-fix; añadido un
+  test adversarial (metacaracteres MD2 en todos los campos de card). `bot/tests/test_botfmt.py` **12/12**, tgfmt
+  7/7, tui 80/80, intel 28/28, sessionlog 15/15, validate_suite **471/0/0**.
+
 ## [2.30.0] - 2026-07-03
 ### Added
 - **TUI · log de sesión PERSISTENTE (la narración sobrevive a reinicios).** Cierra la causa raíz del «registro
