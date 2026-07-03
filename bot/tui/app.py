@@ -42,6 +42,7 @@ from intel.runner import AgentRunner, SDK_OK  # noqa: E402
 
 from . import actions as A                 # noqa: E402
 from . import panels as P                  # noqa: E402
+from . import sessionlog as SL             # noqa: E402  (log de narración persistente, F0)
 from . import state as S                   # noqa: E402
 from . import theme as T                   # noqa: E402  (tokens de color: única fuente)
 from .commands import DataAttackCommands   # noqa: E402  (paleta de dominio en español)
@@ -246,6 +247,7 @@ class DataAttackTUI(App[None]):
         self._order_token: "object | None" = None
         self._order_worker = None                    # Worker Textual (para cancelarlo en la recuperación)
         self._stall_timeout = _stall_timeout()       # umbral de auto-recuperación (env ORCH_STALL_TIMEOUT)
+        self._eid: "str | None" = None               # engagement activo: destino del log de sesión (F0)
         # Refs de paneles (todos viven montados aunque su pestaña esté oculta).
         self._dash = self.query_one(P.DashboardPanel)
         self._a2a = self.query_one(P.A2APanel)
@@ -258,7 +260,8 @@ class DataAttackTUI(App[None]):
         if not SDK_OK:
             self._log(f"[{T.WARN}]Agent SDK no instalado aquí: las órdenes al Orquestador se "
                       "ejecutan en la Kali. El panel sí muestra estado, hallazgos y triage.[/]")
-        self.refresh_state()
+        self.refresh_state()               # fija self._eid del engagement activo
+        self._replay_session_log()         # F0: reproduce el histórico persistido (sobrevive a reinicios)
         self._fetch_rag_status()
         self._fetch_kb_status()
         self.set_interval(5.0, self.refresh_state)
@@ -267,6 +270,7 @@ class DataAttackTUI(App[None]):
     # ── refresco global (lector único) ───────────────────────────────────────────
     def refresh_state(self) -> None:
         snap = S.build_snapshot(REPO_DIR, self._last_cost, _approval_mode())
+        self._eid = snap.eng.get("engagement_id") or None   # destino del log de sesión (F0)
         grp = C.scan(snap.eng.get("findings", []))
         self.query_one("#hdr", Static).update(
             S.header_line(snap.eng, snap.count, snap.cap, snap.cost, snap.approval_mode))
@@ -343,6 +347,23 @@ class DataAttackTUI(App[None]):
 
     def _log(self, msg: str) -> None:
         self.query_one("#log", RichLog).write(msg)
+        SL.append(REPO_DIR, self._eid, msg)   # F0: persiste la narración (no-op sin engagement)
+
+    def _replay_session_log(self) -> None:
+        """F0: al arrancar REPRODUCE la narración persistida del engagement activo. El RichLog es
+        efímero pero engagements/<id>/session.log sobrevive a reinicios; sin esto, tras un cuelgue/
+        reinicio el registro salía vacío aunque el engagement seguía. Escribe DIRECTO al widget (no
+        vía _log) para no re-persistir lo que ya está en disco."""
+        entries = SL.tail(REPO_DIR, self._eid) if self._eid else []
+        if not entries:
+            return
+        log = self.query_one("#log", RichLog)
+        log.write(f"[{T.MUTED}]── historial de la sesión · "
+                  f"engagements/{S._esc(self._eid)}/session.log ──[/]")
+        for e in entries:
+            clock = SL.fmt_clock(e.get("ts"))
+            log.write((f"[{T.MUTED}]{clock}[/] " if clock else "") + str(e.get("text", "")))
+        log.write(f"[{T.MUTED}]── fin del historial · en vivo ──[/]")
 
     # ── entrada de órdenes (solo el input #cmd) ──────────────────────────────────
     def on_input_submitted(self, event: Input.Submitted) -> None:

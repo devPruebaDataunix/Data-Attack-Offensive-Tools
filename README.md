@@ -108,7 +108,7 @@ hops anti-bucle).
 | 🙋 | **Supervisión configurable** | Aprobación humana por acción en modo `full`/`critical`/`auto` (def. `critical`); el alcance y el no-daño **NO** se relajan en ningún modo. |
 | 🔒 | **Mínimo privilegio por agente** | Cada especialista acota sus turnos (`maxTurns`) y no puede spawnear subagentes (`disallowedTools: Agent, Task`, malla hub-and-spoke); el cierre (reporting/postmortem) además sin `Bash`. El fin de cada subagente se audita (`SubagentStop`). |
 | 📱 | **Bot de Telegram** | Control remoto en lenguaje natural, resúmenes en vivo y aprobación por nivel de riesgo. |
-| 🖥️ | **Panel TUI de control total** | Terminal (Textual) por pestañas: estado, **bus A2A**, roster de agentes, **presupuesto/coste**, RAG, evidencia y **acciones** (kill-switch, delegación dirigida, override de fase) — con las mismas puertas que el bot. |
+| 🖥️ | **Panel TUI de control total** | Terminal (Textual) por pestañas: estado, **bus A2A**, roster de agentes, **presupuesto/coste**, RAG, evidencia y **acciones** (kill-switch, delegación dirigida, override de fase) — con las mismas puertas que el bot; el **registro persiste y sobrevive a reinicios**. |
 | 📊 | **Analítica de coste local** | [agentsview](https://github.com/kenn-io/agentsview) (local-first) lee `~/.claude/projects/` → coste y actividad por agente en `127.0.0.1:8080`. Re-medir el gasto sin sacar datos. |
 | 🧠 | **Aprendizaje por agente** | Cada especialista de explotación/triage acumula su propia memoria local de **técnica** (`memory: local`, per-operador), saneada de forma **determinista** por `memory_guard.py` (sin datos de cliente); `knowledge-postmortem` la consolida al cierre y guarda lecciones en el blackboard. |
 | 🌐 | **Multi-host y pivoting** | Cadenas a través de hosts comprometidos: pivot (ligolo-ng), estado multi-host en el blackboard y propagación de credenciales (reuse/pass-the-hash/spray) para cerrar máquinas encadenadas. |
@@ -369,8 +369,10 @@ está). Detalle en [bot/README.md](bot/README.md).
 > puertas que el bot, en la terminal de la Kali, organizado en **pestañas** — *Panel* (estado/hallazgos),
 > *Bus A2A* (inspector de mensajes + hops), *Agentes* (roster), *Presupuesto* (kill-switch + coste),
 > *RAG*, *Evidencia* y *Acciones* (abortar la orden en curso, delegación dirigida, override de fase,
-> control del bus A2A, modelo/effort). Ninguna acción se salta el scope ni la aprobación humana. El
-> bot de Telegram queda para el control remoto.
+> control del bus A2A, modelo/effort). El **registro de narración persiste** en
+> `engagements/<id>/session.log` (con secretos redactados) y se **reproduce al reabrir**, así el
+> histórico **sobrevive a cuelgues y reinicios**. Ninguna acción se salta el scope ni la aprobación
+> humana. El bot de Telegram queda para el control remoto.
 
 <details>
 <summary><b>Aprobación por niveles de riesgo</b></summary>

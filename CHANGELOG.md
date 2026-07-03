@@ -4,6 +4,31 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.30.0] - 2026-07-03
+### Added
+- **TUI · log de sesión PERSISTENTE (la narración sobrevive a reinicios).** Cierra la causa raíz del «registro
+  vacío» tras un cuelgue/reinicio: el `RichLog` era efímero (solo en memoria) mientras el estado en disco
+  (`contracts/.action_count`, `contracts/engagement.json`) SÍ persistía → al reabrir se veían «8/1000 acciones»
+  pero el registro salía en blanco. Ahora cada línea de narración se persiste a `engagements/<id>/session.log`
+  (JSONL) y la TUI **reproduce el histórico al arrancar** (con marca de hora), bajo un divisor
+  «── historial de la sesión ──». `engagements/` está gitignored → el histórico queda **AISLADO por cliente**
+  (zona E3) y nunca se commitea.
+### Security
+- **La narración persistida se REDACTA antes de escribir (control C12, OWASP LLM02).** Como F0 lleva a disco lo que
+  antes moría en RAM, cada línea pasa por `tools/redactor.redact()` en `append()`: ningún secreto del operador (clave
+  privada, API key de Anthropic, token del bot) se persiste en claro. Cierra el hueco de que este sumidero nuevo
+  quedara fuera de los hooks `secret_scan`/`memory_guard`.
+### Notes
+- Nuevo módulo PURO `bot/tui/sessionlog.py` (stdlib + `tools/redactor`): `append`/`tail`/`strip_markup`/`log_path`.
+  Best-effort: **NUNCA lanza** — un fallo de disco no puede tumbar una orden. No toca el motor ni las puertas.
+- **Endurecido por council (devil/security/simplicity/scalability):** `_safe_id` **inyectivo** (ids distintos ->
+  carpetas distintas: dos clientes jamás comparten log por colapso de saneo, aislamiento E3) + guard de **nombres
+  reservados de Windows** (`nul`/`con`/`com1`… no pierden narración en silencio); **caps forenses** (25 MB / 50k
+  líneas, jerarquía fichero ≥ RAM 2000 ≥ replay 500) para no tirar el 98 % de un engagement largo; `tail` **acotado
+  por bytes** (arranque O(1) aun con log enorme) y `split("\n")` (robusto ante separadores Unicode en output ofensivo).
+  Documentado **single-writer**: habilitar un 2º escritor (bot/dashboard) exigirá un lock de fichero.
+- Tests: `test_sessionlog` **15/15**, test_tui **80/80**, intel 28/28, tgfmt 7/7, botfmt 7/7, validate_suite **471/0/0**.
+
 ## [2.29.0] - 2026-07-03
 ### Added
 - **Bot de Telegram · capa de formato MarkdownV2 + unificación sobre `tui/state.py` (backbone B0).** Se sienta la
