@@ -4,6 +4,34 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.29.0] - 2026-07-03
+### Added
+- **Bot de Telegram · capa de formato MarkdownV2 + unificación sobre `tui/state.py` (backbone B0).** Se sienta la
+  base para subir el listón de calidad de TODAS las respuestas del bot: un **escaper MarkdownV2 correcto en un
+  solo sitio** (`bot/tgfmt.py`: `esc`/`code`/`link`/`card`/`kv`/`bullet`/`sev_emoji`/chips) en vez del Markdown
+  legacy + fallback a texto plano (frágil y feo) que había. La **presentación** de cada comando se extrae a un
+  módulo PURO (`bot/botfmt.py`: datos → MarkdownV2) que reutiliza la lógica ya testeada de `tui/state.py`
+  (`phase_es`, `resolve_approval_mode`, `max_actions`, `load_engagement`/`load_scope`…) — misma fuente de datos
+  que la TUI, formato propio de cada front-end. Los handlers quedan finos.
+- **Primeros comandos migrados (prueba del backbone + salto de calidad):** `/cve` (antes `json.dumps` crudo → ficha
+  con severidad/CVSS/EPSS/KEV/exploit/MSF/Nuclei/CWE/ref), `/scope` (antes 2 líneas → tarjeta con autorización +
+  vigencia + en/fuera de alcance + restricciones/no-daño + supervisión), `/findings` (tarjeta con buckets real/
+  vigilar/ruido, emojis y drill por hallazgo). `sayv2`/`editv2` envían MarkdownV2 con degradación segura.
+### Notes
+- Todo lo nuevo es **lógica pura testeada sin red**: `bot/tests/test_tgfmt.py` (escaper por-contexto: normal/
+  code/url) + `bot/tests/test_botfmt.py` (fichas). No toca el motor ni las puertas; es solo presentación + lector
+  único. Los comandos aún no migrados siguen con el envío legacy hasta su turno.
+- **Council 4 roles (devil/security/simplicity/dx) GO con arreglos aplicados:** (1) `esc_url` endurecido (escapa
+  también `(`) y las refs de `/cve` pasan a `code()` en vez de `link()` — una URL con `(`/espacio rompía el enlace
+  MD2; en monospace es robusta y se ve entera; (2) `state.phase_label()` (crudo, sin markup) evita el doble-escape
+  Rich→MD2 en fases desconocidas; (3) `_tg` no corta a mitad de un escape (quita la `\` colgante); (4) `kv`/`kv_raw`
+  fusionados en un solo `kv(label, fragmento)` (regla única, menos footgun); (5) `clip×3` deduplicado
+  (`tgfmt.clip` fuera, `bot.clip`→`_truncate_body`); (6) `ok()` muerto eliminado; (7) `editv2` con log de degradación.
+  Security confirmó: presentación-only, todo campo escapado, sin fuga de `secret_ref`, fallback inerte
+  (`parse_mode=None`). DX dejó anotado para `/agents`/`/network`: NO reusar los renders Rich de `state.py`; añadir
+  `tgfmt.table`. TUI 80/80, intel 28/28, tgfmt 7/7, botfmt 7/7, validate_suite 469/0/0.
+  **Siguiente = A1 `/agents` rico + `/agent <n>` + A2 `/help`.**
+
 ## [2.28.0] - 2026-07-03
 ### Added
 - **Bot de Telegram · `/kill` (kill-switch) + observabilidad del lock.** Cierra un GAP crítico: el bot marcaba

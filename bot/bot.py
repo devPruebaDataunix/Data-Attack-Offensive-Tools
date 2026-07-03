@@ -42,6 +42,8 @@ from intel import classify as clf       # noqa: E402
 from intel import scope as scp           # noqa: E402
 from intel.runner import AgentRunner, SDK_OK   # noqa: E402
 from tui import state as S               # noqa: E402  (lógica pura compartida con la TUI; sin Textual)
+import tgfmt as F                        # noqa: E402  (capa de formato Telegram MarkdownV2, fuente única)
+import botfmt as BF                      # noqa: E402  (presentación: datos state/intel -> MarkdownV2)
 
 # ── Config ───────────────────────────────────────────────────────────────────
 BOT_DIR = Path(__file__).resolve().parent
@@ -115,7 +117,9 @@ async def run(cmd, timeout=180):
         return 124, "⏱️ Timeout."
 
 
-def clip(s, n=3900):
+def _truncate_body(s, n=3900):
+    """Recorta un CUERPO de mensaje largo con sufijo '… (recortado)'. NO es el 'clip' que colapsa
+    espacios de state._clip/tgfmt (ese va sobre campos): esto solo capa el tamaño de un bloque grande."""
     return s if len(s) <= n else s[:n] + "\n… (recortado)"
 
 
@@ -148,7 +152,14 @@ def _spawn(coro):
 # Red de seguridad: Telegram rechaza mensajes > 4096 caracteres (sea cual sea el emisor).
 def _tg(s):
     s = s or ""
-    return s if len(s) <= 4096 else s[:4080] + "\n… (recortado)"
+    if len(s) <= 4096:
+        return s
+    cut = s[:4080]
+    # No cortar a mitad de un escape de MarkdownV2: un nº IMPAR de '\' colgantes al final = un escape
+    # incompleto que haría rechazar el mensaje (→ fallback sin formato). Quita UNA para dejarlo par/válido.
+    if (len(cut) - len(cut.rstrip("\\"))) % 2:
+        cut = cut[:-1]
+    return cut + "\n… (recortado)"
 
 
 async def say(bot, chat_id, text, reply_markup=None, md=True):
@@ -169,6 +180,33 @@ async def edit(msg, text, md=False):
                             disable_web_page_preview=True)
     except BadRequest:
         pass  # "message is not modified" o error de markdown: lo ignoramos
+
+
+# ── envío MarkdownV2 (capa tgfmt) ─────────────────────────────────────────────
+# Los comandos nuevos/migrados construyen el mensaje con tgfmt (F.*) y lo mandan con estos helpers.
+# Un solo escaper correcto en vez del Markdown legacy + fallback a plano (frágil). El fallback aquí es
+# la RED DE SEGURIDAD: si aun así Telegram rechaza el parseo, se degrada a texto legible sin perder
+# contenido (F.plain) en vez de fallar.
+async def sayv2(bot, chat_id, md2_text, reply_markup=None):
+    body = _tg(md2_text)
+    try:
+        return await bot.send_message(chat_id, body, parse_mode="MarkdownV2",
+                                      reply_markup=reply_markup, disable_web_page_preview=True)
+    except BadRequest:
+        log.warning("MarkdownV2 rechazado; degrado a texto plano")
+        return await bot.send_message(chat_id, F.plain(body), reply_markup=reply_markup,
+                                      disable_web_page_preview=True)
+
+
+async def editv2(msg, md2_text):
+    body = _tg(md2_text)
+    try:
+        await msg.edit_text(body, parse_mode="MarkdownV2", disable_web_page_preview=True)
+    except BadRequest as e:
+        # "message is not modified" es esperado (mismo contenido) y NO se loguea; un parseo inválido sí,
+        # para tener la misma observabilidad que sayv2 (que avisa cuando degrada).
+        if "not modified" not in str(e).lower():
+            log.warning("MarkdownV2 rechazado en edición: %s", e)
 
 
 # ── Comandos básicos ─────────────────────────────────────────────────────────
@@ -209,7 +247,7 @@ async def status(update, ctx):
         await update.message.reply_text("▶️ " + _order_line(order) + "\nAbórtala con /kill.")
     msg = await update.message.reply_text("⏳ Comprobando…")
     rc, out = await run(["bash", "deploy/verify.sh"], timeout=120)
-    await edit(msg, "```\n" + clip(out, 3500) + "\n```", md=True)
+    await edit(msg, "```\n" + _truncate_body(out, 3500) + "\n```", md=True)
 
 
 @authorized
@@ -264,7 +302,7 @@ async def triage(update, ctx):
     try:
         data = json.loads(out)
     except json.JSONDecodeError:
-        await edit(msg, "```\n" + clip(out) + "\n```", md=True)
+        await edit(msg, "```\n" + _truncate_body(out) + "\n```", md=True)
         return
     lines = [f"*Triage — {q}*  (store {data['store'].get('kev_version', '?')})"]
     for r in data.get("results", []):
@@ -279,24 +317,22 @@ async def triage(update, ctx):
             lines.append(f"    MSF: `{msf}`")
         if r.get("nuclei_templates"):
             lines.append(f"    Nuclei: `{r['nuclei_templates'][0]}`")
-    await edit(msg, clip("\n".join(lines)), md=True)
+    await edit(msg, _truncate_body("\n".join(lines)), md=True)
 
 
 @authorized
 async def cve(update, ctx):
+    chat_id = update.effective_chat.id
     if not ctx.args:
-        await update.message.reply_text("Uso: /cve `<CVE-id>`", parse_mode="Markdown")
+        await sayv2(ctx.bot, chat_id,
+                    F.card("Uso", F.esc("/cve <CVE-id> — p. ej. ") + F.code("CVE-2021-44228"), icon="ℹ️"))
         return
-    cid = ctx.args[0]
-    rc, out = await run([PY, "rag/query_vulns.py", "--query", cid, "--json", "--limit", "1"], timeout=60)
+    rc, out = await run([PY, "rag/query_vulns.py", "--query", ctx.args[0], "--json", "--limit", "1"], timeout=60)
     try:
         res = json.loads(out).get("results", [])
     except json.JSONDecodeError:
         res = []
-    if not res:
-        await update.message.reply_text(f"Sin datos para `{cid}` en el RAG.", parse_mode="Markdown")
-        return
-    await update.message.reply_text(clip("```json\n" + json.dumps(res[0], indent=1, ensure_ascii=False) + "\n```"), parse_mode="Markdown")
+    await sayv2(ctx.bot, chat_id, BF.cve_card(res[0] if res else None))
 
 
 @authorized
@@ -312,19 +348,9 @@ async def refresh(update, ctx):
 
 @authorized
 async def findings(update, ctx):
-    eng = REPO_DIR / "contracts" / "engagement.json"
-    if not eng.exists():
-        await update.message.reply_text("No hay engagement activo.")
-        return
-    d = json.loads(eng.read_text(encoding="utf-8"))
-    grp = clf.scan(d.get("findings", []))
-    lines = [f"*Engagement {d.get('engagement_id', '?')}* — fase {d.get('phase', '?')}",
-             f"🔴 reales: {len(grp['real'])}  🟠 vigilar: {len(grp['watch'])}  🔇 ruido: {len(grp['noise'])}"]
-    for v in grp["real"][:6]:
-        lines.append(f"🔴 `{v.finding_id}` [{v.severity.upper()}] {v.title[:60]} → {v.target}")
-    for v in grp["watch"][:6]:
-        lines.append(f"🟠 `{v.finding_id}` [{v.severity.upper()}] {v.title[:60]}")
-    await update.message.reply_text(clip("\n".join(lines)), parse_mode="Markdown")
+    eng = S.load_engagement(REPO_DIR)                       # lector único (state.py)
+    grp = clf.scan(eng.get("findings", []) or [])
+    await sayv2(ctx.bot, update.effective_chat.id, BF.findings_card(grp, eng))
 
 
 @authorized
@@ -339,16 +365,7 @@ async def report(update, ctx):
 
 @authorized
 async def scope(update, ctx):
-    d = scp.load_scope(REPO_DIR)
-    if not d:
-        await update.message.reply_text("⚠️ No hay `contracts/scope.json`. Defínelo antes de operar.")
-        return
-    ins = d.get("in_scope", {})
-    await update.message.reply_text(
-        f"*Scope* — {d.get('client', d.get('engagement_id', '?'))}\n"
-        f"dominios: `{', '.join(ins.get('domains', []) or ['—'])}`\n"
-        f"ips/cidr: `{', '.join((ins.get('ips', []) or []) + (ins.get('cidrs', []) or []) or ['—'])}`",
-        parse_mode="Markdown")
+    await sayv2(ctx.bot, update.effective_chat.id, BF.scope_card(S.load_scope(REPO_DIR)))
 
 
 # ── Lenguaje natural -> Orquestador (con pregunta de scope y confirmación) ────
@@ -378,7 +395,7 @@ async def _confirm(update, ctx, task):
         InlineKeyboardButton("✅ Ejecutar", callback_data="run"),
         InlineKeyboardButton("✖️ Cancelar", callback_data="cancel")]])
     await say(ctx.bot, update.effective_chat.id,
-              f"*Orden al Orquestador:*\n> {clip(task, 400)}\n\n¿Ejecutar?", reply_markup=kb)
+              f"*Orden al Orquestador:*\n> {_truncate_body(task, 400)}\n\n¿Ejecutar?", reply_markup=kb)
 
 
 # ── Ejecución con streaming + aprobación por acción + alertas ─────────────────
@@ -408,7 +425,7 @@ async def _alert(ctx, chat_id, v: clf.Verdict):
     body = f"{head}\n*{v.title}* → `{v.target}`\n_{v.reason}_"
     if v.summary:
         body += "\n\n" + v.summary
-    await say(ctx.bot, chat_id, clip(body, 3500))
+    await say(ctx.bot, chat_id, _truncate_body(body, 3500))
 
 
 async def _execute(ctx, chat_id, task):
@@ -462,7 +479,7 @@ async def _execute(ctx, chat_id, task):
         while True:
             try:
                 await asyncio.sleep(ORDER_TICK_SECS)
-                tail = f"\n🔧 {clip(order['last_tool'], 160)}" if order.get("last_tool") else ""
+                tail = f"\n🔧 {_truncate_body(order['last_tool'], 160)}" if order.get("last_tool") else ""
                 await edit(status_msg, "⏳ " + _order_line(order) + tail)
                 if S.order_stale(order["started"], runner.last_beat, time.monotonic()):
                     try:
@@ -491,7 +508,7 @@ async def _execute(ctx, chat_id, task):
         if ctx.chat_data.get("order") is order:   # token guard: no pisar una orden más nueva
             ctx.chat_data.pop("order", None)
     if final:
-        await say(ctx.bot, chat_id, "🧾 " + clip(final, 3500))
+        await say(ctx.bot, chat_id, "🧾 " + _truncate_body(final, 3500))
 
 
 @authorized

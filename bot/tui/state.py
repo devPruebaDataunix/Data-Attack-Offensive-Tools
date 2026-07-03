@@ -526,8 +526,16 @@ class CmdHistory:
 
 
 # ── Timeline de fase ─────────────────────────────────────────────────────────────
+def phase_label(phase: str) -> str:
+    """Etiqueta en español de una fase SIN markup (dato crudo). La cadena tal cual si es desconocida,
+    '—' si vacía/ausente. Para front-ends que aplican su PROPIO escaper (el bot, MarkdownV2): evita el
+    doble-escape que provocaría phase_es() al meter el escape de Rich (`\\[`) en la capa MD2."""
+    return PHASES_ES.get(phase, phase) if phase else "—"
+
+
 def phase_es(phase: str) -> str:
-    """Etiqueta en español de una fase (la cadena tal cual si es desconocida, '—' si vacía/ausente)."""
+    """Etiqueta en español de una fase con el texto libre desconocido escapado para RICH (uso en la TUI).
+    Para MarkdownV2 usa phase_label() (crudo) y deja que el escaper del bot haga su trabajo."""
     return PHASES_ES.get(phase, _esc(phase)) if phase else "—"
 
 

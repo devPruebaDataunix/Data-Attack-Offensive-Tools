@@ -213,7 +213,14 @@ def test_phase_render_marks_current():
 def test_phase_es_labels():
     assert S.phase_es("post-exploitation") == "post-explotación"
     assert S.phase_es("desconocida") == "desconocida"    # fase fuera del catálogo: se devuelve tal cual
-    assert S.phase_es("ex[b]") == "ex\\[b]"              # fase desconocida con markup: se escapa (defensa)
+    assert S.phase_es("ex[b]") == "ex\\[b]"              # fase desconocida con markup: se escapa (defensa RICH)
+
+
+def test_phase_label_is_raw_no_markup():
+    # phase_label = etiqueta i18n CRUDA (sin escape Rich), para front-ends con su propio escaper (bot MD2).
+    assert S.phase_label("post-exploitation") == "post-explotación"
+    assert S.phase_label("ex[b]") == "ex[b]"             # NO escapa: el bot aplicará MarkdownV2 encima
+    assert S.phase_label("") == "—" and S.phase_label(None) == "—"
 
 
 def test_dashboard_status_empty_and_active():
