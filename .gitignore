@@ -48,3 +48,6 @@ bot/.venv/
 .DS_Store
 *.log
 deploy/*.log
+
+# Cache local del council de revisión (no versionar: notas de revisión efímeras)
+.claude/council-cache/

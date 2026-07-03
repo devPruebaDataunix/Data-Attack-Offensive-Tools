@@ -26,6 +26,7 @@ import logging
 import os
 import re
 import sys
+import time
 from functools import wraps
 from pathlib import Path
 from uuid import uuid4
@@ -35,11 +36,12 @@ from telegram.error import BadRequest
 from telegram.ext import (Application, CommandHandler, MessageHandler,
                           CallbackQueryHandler, ContextTypes, filters)
 
-# El paquete intel vive junto a este fichero.
+# El paquete intel (y la lógica pura de tui/state.py) viven junto a este fichero.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from intel import classify as clf       # noqa: E402
 from intel import scope as scp           # noqa: E402
 from intel.runner import AgentRunner, SDK_OK   # noqa: E402
+from tui import state as S               # noqa: E402  (lógica pura compartida con la TUI; sin Textual)
 
 # ── Config ───────────────────────────────────────────────────────────────────
 BOT_DIR = Path(__file__).resolve().parent
@@ -117,6 +119,32 @@ def clip(s, n=3900):
     return s if len(s) <= n else s[:n] + "\n… (recortado)"
 
 
+# Cadencia del mini-dashboard EN VIVO de una orden (edición del mensaje de estado + chequeo de cuelgue).
+ORDER_TICK_SECS = 4
+
+
+def _order_line(order):
+    """Estado en UNA línea (texto plano, sin markup Rich) de la orden en curso, para Telegram. Reutiliza
+    la MISMA lógica que la barra de la TUI (state.order_status_line, plain=True) — un solo sitio que
+    formatea; aquí solo sugerimos /kill como comando de recuperación en vez del Ctrl+K de la TUI."""
+    runner = order["runner"]
+    return S.order_status_line(
+        order["task"], order["started"], time.monotonic(),
+        turns=runner.live_turns, cost=runner.last_cost_usd, last_beat=runner.last_beat,
+        plain=True, stale_hint="/kill")
+
+
+# Referencias fuertes a las tareas en segundo plano (evita que el GC recolecte una tarea sin await).
+_BG_TASKS: set = set()
+
+
+def _spawn(coro):
+    t = asyncio.create_task(coro)
+    _BG_TASKS.add(t)
+    t.add_done_callback(_BG_TASKS.discard)
+    return t
+
+
 # Red de seguridad: Telegram rechaza mensajes > 4096 caracteres (sea cual sea el emisor).
 def _tg(s):
     s = s or ""
@@ -149,7 +177,8 @@ HELP = (
     "Háblame en lenguaje normal: _\"haz recon de app.cliente.com\"_, _\"prioriza los CVE de "
     "ese Apache\"_, _\"genera el informe\"_. Te pido confirmación, te aviso por hito en vivo, "
     "y solo escalo las alertas reales.\n\n"
-    "/status — salud del sistema y del RAG\n"
+    "/status — salud del sistema y estado de la orden en curso\n"
+    "/kill — aborta la orden en curso (kill-switch)\n"
     "/health — versiones del toolchain\n"
     "/agents — lista de agentes\n"
     "/triage `<producto> [versión]` — CVEs priorizados (KEV/MSF/CVSS)\n"
@@ -175,9 +204,36 @@ async def help_cmd(update, ctx):
 
 @authorized
 async def status(update, ctx):
+    order = ctx.chat_data.get("order")
+    if order:
+        await update.message.reply_text("▶️ " + _order_line(order) + "\nAbórtala con /kill.")
     msg = await update.message.reply_text("⏳ Comprobando…")
     rc, out = await run(["bash", "deploy/verify.sh"], timeout=120)
     await edit(msg, "```\n" + clip(out, 3500) + "\n```", md=True)
+
+
+@authorized
+async def kill(update, ctx):
+    """Kill-switch: aborta la orden en curso. Cierra el GAP crítico — antes el bot marcaba 'running' pero
+    NUNCA abortaba (mismo lock fantasma que la TUI tenía). abort() = deny cooperativo (la próxima acción
+    del SDK se rechaza); cancelar la tarea = backup duro para desatascar un await colgado (aprobación/SDK)."""
+    order = ctx.chat_data.get("order")
+    if not order:
+        await update.message.reply_text("No hay ninguna orden en curso. Usa /status para ver el estado.")
+        return
+    runner = order.get("runner")
+    if runner is not None:
+        runner.abort()
+    t = order.get("aio_task")
+    if t is not None and not t.done():
+        t.cancel()
+    # Liberación DURA del lock: aunque el finally del ejecutor no llegue a correr, el estado queda limpio.
+    # El finally usa la identidad de `order` como token, así que no pisará una orden más nueva.
+    ctx.chat_data.pop("order", None)
+    # Precisión: abort() es un deny COOPERATIVO (se rechaza toda acción NUEVA); una acción ya lanzada
+    # (p.ej. un nmap/sqlmap en curso) puede tardar en cortarse. No prometemos más de lo que garantiza.
+    await update.message.reply_text(
+        "⛔ Orden abortada: se deniega toda acción NUEVA. Una acción ya en curso puede tardar en cortarse.")
 
 
 @authorized
@@ -251,7 +307,7 @@ async def refresh(update, ctx):
         rc, out = await run([PY, "rag/refresh.py", "--epss-all"], timeout=1800)
         await ctx.bot.send_message(update.effective_chat.id,
                                    "✅ RAG actualizado." if rc == 0 else "⚠️ Refresh con errores.")
-    asyncio.create_task(_job())
+    _spawn(_job())   # ref fuerte (evita que el GC recolecte la tarea de fondo antes de terminar)
 
 
 @authorized
@@ -356,33 +412,84 @@ async def _alert(ctx, chat_id, v: clf.Verdict):
 
 
 async def _execute(ctx, chat_id, task):
-    if ctx.chat_data.get("running"):
-        await ctx.bot.send_message(chat_id, "⏳ Ya hay una orden en curso; espera a que termine.")
+    if ctx.chat_data.get("order"):
+        await ctx.bot.send_message(
+            chat_id, "⏳ Ya hay una orden en curso. Mira su estado con /status o abórtala con /kill.")
         return
-    ctx.chat_data["running"] = True
-    status_msg = await ctx.bot.send_message(chat_id, "⏳ Orquestador trabajando…")
 
-    async def emit(text):
-        await say(ctx.bot, chat_id, text)
+    # ── Arranque (ANTES de fijar el lock) ─────────────────────────────────────────────────────────
+    # _execute corre en segundo plano (fire-and-forget), así que una excepción AQUÍ (Telegram caído,
+    # el runner no construye) moriría en silencio dejando al operador con "🚀 Lanzando…" para siempre.
+    # La blindamos: se reporta al chat y se sale. El lock se fija AL FINAL, así que si esto falla no se
+    # filtra ningún lock (no hay que limpiar nada).
+    try:
+        status_msg = await ctx.bot.send_message(chat_id, "⏳ Orquestador trabajando…")
 
-    async def status_upd(text):
-        await edit(status_msg, "⏳ " + text)
+        async def emit(text):
+            await say(ctx.bot, chat_id, text)
 
-    async def approve(summary):
-        return await _ask_approval(ctx, chat_id, summary)
+        async def status_upd(text):
+            order["last_tool"] = text      # el ticker lo incorpora al mini-dashboard (un solo mensaje)
 
-    async def on_verdict(v, f):
-        await _alert(ctx, chat_id, v)
+        async def approve(summary):
+            return await _ask_approval(ctx, chat_id, summary)
 
-    runner = AgentRunner(REPO_DIR, emit, status_upd, approve, on_verdict, model=ORCH_MODEL,
-                         effort=ORCH_EFFORT, max_usd=ORCH_MAX_USD, approval_mode=ORCH_APPROVAL_MODE)
+        async def on_verdict(v, f):
+            await _alert(ctx, chat_id, v)
+
+        runner = AgentRunner(REPO_DIR, emit, status_upd, approve, on_verdict, model=ORCH_MODEL,
+                             effort=ORCH_EFFORT, max_usd=ORCH_MAX_USD, approval_mode=ORCH_APPROVAL_MODE)
+        # El `order` es a la vez el estado observable (lo ven /status y /kill) y el TOKEN del lock: su
+        # identidad distingue esta orden de una posterior en el guard anti-carrera del finally.
+        order = {
+            "runner": runner, "task": task, "started": time.monotonic(),
+            "aio_task": asyncio.current_task(), "last_tool": "",
+        }
+        ctx.chat_data["order"] = order
+    except Exception as e:  # noqa: BLE001 - fallo de arranque: repórtalo, no lo tragues en la tarea
+        log.exception("execute-setup")
+        try:
+            await ctx.bot.send_message(chat_id, f"⚠️ No pude arrancar la orden: {e}")
+        except Exception:  # noqa: BLE001
+            pass
+        return
+
+    async def _ticker():
+        """Refresca el mensaje de estado (elapsed/turnos/coste + última tool) y AUTO-RECUPERA el lock si
+        el SDK lleva demasiado sin dar señal (cuelgue silencioso — el caso real de tokenaso). El aviso de
+        inactividad se envía DESDE AQUÍ (antes de cancelar), no dentro del `except CancelledError` del
+        ejecutor: así no puede perderse por una carrera de cancelaciones."""
+        while True:
+            try:
+                await asyncio.sleep(ORDER_TICK_SECS)
+                tail = f"\n🔧 {clip(order['last_tool'], 160)}" if order.get("last_tool") else ""
+                await edit(status_msg, "⏳ " + _order_line(order) + tail)
+                if S.order_stale(order["started"], runner.last_beat, time.monotonic()):
+                    try:
+                        await ctx.bot.send_message(
+                            chat_id, "⚠️ Orden liberada por inactividad (sin señal del SDK). "
+                                     "Se deniega toda acción NUEVA.")
+                    except Exception:  # noqa: BLE001 - el aviso es best-effort; nunca bloquea la recuperación
+                        pass
+                    runner.abort()
+                    order["aio_task"].cancel()
+                    return
+            except asyncio.CancelledError:
+                raise
+            except Exception:  # noqa: BLE001 - el ticker es cosmético; nunca debe tumbar la orden
+                log.debug("order ticker", exc_info=True)
+
+    ticker = _spawn(_ticker())
+    final = None
     try:
         final = await runner.run(task)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001 (CancelledError, BaseException, propaga: el finally limpia el lock)
         log.exception("runner")
         final = f"⚠️ Error: {e}"
     finally:
-        ctx.chat_data["running"] = False
+        ticker.cancel()
+        if ctx.chat_data.get("order") is order:   # token guard: no pisar una orden más nueva
+            ctx.chat_data.pop("order", None)
     if final:
         await say(ctx.bot, chat_id, "🧾 " + clip(final, 3500))
 
@@ -398,7 +505,11 @@ async def on_button(update, ctx):
         fut = ctx.application.bot_data.get("approvals", {}).get(aid)
         if fut and not fut.done():
             fut.set_result(val == "1")
-        await edit(q.message, "✅ Autorizado." if val == "1" else "⛔ Denegado.")
+            await edit(q.message, "✅ Autorizado." if val == "1" else "⛔ Denegado.")
+        else:
+            # El future ya no está: la orden terminó/se abortó (p.ej. /kill) o la solicitud expiró.
+            # NO afirmar "Autorizado" (sería engañoso: no se ejecutará nada).
+            await edit(q.message, "⏱️ Esa solicitud ya no está activa (orden terminada/abortada o expirada).")
         return
 
     if data == "cancel":
@@ -411,8 +522,12 @@ async def on_button(update, ctx):
         if not task:
             await edit(q.message, "No hay orden pendiente.")
             return
+        if ctx.chat_data.get("order"):
+            await edit(q.message, "⏳ Ya hay una orden en curso; abórtala con /kill antes de lanzar otra.")
+            return
         await edit(q.message, "🚀 Lanzando al Orquestador…")
-        await _execute(ctx, q.message.chat_id, task)
+        # En segundo plano para que /kill (u otra actualización) pueda correr y CANCELAR esta orden.
+        _spawn(_execute(ctx, q.message.chat_id, task))
         return
 
 
@@ -440,6 +555,8 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(CommandHandler("status", status))
+    app.add_handler(CommandHandler("kill", kill))
+    app.add_handler(CommandHandler("abort", kill))
     app.add_handler(CommandHandler("health", health))
     app.add_handler(CommandHandler("agents", agents))
     app.add_handler(CommandHandler("triage", triage))

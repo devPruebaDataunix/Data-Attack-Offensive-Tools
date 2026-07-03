@@ -4,6 +4,34 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.28.0] - 2026-07-03
+### Added
+- **Bot de Telegram · `/kill` (kill-switch) + observabilidad del lock.** Cierra un GAP crítico: el bot marcaba
+  una orden como «en curso» pero **nunca la abortaba** (`runner.abort()` existía pero no se llamaba) — el mismo
+  **lock fantasma** que la TUI tenía y que ya resolvimos allí. Ahora **`/kill`** (alias `/abort`) aborta la
+  orden en curso: `abort()` = *deny cooperativo* (la próxima acción del SDK se rechaza) **+** cancelación de la
+  tarea = *backup duro* para desatascar un `await` colgado (aprobación/SDK). Antes, si el SDK se colgaba en
+  silencio, el operador quedaba **atascado sin salida**.
+- **Mini-dashboard en vivo + auto-recuperación del lock.** El mensaje de estado de la orden se refresca con
+  **tiempo transcurrido · turnos · coste · última herramienta**, y si el SDK lleva demasiado tiempo **sin dar
+  señal** (cuelgue silencioso — el caso real observado contra `tokenaso`) la orden se **auto-libera** por
+  inactividad. `/status` antepone además el estado en vivo de la orden en curso.
+### Notes
+- Reutiliza la **lógica PURA y ya testeada** de `bot/tui/state.py`. La línea de estado la formatea ahora un
+  solo sitio: `state.order_status_line(..., plain=True, stale_hint="/kill")` (se le añadió el modo texto-plano
+  para front-ends sin Rich) — mismo contrato que el kill-switch de la TUI (`Ctrl+K` allí, `/kill` aquí), primer
+  paso de la unificación bot↔TUI sobre `state.py`. El lock usa la identidad del `order` como **token
+  anti-carrera** (una orden nueva no pisa el cierre de la anterior). No relaja **ninguna** puerta: `abort()`
+  solo **añade** denegación (deny cooperativo; el gate de scope/budget/aprobación sigue intacto).
+- **Council 4 roles (devil/security/simplicity/scalability) GO con arreglos aplicados:** (1) `_execute` corre en
+  segundo plano → se **blinda el arranque** para que una excepción previa al lock se reporte al chat en vez de
+  morir en silencio; (2) el aviso de inactividad se envía **desde el ticker** (antes de cancelar) para que no lo
+  pierda una carrera de cancelaciones; (3) copy de `/kill` preciso (deny **cooperativo**: una acción ya lanzada
+  puede tardar en cortarse); (4) DRY de la línea de estado; (5) `/refresh` pasa por `_spawn` (ref fuerte, arregla
+  un bug latente de GC); (6) un botón de aprobación pulsado tras `/kill` ya no dice «Autorizado» en falso.
+  Cambio acotado a `bot/bot.py` (+ `state.py` el parámetro `plain`). `py_compile` OK; TUI 79/79, intel 28/28,
+  validate_suite 465/0/0.
+
 ## [2.27.0] - 2026-07-03
 ### Added
 - **Instalador · flag `--exploitarium`** en `deploy/auto-deploy.sh`. La fuente 0-day opt-in añadida en v2.26.0

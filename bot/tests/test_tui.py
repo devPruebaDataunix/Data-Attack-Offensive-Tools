@@ -323,6 +323,22 @@ def test_order_status_line_idle_and_running():
     assert "a\\[b].com" in out                                     # texto libre escapado (markup Rich)
     stale = S.order_status_line("x", started=0.0, now=400.0, last_beat=5.0, timeout=300.0)
     assert "sin señal" in stale                                    # marca el posible cuelgue
+    assert "Ctrl+K" in stale                                       # hint de recuperación por defecto (TUI)
+
+
+def test_order_status_line_plain_for_bot():
+    # plain=True: texto SIN markup Rich (lo usa el bot de Telegram) — misma lógica, un solo sitio.
+    idle = S.order_status_line(None, None, 100.0, plain=True)
+    assert "sin orden" in idle and "[" not in idle                 # empty-state, sin corchetes Rich
+    out = S.order_status_line("haz recon de a[b].com", started=0.0, now=65.0,
+                              turns=3, cost=0.12, last_beat=60.0, plain=True)
+    assert "[b " not in out and "[/]" not in out                   # nada de tags Rich
+    assert "a[b].com" in out                                       # plano NO escapa (Telegram no es Rich)
+    assert "01:05" in out and "3 turnos" in out and "$0.12" in out
+    # stale_hint parametrizable: el bot sugiere /kill en vez de Ctrl+K.
+    stale = S.order_status_line("x", started=0.0, now=400.0, last_beat=5.0, timeout=300.0,
+                                plain=True, stale_hint="/kill")
+    assert "sin señal" in stale and "/kill" in stale and "Ctrl+K" not in stale
 
 
 # ── state: historial de órdenes ↑/↓ (A3) ────────────────────────────────────────

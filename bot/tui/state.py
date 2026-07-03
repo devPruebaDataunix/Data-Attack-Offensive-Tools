@@ -463,21 +463,30 @@ def order_stale(started: Optional[float], last_beat: Optional[float], now: float
 def order_status_line(task: Optional[str], started: Optional[float], now: float,
                       turns: Optional[int] = None, cost: Optional[float] = None,
                       last_beat: Optional[float] = None,
-                      timeout: float = ORDER_STALL_TIMEOUT) -> str:
-    """Línea de estado de la orden en curso para la barra bajo el log. Empty-state amable si no hay
-    orden. Marca staleness (sin señal) para avisar de un posible cuelgue. Escapa el texto libre."""
+                      timeout: float = ORDER_STALL_TIMEOUT,
+                      plain: bool = False, stale_hint: str = "Ctrl+K") -> str:
+    """Línea de estado de la orden en curso. Empty-state amable si no hay orden. Marca staleness (sin
+    señal) para avisar de un posible cuelgue. Dos modos: `plain=False` (por defecto) devuelve markup Rich
+    para la barra de la TUI (escapa el texto libre); `plain=True` devuelve TEXTO PLANO para front-ends sin
+    Rich (el bot de Telegram) — misma lógica, un solo sitio (evita duplicar el formateo). `stale_hint` es
+    la tecla/comando de recuperación que se sugiere en el aviso de cuelgue (Ctrl+K en la TUI, /kill en el bot)."""
     if not task or started is None:
-        return f"[{T.MUTED}]· sin orden en curso[/]"
-    bits = [f"[b {T.BRAND}]▶ orden en curso[/]",
-            f"[{T.INFO}]{_esc(_clip(task, 60))}[/]",
-            f"⏱ {fmt_duration(now - started)}"]
+        return "· sin orden en curso" if plain else f"[{T.MUTED}]· sin orden en curso[/]"
+    dur = fmt_duration(now - started)
+    if plain:
+        bits = [f"orden: {_clip(task, 60)}", f"⏱ {dur}"]
+    else:
+        bits = [f"[b {T.BRAND}]▶ orden en curso[/]",
+                f"[{T.INFO}]{_esc(_clip(task, 60))}[/]",
+                f"⏱ {dur}"]
     if isinstance(turns, int) and turns > 0:
         bits.append(f"{turns} turnos")
     if isinstance(cost, (int, float)) and cost:
         bits.append(f"${cost:.2f}")
     if order_stale(started, last_beat, now, timeout):
         ref = last_beat if (isinstance(last_beat, (int, float)) and last_beat > 0) else started
-        bits.append(f"[{T.DANGER}]⚠ sin señal {fmt_duration(now - ref)} — Ctrl+K para liberar[/]")
+        warn = f"⚠ sin señal {fmt_duration(now - ref)} — {stale_hint} para liberar"
+        bits.append(warn if plain else f"[{T.DANGER}]{warn}[/]")
     return "  ·  ".join(bits)
 
 
