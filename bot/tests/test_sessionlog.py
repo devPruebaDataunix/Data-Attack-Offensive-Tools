@@ -171,6 +171,44 @@ def test_tail_skips_corrupt_lines():
         shutil.rmtree(repo, ignore_errors=True)
 
 
+def test_append_concurrent_writers_no_loss():
+    # F4: con el lock de fichero (_file_lock), varios ESCRITORES concurrentes (TUI+bot+dashboard sobre el
+    # MISMO session.log) no se pisan -> ninguna línea se pierde ni queda a medias (JSON corrupto).
+    import threading
+    repo = _tmp()
+    try:
+        n_writers, per = 8, 40
+        expected = {f"w{w}-{i}" for w in range(n_writers) for i in range(per)}
+
+        def worker(w):
+            for i in range(per):
+                SL.append(repo, "eng-1", f"w{w}-{i}", ts=float(i))
+
+        threads = [threading.Thread(target=worker, args=(w,)) for w in range(n_writers)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        got = SL.tail(repo, "eng-1", n=1_000_000)
+        assert len(got) == n_writers * per                 # nada perdido ni descartado por corrupción
+        assert {e["text"] for e in got} == expected        # y exactamente las líneas esperadas
+    finally:
+        shutil.rmtree(repo, ignore_errors=True)
+
+
+def test_file_lock_best_effort_never_raises():
+    # El lock es best-effort: aunque el locking del SO no estuviese disponible, append no debe romper.
+    repo = _tmp()
+    orig_fcntl, orig_msvcrt = SL._fcntl, SL._msvcrt
+    SL._fcntl, SL._msvcrt = None, None                     # simula un SO sin locking
+    try:
+        SL.append(repo, "eng-1", "sin-lock", ts=1.0)
+        assert [e["text"] for e in SL.tail(repo, "eng-1")] == ["sin-lock"]
+    finally:
+        SL._fcntl, SL._msvcrt = orig_fcntl, orig_msvcrt
+        shutil.rmtree(repo, ignore_errors=True)
+
+
 def test_strip_markup_removes_rich_tags():
     assert SL.strip_markup("[b #e02c41]▶ orden[/] lanzada") == "▶ orden lanzada"
     assert SL.strip_markup("[/]") == ""

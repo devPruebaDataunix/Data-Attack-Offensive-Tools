@@ -20,21 +20,34 @@ Diseño:
     en `append()`: así este sumidero nuevo queda cubierto por el mismo invariante que imponen los
     hooks `secret_scan`/`memory_guard` sobre el blackboard. NUNCA se persiste un secreto del operador.
   · Best-effort: NUNCA lanza. Un fallo de logging jamás debe tumbar una orden (se traga OSError).
-  · **SINGLE-WRITER (hoy solo escribe la TUI).** `append` no toma lock: `open("a")` no garantiza
-    atomicidad entre procesos en Windows y `_prune` (read→write→replace) puede pisar un append
-    concurrente. El FORMATO ya sirve para múltiples LECTORES (bot/dashboard), pero habilitar un
-    segundo ESCRITOR exige antes un lock de fichero (`fcntl.flock`/`msvcrt.locking`). No conectes el
-    bot/dashboard como escritores sin ese lock.
+  · **MULTI-WRITER seguro (F4).** `append` toma un **lock de fichero exclusivo entre procesos**
+    (`_file_lock`, sobre un `.lock` aparte —no el propio log, que `_prune` reemplaza—) que envuelve
+    la escritura Y la poda: así la TUI, el bot y el dashboard pueden escribir el MISMO `session.log`
+    sin corromperlo ni pisar un `_prune` concurrente. El lock es **best-effort** (si el SO no ofrece
+    `fcntl`/`msvcrt` o falla, cede el paso sin lock = comportamiento single-writer previo, nunca
+    rompe). Múltiples LECTORES (`tail`) NO necesitan lock: `_prune` publica con `replace()` atómico.
   · stdlib puro (+ `tools/redactor`, también stdlib) → 100% testeable en bot/tests/test_sessionlog.py.
 """
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import re
 import sys
 import time
 from pathlib import Path
+
+# Lock de fichero entre procesos para SERIALIZAR escritores (F4: habilita bot/dashboard como 2º
+# escritor sin corromper el log). Cross-plataforma: fcntl (POSIX/Kali) o msvcrt (Windows dev).
+try:
+    import fcntl as _fcntl   # POSIX
+except ImportError:          # pragma: no cover - depende del SO
+    _fcntl = None
+try:
+    import msvcrt as _msvcrt  # Windows
+except ImportError:          # pragma: no cover - depende del SO
+    _msvcrt = None
 
 # Caps de crecimiento. `engagements/` está gitignored y aislado por cliente → el disco NO es la
 # restricción; un engagement Red Team real (horas/días) emite decenas de miles de líneas y las
@@ -113,6 +126,58 @@ def log_path(repo, engagement_id) -> Path:
     return Path(repo) / "engagements" / _safe_id(engagement_id) / "session.log"
 
 
+_LOCK_WAIT = 2.0     # s máximos esperando el lock antes de seguir SIN él (nunca colgar una orden)
+_LOCK_POLL = 0.02    # intervalo de reintento del lock no-bloqueante
+
+
+@contextlib.contextmanager
+def _file_lock(lock_path: Path):
+    """Lock EXCLUSIVO entre procesos (best-effort) para serializar escritores del session.log.
+
+    Bloquea un fichero `.lock` APARTE (no el log, que `_prune` reemplaza con `replace()`). fcntl.flock
+    en POSIX (Kali) y msvcrt.locking en Windows (dev). Se toma UNA vez por `append` y cubre escritura +
+    poda (no re-entrante: `_prune` no vuelve a bloquear).
+
+    NO-BLOQUEANTE con espera ACOTADA: reintenta el lock exclusivo hasta `_LOCK_WAIT` s y, si no lo obtiene
+    (o el SO no ofrece locking, o falla), CEDE EL PASO SIN lock. Así nunca cuelga una orden en curso si otro
+    escritor quedó atascado sujetando el lock —el logging es best-effort y jamás debe tumbar una orden—; en
+    el caso normal (escritores que sujetan el lock milisegundos) se serializa sin corrupción. Nunca lanza."""
+    fh = None
+    locked = False
+    try:
+        fh = open(lock_path, "a+")
+        deadline = time.monotonic() + _LOCK_WAIT
+        while True:
+            try:
+                if _fcntl is not None:
+                    _fcntl.flock(fh.fileno(), _fcntl.LOCK_EX | _fcntl.LOCK_NB)
+                    locked = True
+                elif _msvcrt is not None:
+                    fh.seek(0)
+                    _msvcrt.locking(fh.fileno(), _msvcrt.LK_NBLCK, 1)
+                    locked = True
+                break
+            except OSError:
+                if time.monotonic() >= deadline:
+                    break   # no se obtuvo a tiempo: seguimos SIN lock (best-effort, no colgamos la orden)
+                time.sleep(_LOCK_POLL)
+    except OSError:
+        pass   # sin lock: seguimos igual que el estado single-writer previo (best-effort)
+    try:
+        yield
+    finally:
+        if fh is not None:
+            try:
+                if locked and _fcntl is not None:
+                    _fcntl.flock(fh.fileno(), _fcntl.LOCK_UN)
+                elif locked and _msvcrt is not None:
+                    fh.seek(0)
+                    _msvcrt.locking(fh.fileno(), _msvcrt.LK_UNLCK, 1)
+            except OSError:
+                pass
+            fh.close()
+
+
 def append(repo, engagement_id, text, *, ts: float | None = None) -> None:
     """Añade una línea de narración al log de sesión del engagement. Best-effort: nunca lanza.
     Redacta secretos ANTES de escribir. No-op si falta engagement_id (narración pre-engagement =
@@ -124,10 +189,12 @@ def append(repo, engagement_id, text, *, ts: float | None = None) -> None:
                      ensure_ascii=False)
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("a", encoding="utf-8") as fh:
-            fh.write(rec + "\n")
-        if path.stat().st_size > MAX_BYTES:
-            _prune(path)
+        # Lock exclusivo entre procesos: serializa TUI/bot/dashboard y cubre escritura + poda.
+        with _file_lock(path.with_suffix(path.suffix + ".lock")):
+            with path.open("a", encoding="utf-8") as fh:
+                fh.write(rec + "\n")
+            if path.stat().st_size > MAX_BYTES:
+                _prune(path)
     except OSError:
         pass   # un fallo de disco no debe romper la narración ni la orden en curso
 

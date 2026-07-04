@@ -4,6 +4,24 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.32.0] - 2026-07-04
+### Changed
+- **El log de sesión persistente (`session.log`) pasa a ser MULTI-WRITER seguro.** `bot/tui/sessionlog.py`
+  toma ahora un **lock de fichero exclusivo entre procesos** (`fcntl.flock` en POSIX / `msvcrt.locking` en
+  Windows, sobre un `.lock` aparte —no el propio log, que la poda reemplaza con `replace()` atómico—) que
+  envuelve la escritura Y la poda de `append()`. Así varios frontends locales pueden escribir el MISMO
+  `engagements/<id>/session.log` sin corromperlo ni pisar una poda concurrente (antes era **single-writer**:
+  solo la TUI podía escribir sin riesgo; `open("a")` no garantiza atomicidad entre procesos en Windows y
+  `_prune` read→write→replace podía pisar un append concurrente).
+### Notes
+- El lock es **best-effort**: si el SO no ofrece `fcntl`/`msvcrt` o falla, cede el paso sin lock (degrada al
+  comportamiento single-writer previo, nunca lanza). Los múltiples **LECTORES** (`tail`) siguen sin necesitar
+  lock gracias a la publicación atómica de la poda. Cambio **retro-compatible y aislado** (stdlib puro): no
+  toca el motor, los agentes ni las puertas deterministas.
+- Verificado: `bot/tests/test_sessionlog.py` **17/17** (2 tests nuevos: concurrencia de 8 escritores × 40
+  líneas sin pérdida/corrupción + best-effort ante un SO sin locking), validate_suite **471/0/0**,
+  verify_opencode **31/0**.
+
 ## [2.31.0] - 2026-07-03
 ### Added
 - **Bot · `/agents` rico + `/agent <nombre>` + `/help`/`/start` en MarkdownV2 (A1+A2).** `/agents` pasa de un
