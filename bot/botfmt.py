@@ -504,6 +504,24 @@ def lab_usage_card() -> str:
                   icon="🧪")
 
 
+# ── /mode · /model · /effort — config remota del Orquestador ─────────────────────
+def config_card(title: str, current: str, options: list, cmd: str, icon: str = "⚙️") -> str:
+    """Ficha de un parámetro de config: valor actual + opciones válidas + cómo cambiarlo. `current` vacío
+    ⇒ 'por defecto'. Las opciones/valor van en `code` (identificadores)."""
+    body = [
+        F.kv("actual", F.code(current) if current else F.italic("por defecto (según scope)")),
+        F.kv("opciones", " ".join(F.code(str(o)) for o in options)),
+        F.italic(f"cambia con: {cmd}"),
+    ]
+    return F.card(title, body, icon=icon)
+
+
+def config_set_card(label: str, value_frag: str) -> str:
+    """Confirmación de un cambio de config. `value_frag` = fragmento MD2 ya formateado (code/chip)."""
+    return F.card("Config actualizada",
+                  F.kv(label, value_frag) + F.esc("  · efectivo en la próxima orden"), icon="✅")
+
+
 # ── /help y /start — referencia de comandos (MD2; sustituye al HELP legacy) ───────
 def help_card() -> str:
     """Ayuda rica en MarkdownV2 (antes: constante HELP en Markdown legacy). La comparten /help y /start."""
@@ -531,6 +549,10 @@ def help_card() -> str:
         F.bullet(F.code("/kb") + F.esc(" — RAG de conocimiento (cobertura) · ") + F.code("/kb <consulta>")
                  + F.esc(" busca técnicas")),
         F.bullet(F.code("/refresh") + F.esc(" — actualiza el RAG (2º plano)")),
+        "",
+        F.bold("Config"),
+        F.bullet(F.code("/mode") + F.esc(" — supervisión (full/critical/auto)") + F.esc(" · ")
+                 + F.code("/model") + F.esc(" · ") + F.code("/effort")),
         "",
         F.bold("Órdenes"),
         F.bullet(F.code("/lab <ip>") + F.esc(" — fija el scope de un lab y lo lanza (no relaja puertas)")),

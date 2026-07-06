@@ -289,6 +289,22 @@ def test_lab_usage_card():
     assert "Uso de /lab" in B.lab_usage_card()
 
 
+def test_config_card_current_options_and_default():
+    out = B.config_card("Modelo del Orquestador", "claude-opus-4-8",
+                        ["claude-opus-4-8", "claude-sonnet-4-6"], "/model <modelo>")
+    assert "Modelo del Orquestador" in out
+    assert "claude-opus-4-8" in out and "claude-sonnet-4-6" in out   # actual + opciones en code
+    assert "/model" in out
+    # sin valor actual -> 'por defecto'
+    assert "defecto" in B.config_card("Supervisión", "", ["full", "critical", "auto"], "/mode <x>")
+
+
+def test_config_set_card_confirms_effective_next_order():
+    out = B.config_set_card("modelo", B.F.code("claude-haiku-4-5"))   # value_frag ya formateado (code)
+    assert "Config actualizada" in out and "próxima orden" in out
+    assert "claude-haiku-4-5" in out
+
+
 def test_help_card_lists_key_commands():
     out = B.help_card()
     for cmd in ("/status", "/agents", "/agent", "/kill", "/cve", "/scope", "/report"):

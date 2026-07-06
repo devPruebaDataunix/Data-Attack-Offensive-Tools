@@ -360,6 +360,69 @@ async def kb(update, ctx):
 
 
 @authorized
+async def mode(update, ctx):
+    """Supervisión humana (approval_mode). Sin arg: muestra actual + opciones. Con arg: la fija en bot/.env
+    Y en la global viva (efectiva en la próxima orden). NO relaja las puertas duras (solo el gate de
+    aprobación por acción; scope/presupuesto/no-daño se aplican siempre — CONSTITUTION §2)."""
+    global ORCH_APPROVAL_MODE
+    chat_id = update.effective_chat.id
+    args = ctx.args or []
+    if not args:
+        await sayv2(ctx.bot, chat_id, BF.config_card(
+            "Supervisión (approval_mode)", ORCH_APPROVAL_MODE or "", A.APPROVAL_MODES,
+            "/mode full|critical|auto"))
+        return
+    val = args[0].lower()
+    ok, msg = A.set_env_var(REPO_DIR, "ORCH_APPROVAL_MODE", val)
+    if not ok:
+        await sayv2(ctx.bot, chat_id, F.card("Valor inválido", F.esc(msg), icon="⚠️"))
+        return
+    ORCH_APPROVAL_MODE = val
+    await sayv2(ctx.bot, chat_id, BF.config_set_card(
+        "supervisión", f"{F.mode_emoji(val)} {F.esc(S.APPROVAL_MODE_ES.get(val, val))}"))
+
+
+@authorized
+async def model(update, ctx):
+    """Modelo del Orquestador. Sin arg: actual + opciones. Con arg: lo fija (bot/.env + global viva)."""
+    global ORCH_MODEL
+    chat_id = update.effective_chat.id
+    args = ctx.args or []
+    if not args:
+        await sayv2(ctx.bot, chat_id, BF.config_card(
+            "Modelo del Orquestador", ORCH_MODEL, A.ORCH_MODELS, "/model <modelo>"))
+        return
+    val = args[0]
+    ok, msg = A.set_env_var(REPO_DIR, "ORCH_MODEL", val)
+    if not ok:
+        await sayv2(ctx.bot, chat_id, F.card("Modelo inválido",
+                    F.esc(msg) + F.esc(" Opciones: ") + " ".join(F.code(m) for m in A.ORCH_MODELS),
+                    icon="⚠️"))
+        return
+    ORCH_MODEL = val
+    await sayv2(ctx.bot, chat_id, BF.config_set_card("modelo", F.code(val)))
+
+
+@authorized
+async def effort(update, ctx):
+    """Effort del Orquestador. Sin arg: actual + opciones. Con arg: lo fija (bot/.env + global viva)."""
+    global ORCH_EFFORT
+    chat_id = update.effective_chat.id
+    args = ctx.args or []
+    if not args:
+        await sayv2(ctx.bot, chat_id, BF.config_card(
+            "Effort del Orquestador", ORCH_EFFORT, A.EFFORTS, "/effort low|medium|high|xhigh|max"))
+        return
+    val = args[0].lower()
+    ok, msg = A.set_env_var(REPO_DIR, "ORCH_EFFORT", val)
+    if not ok:
+        await sayv2(ctx.bot, chat_id, F.card("Effort inválido", F.esc(msg), icon="⚠️"))
+        return
+    ORCH_EFFORT = val
+    await sayv2(ctx.bot, chat_id, BF.config_set_card("effort", F.code(val)))
+
+
+@authorized
 async def lab(update, ctx):
     """Arranca un lab: IP/CIDR/dominio → contracts/scope.json VALIDADO + lanza el engagement autónomo.
     SENSIBLE: NO relaja ninguna puerta (build_lab_scope rechaza CIDR amplio y FUERZA no-DoS/no-social/
@@ -702,6 +765,9 @@ def main():
     app.add_handler(CommandHandler("creds", creds))
     app.add_handler(CommandHandler("kb", kb))
     app.add_handler(CommandHandler("lab", lab))
+    app.add_handler(CommandHandler("mode", mode))
+    app.add_handler(CommandHandler("model", model))
+    app.add_handler(CommandHandler("effort", effort))
     app.add_handler(CommandHandler("triage", triage))
     app.add_handler(CommandHandler("cve", cve))
     app.add_handler(CommandHandler("refresh", refresh))

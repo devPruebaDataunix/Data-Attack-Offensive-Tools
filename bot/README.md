@@ -57,6 +57,7 @@ bot cae a `claude -p` (modo degradado, sin streaming) automáticamente.
 | `/report` | envía el último informe |
 | `/scope` | muestra el alcance actual |
 | `/lab <ip\|cidr\|dominio> [modo]` | arranca un lab: fija el scope **validado** + lanza (rechaza CIDR amplio, fuerza el no-daño; confirma antes de mutar) |
+| `/mode` · `/model` · `/effort` | consulta/cambia supervisión (full/critical/auto), modelo y effort del Orquestador (efectivo en la próxima orden) |
 | _texto libre_ | orden en lenguaje natural al Orquestador (pregunta scope si falta → confirma → ejecuta con streaming) |
 
 ## Ejecutar

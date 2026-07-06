@@ -4,6 +4,23 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.37.0] - 2026-07-06
+### Added
+- **Bot · config remota del Orquestador: `/mode`, `/model`, `/effort` (B4).** Consulta y cambia desde Telegram
+  la **supervisión** (`/mode full|critical|auto`), el **modelo** (`/model <modelo>`) y el **effort**
+  (`/effort low|medium|high|xhigh|max`). Sin argumento, cada comando muestra el valor **actual** y las opciones
+  válidas; con argumento, lo fija (reutiliza `actions.set_env_var`, que valida el valor contra las listas
+  permitidas y escribe `bot/.env`). El handler **además actualiza la variable viva** del proceso, así el cambio
+  es efectivo **en la próxima orden** sin reiniciar el bot (no solo en `.env`).
+### Security
+- **`/mode` NO relaja las puertas duras.** Cambiar `approval_mode` solo ajusta el **gate de aprobación humana
+  por acción** (configurable por diseño, CONSTITUTION §2); alcance, presupuesto y no-daño se aplican SIEMPRE en
+  todos los modos. `set_env_var` rechaza valores desconocidos (modelo/effort/modo fuera de las listas válidas).
+### Notes
+- Presentación pura `botfmt.config_card`/`config_set_card` (testeada); la lógica de `set_env_var` (validación +
+  escritura idempotente de `.env`) ya estaba **probada** en `test_tui.py`. Verificado: `test_botfmt.py` **28/28**
+  (2 nuevos), `test_tgfmt.py` 7/7, `test_tui.py` 82/82, validate_suite **471/0/0**, verify_opencode **31/0**.
+
 ## [2.36.0] - 2026-07-06
 ### Added
 - **Bot · `/lab <ip>` = arranque IP→autogestión (B5).** Fija el alcance de un lab y lanza el engagement de
