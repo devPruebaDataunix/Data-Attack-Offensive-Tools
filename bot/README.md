@@ -45,8 +45,9 @@ bot cae a `claude -p` (modo degradado, sin streaming) automáticamente.
 ## Comandos
 | Comando | Qué hace |
 | :--- | :--- |
-| `/status` `/health` | salud del sistema + versiones del toolchain (`deploy/verify.sh`) |
-| `/agents` | lista los agentes cargados |
+| `/status` `/health` | tarjeta de **salud** estructurada (✓/⚠ por componente: motor · engagement · scope · Orquestador · agentes · ambos RAG) + orden en curso |
+| `/status full` | chequeo **profundo** del toolchain del host (`deploy/verify.sh`) |
+| `/agents` `/agent <n>` | roster por zonas E1/E2/E3 · ficha de un agente |
 | `/triage <producto> [versión]` | CVEs priorizados (KEV/exploit/MSF/CVSS) desde el RAG |
 | `/cve <CVE-id>` | detalle de un CVE |
 | `/refresh` | actualiza el RAG en segundo plano |

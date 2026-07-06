@@ -4,6 +4,28 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.33.0] - 2026-07-06
+### Changed
+- **Bot · `/status` y `/health` pasan de un volcado crudo de `deploy/verify.sh` a una TARJETA DE SALUD
+  estructurada (A3).** Una sola tarjeta MarkdownV2 con **✓/⚠ por componente**: motor (Agent SDK vs `claude -p`
+  degradado), engagement activo (id + fase), scope definido + acciones consumidas (`N/tope`), Orquestador
+  (modelo · effort · supervisión con chip de color), agentes por zona (E1/E2/E3), **RAG de vulnerabilidades**
+  (nº CVE · KEV + frescura EPSS/CVE5) y **RAG de conocimiento** (Capa 1 `kb.db` + Capa 2 `kb_vec.db`). Si hay
+  una orden en curso, la antepone (elapsed/turnos/coste). `/health` queda como **alias** de `/status`
+  (consolidados). El chequeo PROFUNDO del toolchain del host sigue disponible bajo demanda con **`/status full`**
+  (o `verify`/`toolchain`), que corre `deploy/verify.sh` como antes.
+### Added
+- Presentación pura **`botfmt.health_card(...)`** (datos → MarkdownV2, testeable sin red) + helper del handler
+  `_rag_stats()` que lee los dos RAG por subprocess ligero (`query_vulns.py --json` / `query_kb.py --stats
+  --json`, mismo cableado que la TUI) y **degrada por componente** a un empty-state amable cuando un RAG no
+  está poblado (típico en el Windows de desarrollo). Reutiliza la lógica pura ya existente en `bot/tui/state.py`
+  (`resolve_approval_mode`, `roster_by_zone`, `zone_label`, `phase_label`, `parse_rag_store`, `parse_kb_stats`,
+  `max_actions`, `action_count`) — coherencia bot↔TUI, sin reimplementar.
+### Notes
+- Verificado: `bot/tests/test_botfmt.py` **15/15** (3 nuevos: sano / empty-states / escape del texto de la
+  orden en curso), `test_tgfmt.py` **7/7**, `test_tui.py` **80/80**, validate_suite **471/0/0**. Cambio de
+  presentación **aislado** (stdlib puro): no toca el motor, los agentes ni las puertas deterministas.
+
 ## [2.32.0] - 2026-07-04
 ### Changed
 - **El log de sesión persistente (`session.log`) pasa a ser MULTI-WRITER seguro.** `bot/tui/sessionlog.py`

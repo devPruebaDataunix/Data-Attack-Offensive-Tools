@@ -197,6 +197,91 @@ def agent_card(card: Optional[dict]) -> str:
     return F.card(card.get("name", "agente"), body, icon="👥")
 
 
+# ── /status y /health — tarjeta de SALUD estructurada (sustituye al volcado de verify.sh) ─
+_H_OK, _H_WARN = "✅", "⚠️"
+
+
+def _health_row(ok: bool, label: str, detail: str) -> str:
+    """Una fila de salud: glifo ✓/⚠ + etiqueta CRUDA (se escapa) + detalle (fragmento MD2 YA escapado)."""
+    return f"{_H_OK if ok else _H_WARN} {F.bold(label)}" + (f" — {detail}" if detail else "")
+
+
+def health_card(*, sdk_ok: bool, eng: dict, scope: Optional[dict], cards: list,
+                actions: tuple, rag_store: Optional[dict], kb: Optional[dict],
+                model: str, effort: str, order_line: Optional[str] = None) -> str:
+    """Tarjeta de salud (✓/⚠ por componente): motor/SDK · engagement activo · scope+acciones ·
+    Orquestador (modelo·effort·supervisión) · agentes por zona · RAG de vulns (+frescura) · RAG de
+    conocimiento (Capa 1+2). PURA y testeable: los datos se leen en el handler (state.py + los dos
+    query_*.py) y se pasan aquí; empty-states amables por componente (útil en el Windows de desarrollo,
+    donde los RAG no están poblados). `order_line` = estado de la orden en curso (texto CRUDO), si la hay.
+    Consolida /status y /health en una sola tarjeta (A3)."""
+    eng = eng or {}
+    eid = eng.get("engagement_id")
+    mode = S.resolve_approval_mode(scope)
+    count, cap = actions or (0, S.DEFAULT_MAX_ACTIONS)
+    body: list = []
+
+    if order_line:
+        body += [F.bold("▶️ Orden en curso"), F.esc(order_line), ""]
+
+    body.append(_health_row(sdk_ok, "Motor",
+                            F.esc("Agent SDK (streaming)" if sdk_ok else "claude -p (degradado)")))
+
+    if eid:
+        body.append(_health_row(True, "Engagement",
+                                F.code(eid) + F.esc(f" · fase {S.phase_label(eng.get('phase'))}")))
+    else:
+        body.append(_health_row(False, "Engagement", F.esc("sin engagement activo")))
+
+    if scope:
+        client = scope.get("client") or scope.get("engagement_id") or "definido"
+        body.append(_health_row(True, "Scope",
+                                F.code(client) + F.esc(f" · {count}/{cap} acciones")))
+    else:
+        body.append(_health_row(False, "Scope",
+                                F.esc("sin definir — usa /lab <ip> o crea contracts/scope.json")))
+
+    body.append(_health_row(True, "Orquestador",
+                            F.code((model or "—").replace("claude-", ""))
+                            + F.esc(f" · effort {effort} · ")
+                            + f"{F.mode_emoji(mode)} {F.esc(S.APPROVAL_MODE_ES.get(mode, mode))}"))
+
+    n = len(cards or [])
+    if n:
+        zt = " ".join(f"{S.zone_label(z).split()[0]}{len(rows)}" for z, rows in S.roster_by_zone(cards))
+        body.append(_health_row(True, "Agentes", F.esc(f"{n}  ") + F.esc(zt)))
+    else:
+        body.append(_health_row(False, "Agentes", F.esc("no se pudo leer contracts/agent-cards.json")))
+
+    total_cves = (rag_store or {}).get("total_cves")
+    if rag_store and total_cves:
+        body.append(_health_row(True, "RAG vulns",
+                                F.esc(f"{total_cves} CVE · KEV {rag_store.get('kev_version') or '—'}")))
+        fresh = " · ".join(x for x in (
+            f"EPSS {rag_store['epss_last_sync']}" if rag_store.get("epss_last_sync") else "",
+            f"CVE5 {rag_store['cve5_last_sync']}" if rag_store.get("cve5_last_sync") else "",
+        ) if x)
+        if fresh:
+            body.append(F.italic("frescura: " + fresh))
+    else:
+        body.append(_health_row(False, "RAG vulns", F.esc("sin poblar — python rag/refresh.py")))
+
+    c1 = (kb or {}).get("capa1_kb") or {}
+    c2 = (kb or {}).get("capa2_kb_vec") or {}
+    t1 = c1.get("total") or 0
+    t2 = c2.get("total")
+    if t1:
+        det = F.esc(f"Capa 1: {t1} técnicas")
+        if isinstance(t2, int):
+            det += F.esc(f" · Capa 2: {t2} trozos")
+        body.append(_health_row(bool(t1 and t2), "RAG conocim.", det))
+    else:
+        body.append(_health_row(False, "RAG conocim.",
+                                F.esc("sin poblar — rag/knowledge/refresh_kb.py (--semantic para Capa 2)")))
+
+    return F.card("Estado de Data Attack", body, icon="🩺")
+
+
 # ── /help y /start — referencia de comandos (MD2; sustituye al HELP legacy) ───────
 def help_card() -> str:
     """Ayuda rica en MarkdownV2 (antes: constante HELP en Markdown legacy). La comparten /help y /start."""
@@ -206,8 +291,8 @@ def help_card() -> str:
                  "escalo alertas reales."),
         "",
         F.bold("Estado"),
-        F.bullet(F.code("/status") + F.esc(" — entorno + orden en curso")),
-        F.bullet(F.code("/health") + F.esc(" — versiones del toolchain")),
+        F.bullet(F.code("/status") + F.esc(" — salud del entorno + orden en curso")),
+        F.bullet(F.code("/status full") + F.esc(" — chequeo profundo del toolchain")),
         F.bullet(F.code("/findings") + F.esc(" — hallazgos (real / vigilar / ruido)")),
         F.bullet(F.code("/scope") + F.esc(" — alcance y restricciones")),
         "",

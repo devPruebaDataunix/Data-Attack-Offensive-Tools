@@ -222,14 +222,46 @@ async def help_cmd(update, ctx):
     await sayv2(ctx.bot, update.effective_chat.id, BF.help_card())
 
 
+async def _rag_stats():
+    """Lee los dos RAG por subprocess (lecturas SQLite LIGERAS, sin venv/embedder). Devuelve
+    (store, kb) — cada uno None si falla o está sin poblar, para que la tarjeta muestre un empty-state
+    amable en vez de un error crudo. Mismo cableado que la TUI (app.py): --json / --stats --json."""
+    store = kb = None
+    try:
+        _, out = await run([PY, "rag/query_vulns.py", "--query", "apache", "--json", "--limit", "1"],
+                           timeout=40)
+        store = S.parse_rag_store(out)
+    except Exception as e:  # noqa: BLE001
+        log.warning("RAG vulns stats no disponibles: %s", e)
+    try:
+        _, out = await run([PY, "rag/knowledge/query_kb.py", "--stats", "--json"], timeout=40)
+        kb = S.parse_kb_stats(out)
+    except Exception as e:  # noqa: BLE001
+        log.warning("RAG conocimiento stats no disponibles: %s", e)
+    return store, kb
+
+
 @authorized
 async def status(update, ctx):
+    """Tarjeta de SALUD estructurada (A3): ✓/⚠ por componente + orden en curso. `full` (o `verify`/
+    `toolchain`) corre el chequeo PROFUNDO del toolchain del host (deploy/verify.sh)."""
+    args = [a.lower() for a in (ctx.args or [])]
+    if args and args[0] in ("full", "verify", "toolchain", "deep"):
+        msg = await update.message.reply_text("⏳ Chequeo profundo del toolchain…")
+        _, out = await run(["bash", "deploy/verify.sh"], timeout=120)
+        await edit(msg, "```\n" + _truncate_body(out, 3500) + "\n```", md=True)
+        return
+    msg = await ctx.bot.send_message(update.effective_chat.id, "🩺 Comprobando estado…")
     order = ctx.chat_data.get("order")
-    if order:
-        await update.message.reply_text("▶️ " + _order_line(order) + "\nAbórtala con /kill.")
-    msg = await update.message.reply_text("⏳ Comprobando…")
-    rc, out = await run(["bash", "deploy/verify.sh"], timeout=120)
-    await edit(msg, "```\n" + _truncate_body(out, 3500) + "\n```", md=True)
+    scope = S.load_scope(REPO_DIR)
+    count, _key = S.action_count(REPO_DIR)
+    store, kb = await _rag_stats()
+    card = BF.health_card(
+        sdk_ok=SDK_OK, eng=S.load_engagement(REPO_DIR), scope=scope, cards=S.load_cards(REPO_DIR),
+        actions=(count, S.max_actions(scope)), rag_store=store, kb=kb,
+        model=ORCH_MODEL, effort=ORCH_EFFORT,
+        order_line=_order_line(order) if order else None)
+    await editv2(msg, card)
 
 
 @authorized
@@ -258,6 +290,7 @@ async def kill(update, ctx):
 
 @authorized
 async def health(update, ctx):
+    # /health = alias de /status (A3: una sola tarjeta de salud consolidada).
     await status(update, ctx)
 
 

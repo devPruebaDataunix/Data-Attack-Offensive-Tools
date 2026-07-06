@@ -116,6 +116,49 @@ def test_agent_card_rich_and_not_found():
     assert "Agente no encontrado" in B.agent_card(None)
 
 
+def test_health_card_healthy():
+    cards = [_agent_card("osint-recon", "recon"),
+             _agent_card("web-exploit", "exploitation", model="claude-opus-4-8"),
+             _agent_card("reporting", "reporting")]
+    out = B.health_card(
+        sdk_ok=True,
+        eng={"engagement_id": "ENG-9", "phase": "exploitation"},
+        scope={"client": "ACME", "constraints": {"approval_mode": "critical", "max_actions": 500}},
+        cards=cards, actions=(12, 500),
+        rag_store={"total_cves": 1623, "kev_version": "2026.07",
+                   "epss_last_sync": "2026-07-04", "cve5_last_sync": "2026-07-03"},
+        kb={"capa1_kb": {"total": 4672}, "capa2_kb_vec": {"total": 8123}},
+        model="claude-opus-4-8", effort="medium")
+    assert "Estado de Data Attack" in out
+    assert "Agent SDK" in out                                # motor sano
+    assert "ENG-9" in out and "explotación" in out           # engagement en code (guion literal) + fase i18n
+    assert "ACME" in out and "12/500" in out                 # scope + acciones consumidas
+    assert "opus-4-8" in out and "medium" in out and "crítica" in out   # orquestador
+    assert "1623" in out and "KEV" in out and "frescura" in out          # RAG vulns + frescura
+    assert "4672" in out and "8123" in out                   # RAG conocimiento Capa 1 + 2
+    assert "✅" in out and "⚠️" not in out                    # todo verde
+
+
+def test_health_card_empty_states():
+    out = B.health_card(
+        sdk_ok=False, eng={}, scope=None, cards=[], actions=(0, 1000),
+        rag_store=None, kb=None, model="claude-opus-4-8", effort="medium")
+    assert "⚠️" in out
+    assert "degradado" in out                                # motor sin SDK
+    assert "sin engagement" in out
+    assert "sin definir" in out                              # scope
+    assert "sin poblar" in out                               # ambos RAG sin poblar
+
+
+def test_health_card_shows_order_line_escaped():
+    out = B.health_card(
+        sdk_ok=True, eng={"engagement_id": "E"}, scope=None, cards=[], actions=(0, 1000),
+        rag_store=None, kb=None, model="m", effort="medium",
+        order_line="recon de app.x.com · 2m 10s · 5 turnos")
+    assert "Orden en curso" in out and "turnos" in out
+    assert "app\\.x\\.com" in out                            # el texto de la orden va escapado (MD2)
+
+
 def test_help_card_lists_key_commands():
     out = B.help_card()
     for cmd in ("/status", "/agents", "/agent", "/kill", "/cve", "/scope", "/report"):
