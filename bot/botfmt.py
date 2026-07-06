@@ -504,6 +504,81 @@ def lab_usage_card() -> str:
                   icon="🧪")
 
 
+# ── /a2a — bus de mensajes A2A + drill-down ──────────────────────────────────────
+# Consume los mensajes CRUDOS del blackboard; NO el render Rich `a2a_summary`/`a2a_rows`/`message_detail`
+# de state.py (llevan markup Textual). Reutiliza solo los MAPAS constantes (sin markup) y `_msg_text`.
+def _free(txt) -> str:
+    """Texto LIBRE (preview/parte de un mensaje, influido por el target) → fragmento MD2 seguro. Escapa
+    también el '\\' (que `F.esc` NO toca) para no dejar un escape MD2 inválido colgando."""
+    return F.esc(str(txt).replace("\\", "\\\\"))
+
+
+def a2a_card(eng: dict, scope: Optional[dict] = None) -> str:
+    """/a2a: resumen del bus (recuento por estado + hops máx/techo) + últimos mensajes (from→to · rol ·
+    hops · preview · message_id). `/a2a <id>` da el detalle (a2a_detail_card)."""
+    msgs = [m for m in (eng or {}).get("messages", []) or [] if isinstance(m, dict)]
+    if not msgs:
+        return F.card("Bus A2A",
+                      F.esc("Sin mensajes todavía — aparecen cuando los agentes se comunican entre sí."),
+                      icon="✉️")
+    counts: dict = {}
+    for m in msgs:
+        st = m.get("status", "pending")
+        counts[st] = counts.get(st, 0) + 1
+    hops_max = max((int(m.get("hops", 0) or 0) for m in msgs), default=0)
+    ceil = S.max_a2a_hops(scope)
+    near = ceil and hops_max >= ceil * 0.8
+    body = [
+        f"⏳ {F.bold(counts.get('pending', 0))} · 📨 {F.bold(counts.get('delivered', 0))} · "
+        f"✅ {F.bold(counts.get('done', 0))} · ⛔ {F.bold(counts.get('blocked', 0))}",
+        F.kv("hops máx", F.esc(f"{hops_max}/{ceil}")) + (F.esc("  ⚠️ cerca del techo") if near else ""),
+        "", F.bold("Mensajes"),
+    ]
+    shown = msgs[-15:]
+    if len(msgs) > len(shown):
+        body.append(F.italic(f"(los últimos {len(shown)} de {len(msgs)})"))
+    for m in shown:
+        emoji = S.A2A_STATUS_EMOJI.get(m.get("status", "pending"), "•")
+        role = S.A2A_ROLE_ES.get(m.get("role", ""), m.get("role", "") or "—")
+        frag = (f"{emoji} " + F.code(m.get("from_agent", "?")) + F.esc(" → ")
+                + F.code(m.get("to_agent", "?")) + F.esc(f" · {role} · {m.get('hops', 0)} hops"))
+        prev = S._clip(S._msg_text(m), 60)
+        if prev:
+            frag += F.esc(" · ") + _free(prev)
+        if m.get("message_id"):
+            frag += F.esc("  ") + F.code(m["message_id"])
+        body.append(F.bullet(frag))
+    body += ["", F.italic("detalle: /a2a <message_id>")]
+    return F.card("Bus A2A", body, icon="✉️")
+
+
+def a2a_detail_card(eng: dict, message_id: str) -> str:
+    """/a2a <id>: volcado legible de un mensaje A2A (dict CRUDO). from/to/refs/message_id en `code`; el
+    texto libre de las partes por `_free` (escapa también '\\')."""
+    for m in (eng or {}).get("messages", []) or []:
+        if isinstance(m, dict) and m.get("message_id") == message_id:
+            st = m.get("status", "pending")
+            role = S.A2A_ROLE_ES.get(m.get("role", ""), m.get("role", "") or "—")
+            body = [
+                F.code(m.get("from_agent", "?")) + F.esc(" → ") + F.code(m.get("to_agent", "?"))
+                + F.esc(f"  ({role})"),
+                F.kv("estado", f"{S.A2A_STATUS_EMOJI.get(st, '•')} {F.esc(S.A2A_STATUS_ES.get(st, st))}")
+                + F.esc("   ") + F.kv("hops", F.esc(m.get("hops", 0))),
+                F.kv("ref_finding", F.code(m.get("ref_finding") or "—")) + F.esc("   ")
+                + F.kv("ref_message", F.code(m.get("ref_message") or "—")),
+            ]
+            parts = [p for p in m.get("parts", []) or [] if isinstance(p, dict)]
+            if parts:
+                body.append(F.bold("partes"))
+                for p in parts:
+                    txt = S._clip(p.get("text") or p.get("data") or "", 300)
+                    body.append(F.bullet(F.code(p.get("kind", "?")) + (F.esc(": ") + _free(txt) if txt else "")))
+            return F.card(f"A2A · {S._clip(message_id, 24)}", body, icon="✉️")
+    return F.card("Bus A2A",
+                  F.esc(f"Mensaje «{S._clip(message_id, 40)}» no encontrado. Usa /a2a para la lista."),
+                  icon="✉️")
+
+
 # ── /mode · /model · /effort — config remota del Orquestador ─────────────────────
 def config_card(title: str, current: str, options: list, cmd: str, icon: str = "⚙️") -> str:
     """Ficha de un parámetro de config: valor actual + opciones válidas + cómo cambiarlo. `current` vacío
@@ -540,6 +615,8 @@ def help_card() -> str:
         F.bullet(F.code("/network") + F.esc(" — frontera de hosts (alias /hosts)")),
         F.bullet(F.code("/pivots") + F.esc(" — túneles de pivoting")),
         F.bullet(F.code("/creds") + F.esc(" — credenciales (siempre referenciadas)")),
+        F.bullet(F.code("/a2a") + F.esc(" — bus de mensajes entre agentes · ") + F.code("/a2a <id>")
+                 + F.esc(" detalle")),
         "",
         F.bold("Agentes y conocimiento"),
         F.bullet(F.code("/agents") + F.esc(" — roster por zonas E1/E2/E3")),

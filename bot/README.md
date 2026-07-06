@@ -49,6 +49,7 @@ bot cae a `claude -p` (modo degradado, sin streaming) automáticamente.
 | `/status full` | chequeo **profundo** del toolchain del host (`deploy/verify.sh`) |
 | `/agents` `/agent <n>` | roster por zonas E1/E2/E3 · ficha de un agente |
 | `/network` `/hosts` · `/pivots` · `/creds` | frontera multi-host: hosts · túneles de pivoting · credenciales (**siempre referenciadas**) |
+| `/a2a` · `/a2a <id>` | bus de mensajes entre agentes (resumen + últimos) · detalle de un mensaje |
 | `/triage <producto> [versión]` | CVEs priorizados (KEV/exploit/MSF/CVSS) desde el RAG |
 | `/cve <CVE-id>` | detalle de un CVE |
 | `/kb` · `/kb <consulta>` | RAG de **conocimiento**: cobertura (Capa 1+2) · busca técnicas accionables (GTFOBins/LOLBAS/ATT&CK/Atomic) |

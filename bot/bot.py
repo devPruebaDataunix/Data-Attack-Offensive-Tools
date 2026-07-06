@@ -340,6 +340,18 @@ async def creds(update, ctx):
 
 
 @authorized
+async def a2a(update, ctx):
+    """Bus A2A. Sin arg: resumen + últimos mensajes. Con arg: detalle de un message_id (drill-down)."""
+    chat_id = update.effective_chat.id
+    eng = S.load_engagement(REPO_DIR)
+    args = ctx.args or []
+    if args:
+        await sayv2(ctx.bot, chat_id, BF.a2a_detail_card(eng, args[0]))
+    else:
+        await sayv2(ctx.bot, chat_id, BF.a2a_card(eng, S.load_scope(REPO_DIR)))
+
+
+@authorized
 async def kb(update, ctx):
     """RAG de CONOCIMIENTO. Sin args: cobertura (Capa 1+2). Con args: busca técnicas Capa 1 (determinista,
     stdlib, sin venv/embedder — la fiable durante un engagement). La semántica (Capa 2) va aparte a futuro."""
@@ -763,6 +775,7 @@ def main():
     app.add_handler(CommandHandler("hosts", network))
     app.add_handler(CommandHandler("pivots", pivots))
     app.add_handler(CommandHandler("creds", creds))
+    app.add_handler(CommandHandler("a2a", a2a))
     app.add_handler(CommandHandler("kb", kb))
     app.add_handler(CommandHandler("lab", lab))
     app.add_handler(CommandHandler("mode", mode))

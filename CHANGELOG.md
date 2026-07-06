@@ -4,6 +4,21 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.38.0] - 2026-07-06
+### Added
+- **Bot · `/a2a` = bus de mensajes A2A + drill-down (B6).** Lleva la pestaña «Bus A2A» de la TUI al bot.
+  `/a2a` muestra un **resumen** (recuento por estado ⏳ pendiente / 📨 entregado / ✅ hecho / ⛔ bloqueado + hops
+  máx/techo con aviso si se acerca al límite) y los **últimos mensajes** (from→to · rol · hops · preview ·
+  `message_id`). **`/a2a <message_id>`** = detalle de un mensaje (estado, hops, `ref_finding`/`ref_message`,
+  partes). Reutiliza los mapas de estado/rol i18n y `_msg_text` de `state.py`, consumiendo los mensajes
+  **crudos** del blackboard (no el render Rich `a2a_summary`/`message_detail`, que llevan markup Textual).
+### Notes
+- Presentación pura `botfmt.a2a_card`/`a2a_detail_card` + helper `_free` que escapa **también el `\`** en el
+  texto libre de las partes/previews (influido por el target) para no dejar un escape MarkdownV2 inválido — un
+  endurecimiento local del que se beneficia este comando (el backlog global de `tgfmt.esc()` sigue pendiente).
+  Verificado: `test_botfmt.py` **31/31** (3 nuevos, incl. anti-metacaracteres y `\` en partes), `test_tgfmt.py`
+  7/7, `test_tui.py` 82/82, validate_suite **471/0/0**, verify_opencode **31/0**.
+
 ## [2.37.0] - 2026-07-06
 ### Added
 - **Bot · config remota del Orquestador: `/mode`, `/model`, `/effort` (B4).** Consulta y cambia desde Telegram

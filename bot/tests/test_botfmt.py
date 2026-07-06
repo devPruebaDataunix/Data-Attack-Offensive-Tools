@@ -305,6 +305,44 @@ def test_config_set_card_confirms_effective_next_order():
     assert "claude-haiku-4-5" in out
 
 
+def _eng_a2a():
+    return {"messages": [
+        {"message_id": "m-001", "from_agent": "vuln-triage", "to_agent": "web-exploit",
+         "role": "handoff", "status": "delivered", "hops": 2, "ref_finding": "F-003",
+         "parts": [{"kind": "text", "text": "SQLi candidata en /login param user"}]},
+        {"message_id": "m-002", "from_agent": "web-exploit", "to_agent": "sqlmap",
+         "role": "request", "status": "pending", "hops": 3,
+         "parts": [{"kind": "text", "text": "confirma la inyección con back\\slash y [corchetes]"}]},
+    ]}
+
+
+def test_a2a_card_summary_and_list():
+    out = B.a2a_card(_eng_a2a(), {"constraints": {"max_a2a_hops": 50}})
+    assert "Bus A2A" in out
+    assert "vuln-triage" in out and "web-exploit" in out and "sqlmap" in out   # from/to en code
+    assert "traspaso" in out and "solicitud" in out                            # roles i18n
+    assert "m-001" in out and "m-002" in out                                   # message_ids
+    assert "hops máx" in out and "3/50" in out                                 # hops máx / techo
+    assert "⏳" in out and "📨" in out                                          # chips de estado
+
+
+def test_a2a_card_empty():
+    assert "Sin mensajes" in B.a2a_card({}, None)
+
+
+def test_a2a_detail_found_notfound_and_metachars():
+    eng = _eng_a2a()
+    out = B.a2a_detail_card(eng, "m-002")
+    assert "m\\-002" in out                                   # id en el título (bold→esc: guion escapado)
+    assert "web-exploit" in out and "sqlmap" in out           # from/to en code (guion literal)
+    assert "solicitud" in out and "pendiente" in out                           # rol + estado i18n
+    assert "back" in out                                                       # texto de la parte presente
+    assert _unescaped(out, "`") % 2 == 0                                       # code spans balanceados
+    # el '\' del texto libre no deja un escape MD2 colgando (nº par de '\' de escape)
+    assert (len(out) - len(out.rstrip("\\"))) % 2 == 0
+    assert "no encontrado" in B.a2a_detail_card(eng, "m-999")
+
+
 def test_help_card_lists_key_commands():
     out = B.help_card()
     for cmd in ("/status", "/agents", "/agent", "/kill", "/cve", "/scope", "/report"):
