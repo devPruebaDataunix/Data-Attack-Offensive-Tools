@@ -4,6 +4,19 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.35.1] - 2026-07-06
+### Fixed
+- **Bot · `editv2` degrada a texto plano ante un MarkdownV2 rechazado (antes solo lo logueaba).** Igual que
+  `sayv2`, cuando Telegram rechaza el parseo (`BadRequest` que NO sea «message is not modified») ahora
+  reintenta la edición en **texto plano** (`tgfmt.plain`) en vez de dejar el mensaje sin actualizar. Cierra
+  el gap que el council señaló en A3 y B3: los comandos que **editan** un placeholder («🩺/📚 Comprobando…»)
+  —`/status`, `/health`, `/kb`— habrían dejado el placeholder **congelado** si un escape colara, en lugar de
+  mostrar el contenido degradado. Con el escaper correcto casi nunca se activa: es defensa en profundidad.
+### Notes
+- Cambio mínimo y aislado en `bot/bot.py` (espeja el fallback ya probado de `sayv2`; `tgfmt.plain` tiene test
+  propio en `test_tgfmt.py`). Sin regresión: `test_botfmt.py` 24/24, `test_tgfmt.py` 7/7, `test_tui.py` 80/80,
+  validate_suite **471/0/0**, verify_opencode **31/0**. No toca el motor ni las puertas.
+
 ## [2.35.0] - 2026-07-06
 ### Added
 - **Bot · `/kb` = RAG de CONOCIMIENTO (B3).** Hasta ahora el bot solo tocaba el RAG de vulnerabilidades;

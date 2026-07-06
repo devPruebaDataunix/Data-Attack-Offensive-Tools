@@ -203,10 +203,18 @@ async def editv2(msg, md2_text):
     try:
         await msg.edit_text(body, parse_mode="MarkdownV2", disable_web_page_preview=True)
     except BadRequest as e:
-        # "message is not modified" es esperado (mismo contenido) y NO se loguea; un parseo inválido sí,
-        # para tener la misma observabilidad que sayv2 (que avisa cuando degrada).
-        if "not modified" not in str(e).lower():
-            log.warning("MarkdownV2 rechazado en edición: %s", e)
+        # "message is not modified" (mismo contenido) es esperado: ni se degrada ni se loguea. Ante un
+        # parseo inválido, DEGRADAMOS a texto plano (F.plain, misma red de seguridad que sayv2) en vez de
+        # dejar el mensaje sin actualizar: si no, el placeholder de /status·/health·/kb (que EDITAN un
+        # "comprobando…") quedaría congelado y el usuario no vería el contenido. Con el escaper correcto
+        # casi nunca se activa; es defensa en profundidad.
+        if "not modified" in str(e).lower():
+            return
+        log.warning("MarkdownV2 rechazado en edición; degrado a texto plano: %s", e)
+        try:
+            await msg.edit_text(F.plain(body), disable_web_page_preview=True)
+        except BadRequest as e2:
+            log.warning("edición en texto plano también rechazada: %s", e2)
 
 
 # ── Comandos básicos ─────────────────────────────────────────────────────────
