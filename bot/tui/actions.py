@@ -194,7 +194,7 @@ def build_lab_scope(raw_targets: str, engagement_id: str = "", approval_mode: st
         return False, f"Objetivos inválidos (no son IP/CIDR/dominio): {', '.join(bad[:5])}."
     if not (ips or cidrs or domains):
         return False, "Indica al menos un objetivo (IP, CIDR o dominio)."
-    first = (ips or cidrs or domains)[0].replace("/", "_")
+    first = (ips or cidrs or domains)[0].replace("/", "_").replace(":", "_")  # ':' de IPv6 -> eid válido
     eid = (engagement_id or "").strip() or f"LAB-{first}"
     if not _LAB_EID.match(eid):
         return False, f"engagement_id inválido: {eid!r} (letras/números/.-_ , máx 64)."

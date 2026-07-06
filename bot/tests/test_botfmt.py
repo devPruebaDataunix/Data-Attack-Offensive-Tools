@@ -273,6 +273,22 @@ def test_kb_results_card_command_metachars_dont_break_md2():
     assert _unescaped(out, "`") % 2 == 0                     # todo code span abre y cierra
 
 
+def test_lab_confirm_card_shows_targets_mode_and_no_harm():
+    scope = {"engagement_id": "LAB-10.10.10.5",
+             "in_scope": {"ips": ["10.10.10.5"], "cidrs": ["10.0.0.0/24"], "domains": []}}
+    out = B.lab_confirm_card(scope, "auto")
+    assert "Arrancar lab" in out
+    assert "LAB-10.10.10.5" in out                            # engagement en code (literal)
+    assert "10.10.10.5" in out and "10.0.0.0/24" in out       # objetivos en code
+    assert "automática" in out                                # supervisión i18n (auto)
+    assert "no-DoS" in out or "no\\-DoS" in out               # recordatorio de no-daño
+    assert "Confirmar" in out
+
+
+def test_lab_usage_card():
+    assert "Uso de /lab" in B.lab_usage_card()
+
+
 def test_help_card_lists_key_commands():
     out = B.help_card()
     for cmd in ("/status", "/agents", "/agent", "/kill", "/cve", "/scope", "/report"):

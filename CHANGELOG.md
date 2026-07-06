@@ -4,6 +4,32 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.36.0] - 2026-07-06
+### Added
+- **Bot · `/lab <ip>` = arranque IP→autogestión (B5).** Fija el alcance de un lab y lanza el engagement de
+  forma autónoma desde Telegram, reutilizando la lógica **validada** de la TUI (`actions.build_lab_scope`/
+  `set_lab_scope`/`compose_lab_run`). Acepta IP/CIDR/dominio **(IPv4 e IPv6)** separados por espacio o coma
+  (`/lab 10.10.10.5 10.10.10.6`) + modo de supervisión opcional (`/lab 10.10.10.5 auto`). **Flujo en dos
+  tiempos, nada muta hasta confirmar:** valida al recibir el comando
+  (muestra engagement, objetivos y supervisión); solo al pulsar **✅ Fijar y lanzar** escribe
+  `contracts/scope.json` (atómico, con backup `.bak`) y lanza la orden autónoma.
+### Security
+- **`/lab` NO relaja NINGUNA puerta.** `build_lab_scope` **rechaza CIDR demasiado amplios** (ruta por defecto,
+  `/0../8` IPv4, prefijos < /16 IPv4 o < /64 IPv6) y **FUERZA** `no_dos`/`no_social_engineering`/
+  `no_data_exfiltration_real` a `True`; NO hereda `client`/`out_of_scope`/`authorization` de un engagement
+  anterior (higiene de datos). El engagement autónomo sigue pasando por scope_guard/budget_guard/aprobación
+  en runtime. Escribe como el **operador** (human-in-the-loop de la CONSTITUTION), no por la tool del agente.
+### Notes
+- Presentación pura `botfmt.lab_confirm_card`/`lab_usage_card` (testeada); el handler `lab` + las ramas de
+  callback `lab_run`/`lab_cancel` en `bot.py` reutilizan el import nuevo `tui.actions as A`. La validación
+  sensible (rechazo de CIDR amplio + forzado de no-daño) ya estaba **probada** en `test_tui.py`
+  (`test_classify_targets_rejects_broad_cidr`, `test_build_lab_scope_valid_and_forces_no_harm`). Incorpora dos
+  correcciones de ergonomía que el review destapó al hacer `/lab` alcanzable (ambas **fallan cerrado**, nunca
+  abren scope): el auto-`engagement_id` sustituye también los `:` de IPv6 (antes `/lab <ipv6>` daba un error
+  engañoso), y los objetivos se aceptan **separados por espacio** además de por coma. Verificado: `test_botfmt.py`
+  **26/26** (2 nuevos), `test_tgfmt.py` 7/7, `test_tui.py` **82/82** (2 nuevos: IPv6 eid + multi-objetivo),
+  validate_suite **471/0/0**, verify_opencode **31/0**.
+
 ## [2.35.1] - 2026-07-06
 ### Fixed
 - **Bot · `editv2` degrada a texto plano ante un MarkdownV2 rechazado (antes solo lo logueaba).** Igual que

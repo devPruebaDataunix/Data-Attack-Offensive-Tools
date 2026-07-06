@@ -476,6 +476,34 @@ def kb_results_card(data: Optional[dict], query: str) -> str:
     return F.card(f"RAG conocimiento · {S._clip(query, 40)}", body, icon="📚")
 
 
+# ── /lab — arranque IP→autogestión (escribe scope + lanza; SENSIBLE) ─────────────
+# La VALIDACIÓN (rechazo de CIDR amplio, forzado de no-daño) vive en actions.build_lab_scope (probada en
+# test_tui.py). Aquí SOLO la presentación de la confirmación: nada muta hasta que el operador pulsa ✅.
+def lab_confirm_card(scope: dict, mode: str) -> str:
+    """Ficha de confirmación de `/lab`: engagement + objetivos (ya clasificados y validados) + supervisión,
+    recordando que el no-daño se fuerza y las puertas NO se relajan. `scope` = dict de `build_lab_scope`."""
+    ins = (scope or {}).get("in_scope", {}) or {}
+    tgt = (ins.get("ips") or []) + (ins.get("cidrs") or []) + (ins.get("domains") or [])
+    body = [
+        F.kv("engagement", F.code(scope.get("engagement_id", "—"))),
+        F.kv("objetivos", " ".join(F.code(t) for t in tgt[:12]) or F.italic("—")),
+        F.kv("supervisión", f"{F.mode_emoji(mode)} {F.esc(S.APPROVAL_MODE_ES.get(mode, mode))}"),
+        "",
+        F.italic("Se FUERZAN no-DoS · no-social · no-exfil; las puertas (alcance/presupuesto/aprobación) "
+                 "NO se relajan."),
+        F.esc("Voy a fijar contracts/scope.json (con backup .bak) y lanzar el lab de forma autónoma. "
+              "¿Confirmar?"),
+    ]
+    return F.card("Arrancar lab", body, icon="🧪")
+
+
+def lab_usage_card() -> str:
+    return F.card("Uso de /lab",
+                  F.esc("/lab <ip|cidr|dominio> [full|critical|auto] — p. ej. ") + F.code("/lab 10.10.10.5")
+                  + F.esc(". Fija el scope y lanza el lab (rechaza CIDR amplio; el no-daño se fuerza)."),
+                  icon="🧪")
+
+
 # ── /help y /start — referencia de comandos (MD2; sustituye al HELP legacy) ───────
 def help_card() -> str:
     """Ayuda rica en MarkdownV2 (antes: constante HELP en Markdown legacy). La comparten /help y /start."""
@@ -505,6 +533,7 @@ def help_card() -> str:
         F.bullet(F.code("/refresh") + F.esc(" — actualiza el RAG (2º plano)")),
         "",
         F.bold("Órdenes"),
+        F.bullet(F.code("/lab <ip>") + F.esc(" — fija el scope de un lab y lo lanza (no relaja puertas)")),
         F.bullet(F.code("/kill") + F.esc(" — aborta la orden en curso (kill-switch)")),
         F.bullet(F.code("/report") + F.esc(" — genera y envía el informe")),
         "",

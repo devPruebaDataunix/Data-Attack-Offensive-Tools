@@ -548,6 +548,22 @@ def test_build_lab_scope_valid_and_forces_no_harm():
     assert sc["constraints"]["no_data_exfiltration_real"] is True
 
 
+def test_build_lab_scope_ipv6_auto_eid_valid():
+    # Regresión: el auto-eid debe sustituir tanto '/' como ':' de una IPv6, o el eid caería en _LAB_EID
+    # inválido y daría un error engañoso para un input correcto (lo destapó /lab del bot).
+    ok, sc = A.build_lab_scope("2001:db8::5", "", "auto")
+    assert ok and sc["in_scope"]["ips"] == ["2001:db8::5"]
+    assert ":" not in sc["engagement_id"] and "/" not in sc["engagement_id"]
+    ok6, sc6 = A.build_lab_scope("fd00::/64", "", "auto")     # CIDR IPv6 /64 aceptable
+    assert ok6 and sc6["in_scope"]["cidrs"] == ["fd00::/64"]
+
+
+def test_build_lab_scope_multi_target_comma():
+    # El handler del bot une los objetivos con coma; classify_targets debe aceptar varios.
+    ok, sc = A.build_lab_scope("10.10.10.5,10.10.10.6", "", "auto")
+    assert ok and sc["in_scope"]["ips"] == ["10.10.10.5", "10.10.10.6"]
+
+
 def test_build_lab_scope_default_eid_and_rejections():
     ok, sc = A.build_lab_scope("10.10.10.5", "", "auto")
     assert ok and sc["engagement_id"] == "LAB-10.10.10.5"     # eid por defecto desde el 1er objetivo

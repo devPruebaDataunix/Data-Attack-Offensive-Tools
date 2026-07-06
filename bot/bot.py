@@ -42,6 +42,7 @@ from intel import classify as clf       # noqa: E402
 from intel import scope as scp           # noqa: E402
 from intel.runner import AgentRunner, SDK_OK   # noqa: E402
 from tui import state as S               # noqa: E402  (lógica pura compartida con la TUI; sin Textual)
+from tui import actions as A             # noqa: E402  (mutadores del OPERADOR: lab scope, config; validados)
 import tgfmt as F                        # noqa: E402  (capa de formato Telegram MarkdownV2, fuente única)
 import botfmt as BF                      # noqa: E402  (presentación: datos state/intel -> MarkdownV2)
 
@@ -359,6 +360,34 @@ async def kb(update, ctx):
 
 
 @authorized
+async def lab(update, ctx):
+    """Arranca un lab: IP/CIDR/dominio → contracts/scope.json VALIDADO + lanza el engagement autónomo.
+    SENSIBLE: NO relaja ninguna puerta (build_lab_scope rechaza CIDR amplio y FUERZA no-DoS/no-social/
+    no-exfil). Nada muta hasta la confirmación (botón ✅): valida ahora, escribe+lanza al confirmar."""
+    chat_id = update.effective_chat.id
+    args = list(ctx.args or [])
+    if not args:
+        await sayv2(ctx.bot, chat_id, BF.lab_usage_card())
+        return
+    # El modo de supervisión es opcional (último token si es válido); el resto son objetivos.
+    mode = ORCH_APPROVAL_MODE or "auto"
+    if args and args[-1].lower() in ("full", "critical", "auto"):
+        mode = args.pop().lower()
+    # Objetivos separados por ESPACIO (forma natural en Telegram) o coma: los unimos con coma, que es como
+    # classify_targets divide. Así `/lab 10.0.0.5 10.0.0.6` y `/lab 10.0.0.5,10.0.0.6` funcionan igual.
+    targets = ",".join(args)
+    ok, res = A.build_lab_scope(targets, "", mode, base=S.load_scope(REPO_DIR))   # valida, NO escribe
+    if not ok:
+        await sayv2(ctx.bot, chat_id, F.card("Lab no válido", F.esc(str(res)), icon="⚠️"))
+        return
+    ctx.chat_data["pending_lab"] = {"targets": targets, "mode": mode, "eid": res["engagement_id"]}
+    kbd = InlineKeyboardMarkup([[
+        InlineKeyboardButton("✅ Fijar y lanzar", callback_data="lab_run"),
+        InlineKeyboardButton("✖️ Cancelar", callback_data="lab_cancel")]])
+    await sayv2(ctx.bot, chat_id, BF.lab_confirm_card(res, mode), reply_markup=kbd)
+
+
+@authorized
 async def triage(update, ctx):
     q = " ".join(ctx.args)
     if not q:
@@ -601,6 +630,29 @@ async def on_button(update, ctx):
         await edit(q.message, "Cancelado.")
         return
 
+    if data == "lab_cancel":
+        ctx.chat_data.pop("pending_lab", None)
+        await edit(q.message, "Cancelado. No se ha tocado el scope.")
+        return
+
+    if data == "lab_run":
+        pend = ctx.chat_data.pop("pending_lab", None)
+        if not pend:
+            await edit(q.message, "No hay ningún lab pendiente de confirmar.")
+            return
+        if ctx.chat_data.get("order"):
+            await edit(q.message, "⏳ Ya hay una orden en curso; abórtala con /kill antes de lanzar otra.")
+            return
+        # Recién AQUÍ se muta: escribe scope.json (atómico + backup .bak) y lanza. build_lab_scope ya
+        # validó; set_lab_scope re-valida y no relaja ninguna puerta.
+        ok, msg = A.set_lab_scope(REPO_DIR, pend["targets"], pend["eid"], pend["mode"])
+        if not ok:
+            await edit(q.message, f"⚠️ No pude fijar el scope: {msg}")
+            return
+        await edit(q.message, "🧪 Scope fijado (backup en scope.json.bak). 🚀 Lanzando el lab…")
+        _spawn(_execute(ctx, q.message.chat_id, A.compose_lab_run(pend["targets"])))
+        return
+
     if data == "run":
         task = ctx.chat_data.pop("pending_task", None)
         if not task:
@@ -649,6 +701,7 @@ def main():
     app.add_handler(CommandHandler("pivots", pivots))
     app.add_handler(CommandHandler("creds", creds))
     app.add_handler(CommandHandler("kb", kb))
+    app.add_handler(CommandHandler("lab", lab))
     app.add_handler(CommandHandler("triage", triage))
     app.add_handler(CommandHandler("cve", cve))
     app.add_handler(CommandHandler("refresh", refresh))
