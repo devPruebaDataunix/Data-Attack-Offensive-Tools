@@ -314,6 +314,23 @@ async def agent(update, ctx):
 
 
 @authorized
+async def network(update, ctx):
+    # /network (alias /hosts): frontera multi-host desde el blackboard (dato crudo -> MD2).
+    await sayv2(ctx.bot, update.effective_chat.id, BF.network_card(S.load_engagement(REPO_DIR)))
+
+
+@authorized
+async def pivots(update, ctx):
+    await sayv2(ctx.bot, update.effective_chat.id, BF.pivots_card(S.load_engagement(REPO_DIR)))
+
+
+@authorized
+async def creds(update, ctx):
+    # Credenciales SIEMPRE referenciadas — creds_card jamás lee secret_ref ni el valor.
+    await sayv2(ctx.bot, update.effective_chat.id, BF.creds_card(S.load_engagement(REPO_DIR)))
+
+
+@authorized
 async def triage(update, ctx):
     q = " ".join(ctx.args)
     if not q:
@@ -599,6 +616,10 @@ def main():
     app.add_handler(CommandHandler("health", health))
     app.add_handler(CommandHandler("agents", agents))
     app.add_handler(CommandHandler("agent", agent))
+    app.add_handler(CommandHandler("network", network))
+    app.add_handler(CommandHandler("hosts", network))
+    app.add_handler(CommandHandler("pivots", pivots))
+    app.add_handler(CommandHandler("creds", creds))
     app.add_handler(CommandHandler("triage", triage))
     app.add_handler(CommandHandler("cve", cve))
     app.add_handler(CommandHandler("refresh", refresh))

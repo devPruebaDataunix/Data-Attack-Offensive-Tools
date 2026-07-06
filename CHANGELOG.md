@@ -4,6 +4,27 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.34.0] - 2026-07-06
+### Added
+- **Bot · paridad multi-host: `/network` (alias `/hosts`), `/pivots` y `/creds` (B2).** Lleva la pestaña
+  «Red» de la TUI al bot. `/network` = frontera de hosts (asset · tipo · nivel de acceso coloreado —
+  comprometido 🔴 — · `reachable_via` · defensas 🛡📡🍯) con cabecera de resumen (hosts / comprometidos /
+  pivots activos / credenciales) y marca de host **fuera de alcance**. `/pivots` = túneles de pivoting
+  (🟢 up / 🟡 planned / 🔴 down · herramienta · vía · CIDR que alcanza). `/creds` = credenciales del
+  engagement, **SIEMPRE referenciadas**.
+### Security
+- **`creds_card` nunca filtra el secreto ni su referencia.** Lee EXCLUSIVAMENTE campos no-secretos
+  (`cred_id`/`principal`/`type`/`privilege`/`source_target`/`validated_on`); jamás `secret_ref` ni valor
+  alguno (el secreto vive en `engagements/<id>/loot/`, fuera de git, como imponen `memory_guard`/`secret_scan`).
+  Test dedicado que inyecta `secret_ref`/`value` y verifica que NO aparecen en la salida.
+### Notes
+- Presentación pura en `botfmt.py` (`network_card`/`pivots_card`/`creds_card` + helpers `_defenses_frag`/
+  `_net_counts`), consumiendo el **dato CRUDO** del blackboard (`targets[]`/`pivots[]`/`credentials[]`) — NO los
+  renders Rich de `state.py` (`network_rows`/… llevan markup Textual). Los principales AD tipo `DOMAIN\usuario`
+  van en `code` (el `\` lo escapa `code`, no `esc`). Verificado: `test_botfmt.py` **20/20** (5 nuevos, incl.
+  blindaje anti-fuga de secretos y anti-metacaracteres), `test_tgfmt.py` 7/7, `test_tui.py` 80/80, validate_suite
+  **471/0/0**, verify_opencode **31/0**. Cambio **aislado** (stdlib puro): no toca el motor ni las puertas.
+
 ## [2.33.0] - 2026-07-06
 ### Changed
 - **Bot · `/status` y `/health` pasan de un volcado crudo de `deploy/verify.sh` a una TARJETA DE SALUD

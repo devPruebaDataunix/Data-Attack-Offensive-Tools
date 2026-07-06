@@ -282,6 +282,123 @@ def health_card(*, sdk_ok: bool, eng: dict, scope: Optional[dict], cards: list,
     return F.card("Estado de Data Attack", body, icon="🩺")
 
 
+# ── /network · /pivots · /creds — frontera multi-host (pestaña "Red" del bot) ─────
+# Consume el DATO CRUDO del blackboard (targets[]/pivots[]/credentials[]); NO reutiliza los renders
+# Rich de state.py (network_rows/pivot_rows/credential_rows llevan markup Textual `[color]…[/]`).
+# INVARIANTE DURA: las credenciales van SIEMPRE referenciadas — aquí solo se leen campos NO-secretos
+# (cred_id/principal/type/privilege/source_target/validated_on); NUNCA `secret_ref` ni valor alguno
+# (el secreto vive en engagements/<id>/loot/, fuera de git, y lo imponen memory_guard/secret_scan).
+_ACCESS_EMOJI = {"none": "⚪", "user": "🟠", "root": "🔴", "admin": "🔴",
+                 "system": "🔴", "domain-admin": "🔴"}
+_PIVOT_EMOJI = {"up": "🟢", "planned": "🟡", "down": "🔴"}
+_DEF_EMOJI = {"waf": "🛡", "ids": "📡", "ips": "📡", "honeypot": "🍯", "tarpit": "🐌",
+              "edr": "🛡", "ratelimit": "⏱", "unknown": "❓"}
+_PRIV_HOT = {"root", "admin", "system", "domain-admin"}
+
+
+def _defenses_frag(defenses) -> str:
+    """Defensas de un host como fragmento MD2: 'icono tipo·conf' por cada una; '' si ninguna."""
+    if not isinstance(defenses, list) or not defenses:
+        return ""
+    parts = []
+    for d in defenses:
+        if isinstance(d, dict):
+            icon = _DEF_EMOJI.get(d.get("type", "unknown"), "❓")
+            conf = str(d.get("confidence", ""))[:1]
+            parts.append(icon + F.esc(f"{d.get('type', '')}·{conf}" if conf else str(d.get("type", ""))))
+    return " ".join(parts)
+
+
+def _net_counts(eng: dict):
+    targets = [t for t in (eng or {}).get("targets", []) or [] if isinstance(t, dict)]
+    pivots = [p for p in (eng or {}).get("pivots", []) or [] if isinstance(p, dict)]
+    creds = [c for c in (eng or {}).get("credentials", []) or [] if isinstance(c, dict)]
+    owned = sum(1 for t in targets if (t.get("access_level") or "none") != "none")
+    up = sum(1 for p in pivots if p.get("status") == "up")
+    return targets, pivots, creds, owned, up
+
+
+def network_card(eng: dict) -> str:
+    """/network (alias /hosts): frontera de hosts + resumen. Acceso coloreado (comprometido = 🔴)."""
+    targets, pivots, creds, owned, up = _net_counts(eng)
+    if not targets:
+        return F.card("Red (multi-host)",
+                      F.esc("Sin hosts todavía — aparecen al hacer recon; los internos, al pivotar."),
+                      icon="🌐")
+    body = [
+        f"🖧 hosts {F.bold(len(targets))}   🔴 comprometidos {F.bold(owned)}   "
+        f"🟢 pivots {F.bold(f'{up}/{len(pivots)}')}   🔑 creds {F.bold(len(creds))}",
+        F.italic("credenciales SIEMPRE referenciadas · el secreto vive en loot/ (fuera de git)"),
+        "", F.bold("Hosts"),
+    ]
+    for t in targets[:15]:
+        acc = t.get("access_level", "none") or "none"
+        emoji = _ACCESS_EMOJI.get(acc, "⚪")
+        via = t.get("reachable_via", "direct") or "direct"
+        frag = (F.code(S._clip(t.get("asset", "?"), 40))
+                + F.esc(f" · {t.get('asset_type', '—')} · {acc} · vía {via}"))
+        defs = _defenses_frag(t.get("defenses"))
+        if defs:
+            frag += F.esc("  ") + defs
+        if not t.get("in_scope"):
+            frag += F.esc("  ⚠️ fuera de alcance")
+        body.append(F.bullet(f"{emoji} {frag}"))
+    if len(targets) > 15:
+        body.append(F.italic(f"(+{len(targets) - 15} hosts más)"))
+    body += ["", F.italic("detalle: /pivots (túneles) · /creds (credenciales)")]
+    return F.card("Red (multi-host)", body, icon="🌐")
+
+
+def pivots_card(eng: dict) -> str:
+    """/pivots: túneles de pivoting (estado up/planned/down + qué CIDR alcanzan)."""
+    eng = eng or {}
+    pivots = [p for p in eng.get("pivots", []) or [] if isinstance(p, dict)]
+    if not pivots:
+        return F.card("Pivots (túneles)",
+                      F.esc("Sin pivots — lateral-discovery los levanta al descubrir red interna."),
+                      icon="🔀")
+    body = []
+    for p in pivots[:20]:
+        st = p.get("status", "planned")
+        emoji = _PIVOT_EMOJI.get(st, "⚪")
+        frag = (F.code(S._clip(p.get("pivot_id", "?"), 24))
+                + F.esc(f" · {p.get('tool', '—')} · vía {S._clip(p.get('via_target', '—'), 24)} · {st}"))
+        reaches = ", ".join(p.get("reaches_cidr", []) or [])
+        if reaches:
+            frag += F.esc(f" → {S._clip(reaches, 44)}")
+        body.append(F.bullet(f"{emoji} {frag}"))
+    if len(pivots) > 20:
+        body.append(F.italic(f"(+{len(pivots) - 20} más)"))
+    return F.card("Pivots (túneles)", body, icon="🔀")
+
+
+def creds_card(eng: dict) -> str:
+    """/creds: credenciales del engagement — SIEMPRE referenciadas. Lee SOLO campos NO-secretos;
+    NUNCA `secret_ref` ni valor (el secreto vive en engagements/<id>/loot/, fuera de git). El principal
+    va en `code` (los principales AD tipo DOMAIN\\usuario llevan '\\', que `esc` NO escapa pero `code` sí)."""
+    eng = eng or {}
+    creds = [c for c in eng.get("credentials", []) or [] if isinstance(c, dict)]
+    if not creds:
+        return F.card("Credenciales", F.esc("Sin credenciales recolectadas todavía."), icon="🔑")
+    body = [F.italic("referenciadas · el secreto vive en loot/ (fuera de git), nunca aquí")]
+    for c in creds[:20]:
+        priv = c.get("privilege", "unknown")
+        emoji = "🔴" if priv in _PRIV_HOT else "🔑"
+        frag = (F.code(S._clip(c.get("cred_id", "?"), 24)) + F.esc(" · ")
+                + F.code(S._clip(c.get("principal", "—"), 24))
+                + F.esc(f" · {c.get('type', '—')} · {priv}"))
+        src = c.get("source_target")
+        if src:
+            frag += F.esc(f" · de {S._clip(src, 20)}")
+        nval = len(c.get("validated_on", []) or [])
+        if nval:
+            frag += F.esc(f" · validada×{nval}")
+        body.append(F.bullet(f"{emoji} {frag}"))
+    if len(creds) > 20:
+        body.append(F.italic(f"(+{len(creds) - 20} más)"))
+    return F.card("Credenciales", body, icon="🔑")
+
+
 # ── /help y /start — referencia de comandos (MD2; sustituye al HELP legacy) ───────
 def help_card() -> str:
     """Ayuda rica en MarkdownV2 (antes: constante HELP en Markdown legacy). La comparten /help y /start."""
@@ -295,6 +412,11 @@ def help_card() -> str:
         F.bullet(F.code("/status full") + F.esc(" — chequeo profundo del toolchain")),
         F.bullet(F.code("/findings") + F.esc(" — hallazgos (real / vigilar / ruido)")),
         F.bullet(F.code("/scope") + F.esc(" — alcance y restricciones")),
+        "",
+        F.bold("Red (multi-host)"),
+        F.bullet(F.code("/network") + F.esc(" — frontera de hosts (alias /hosts)")),
+        F.bullet(F.code("/pivots") + F.esc(" — túneles de pivoting")),
+        F.bullet(F.code("/creds") + F.esc(" — credenciales (siempre referenciadas)")),
         "",
         F.bold("Agentes y conocimiento"),
         F.bullet(F.code("/agents") + F.esc(" — roster por zonas E1/E2/E3")),

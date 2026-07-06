@@ -159,6 +159,70 @@ def test_health_card_shows_order_line_escaped():
     assert "app\\.x\\.com" in out                            # el texto de la orden va escapado (MD2)
 
 
+def _eng_net():
+    return {
+        "engagement_id": "E",
+        "targets": [
+            {"asset": "web01", "asset_type": "server", "in_scope": True, "access_level": "root",
+             "reachable_via": "direct", "defenses": [{"type": "waf", "confidence": "high"}]},
+            {"asset": "10.0.0.9", "asset_type": "host", "in_scope": True, "access_level": "none",
+             "reachable_via": "ligolo-1"},
+            {"asset": "evil.ext", "asset_type": "host", "in_scope": False, "access_level": "none"},
+        ],
+        "pivots": [{"pivot_id": "ligolo-1", "tool": "ligolo-ng", "via_target": "web01",
+                    "status": "up", "reaches_cidr": ["10.0.1.0/24"]}],
+        "credentials": [{"cred_id": "C-1", "principal": "ACME\\svc", "type": "ntlm",
+                         "privilege": "domain-admin", "source_target": "web01",
+                         "validated_on": ["10.0.0.9"],
+                         "secret_ref": "vault://loot/C-1", "value": "SHOULD-NOT-APPEAR"}],
+    }
+
+
+def test_network_card_rich():
+    out = B.network_card(_eng_net())
+    assert "Red" in out
+    assert "web01" in out and "10.0.0.9" in out          # hosts (en code)
+    assert "root" in out                                 # nivel de acceso
+    assert "🔴" in out                                    # host comprometido
+    assert "vía ligolo\\-1" in out                        # reachable_via (esc: guion escapado)
+    assert "waf" in out                                  # defensa del host
+    assert "fuera de alcance" in out                     # host out-of-scope marcado
+
+
+def test_network_card_empty():
+    assert "Sin hosts" in B.network_card({})
+
+
+def test_pivots_card_rich_and_empty():
+    out = B.pivots_card(_eng_net())
+    assert "ligolo-1" in out and "ligolo\\-ng" in out      # pivot_id (code, literal) + tool (esc, guion escapado)
+    assert "10\\.0\\.1\\.0/24" in out                      # reaches_cidr (esc: puntos escapados, '/' literal)
+    assert "🟢" in out                                    # status up
+    assert "Sin pivots" in B.pivots_card({})
+
+
+def test_creds_card_referenced_never_leaks_secret():
+    out = B.creds_card(_eng_net())
+    assert "C-1" in out and "domain\\-admin" in out and "ntlm" in out   # cred_id en code; privilegio en esc
+    assert "validada×1" in out                            # nº de validaciones
+    assert "🔴" in out                                    # privilegio caliente (domain-admin)
+    # INVARIANTE DURA: jamás el secreto ni su referencia
+    assert "SHOULD-NOT-APPEAR" not in out
+    assert "vault" not in out and "secret_ref" not in out
+    assert "Sin credenciales" in B.creds_card({})
+
+
+def test_network_cards_metachars_dont_break_md2():
+    # Blindaje del escaper: principal AD con '\\' y campos con metacaracteres no rompen el parseo.
+    eng = {"credentials": [{"cred_id": "a*_[]`", "principal": "DOM\\us.er",
+                            "type": "n#t+m", "privilege": "user", "validated_on": []}],
+           "targets": [{"asset": "a`b.[c]", "access_level": "user", "in_scope": True}],
+           "pivots": [{"pivot_id": "p`1", "tool": "t|x", "status": "down", "reaches_cidr": ["1.2.3.0/24"]}]}
+    for out in (B.creds_card(eng), B.network_card(eng), B.pivots_card(eng)):
+        assert isinstance(out, str) and out
+        assert _unescaped(out, "`") % 2 == 0                # todo code span abre y cierra
+
+
 def test_help_card_lists_key_commands():
     out = B.help_card()
     for cmd in ("/status", "/agents", "/agent", "/kill", "/cve", "/scope", "/report"):

@@ -48,6 +48,7 @@ bot cae a `claude -p` (modo degradado, sin streaming) automáticamente.
 | `/status` `/health` | tarjeta de **salud** estructurada (✓/⚠ por componente: motor · engagement · scope · Orquestador · agentes · ambos RAG) + orden en curso |
 | `/status full` | chequeo **profundo** del toolchain del host (`deploy/verify.sh`) |
 | `/agents` `/agent <n>` | roster por zonas E1/E2/E3 · ficha de un agente |
+| `/network` `/hosts` · `/pivots` · `/creds` | frontera multi-host: hosts · túneles de pivoting · credenciales (**siempre referenciadas**) |
 | `/triage <producto> [versión]` | CVEs priorizados (KEV/exploit/MSF/CVSS) desde el RAG |
 | `/cve <CVE-id>` | detalle de un CVE |
 | `/refresh` | actualiza el RAG en segundo plano |
