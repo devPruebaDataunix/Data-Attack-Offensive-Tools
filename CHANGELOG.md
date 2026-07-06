@@ -4,6 +4,22 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.39.0] - 2026-07-06
+### Added
+- **Bot · `/evidence` = artefactos y trazas por engagement (B7).** Cierra la serie B (paridad con la TUI).
+  Muestra las **trazas de evidencia** del engagement activo (`evidence[]` del blackboard: timestamp humanizado ·
+  agente · acción · target · artefacto) y la lista de **engagements con carpeta de artefactos** en disco
+  (`engagements/<id>/` — recon/exploit/loot/evidence/report). Empty-states amables (sin artefactos / sin
+  entradas en el engagement activo).
+### Notes
+- Presentación pura `botfmt.evidence_card`, consumiendo el dict CRUDO (`evidence[]`) + la lista de
+  `state.engagement_dirs` (lectura de disco en el handler) — NO el render Rich `evidence_rows`/`evidence_header`
+  de `state.py`. Reutiliza `human_ts` (timestamps legibles) y el helper `_free` (escapa también `\`) para la
+  acción de texto libre **y para el timestamp** (un ISO inválido hace que `human_ts` devuelva texto crudo con
+  posible `\`, que `esc` no escaparía — hardening del council); agente/target/artefacto en `code`. Verificado:
+  `test_botfmt.py` **34/34** (3 nuevos, incl. anti-metacaracteres y `\` en un ts inválido), `test_tgfmt.py` 7/7,
+  `test_tui.py` 82/82, validate_suite **471/0/0**, verify_opencode **31/0**.
+
 ## [2.38.0] - 2026-07-06
 ### Added
 - **Bot · `/a2a` = bus de mensajes A2A + drill-down (B6).** Lleva la pestaña «Bus A2A» de la TUI al bot.

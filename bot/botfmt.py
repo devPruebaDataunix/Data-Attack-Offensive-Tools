@@ -579,6 +579,42 @@ def a2a_detail_card(eng: dict, message_id: str) -> str:
                   icon="✉️")
 
 
+# ── /evidence — artefactos y trazas por engagement ───────────────────────────────
+def evidence_card(eng: dict, engagement_ids: list) -> str:
+    """/evidence: trazas de evidencia del engagement ACTIVO (evidence[] del blackboard) + engagements con
+    carpeta de artefactos en disco (`engagement_dirs`). Consume el dict CRUDO; NO el render Rich
+    `evidence_rows`/`evidence_header` de state.py. Reutiliza `human_ts` (sin markup)."""
+    ev = [e for e in (eng or {}).get("evidence", []) or [] if isinstance(e, dict)]
+    ids = engagement_ids or []
+    if not ev and not ids:
+        return F.card("Evidencia",
+                      F.esc("Sin artefactos todavía — aparecen cuando un engagement genera "
+                            "recon/exploit/loot/evidence/report."), icon="🧾")
+    body: list = []
+    if ids:
+        body += [F.kv("engagements con artefactos", " ".join(F.code(str(x)) for x in ids[:12])),
+                 F.italic("en engagements/<id>/ (recon · exploit · loot · evidence · report)")]
+    if ev:
+        shown = ev[-15:]
+        body += ["", F.bold(f"Evidencia del engagement activo ({len(ev)})")]
+        if len(ev) > len(shown):
+            body.append(F.italic(f"(las últimas {len(shown)})"))
+        for e in shown:
+            # `_free` (no `F.esc`) porque un ISO inválido hace que human_ts devuelva texto crudo con posible
+            # '\' — y `F.esc` no escapa el backslash (dejaría un escape MD2 inválido colgando).
+            ts = S.human_ts(e.get("ts", ""))
+            frag = _free(f"{ts} · ") + F.code(e.get("agent", "—")) + F.esc(" · ") + _free(S._clip(e.get("action", ""), 60))
+            if e.get("target"):
+                frag += F.esc(" → ") + F.code(S._clip(e["target"], 24))
+            art = e.get("artifact_path") or e.get("output_hash")
+            if art:
+                frag += F.esc("  ") + F.code(S._clip(art, 40))
+            body.append(F.bullet(frag))
+    else:
+        body += ["", F.italic("Sin entradas de evidencia en el engagement activo todavía.")]
+    return F.card("Evidencia", body, icon="🧾")
+
+
 # ── /mode · /model · /effort — config remota del Orquestador ─────────────────────
 def config_card(title: str, current: str, options: list, cmd: str, icon: str = "⚙️") -> str:
     """Ficha de un parámetro de config: valor actual + opciones válidas + cómo cambiarlo. `current` vacío
@@ -617,6 +653,7 @@ def help_card() -> str:
         F.bullet(F.code("/creds") + F.esc(" — credenciales (siempre referenciadas)")),
         F.bullet(F.code("/a2a") + F.esc(" — bus de mensajes entre agentes · ") + F.code("/a2a <id>")
                  + F.esc(" detalle")),
+        F.bullet(F.code("/evidence") + F.esc(" — artefactos y trazas por engagement")),
         "",
         F.bold("Agentes y conocimiento"),
         F.bullet(F.code("/agents") + F.esc(" — roster por zonas E1/E2/E3")),

@@ -343,6 +343,38 @@ def test_a2a_detail_found_notfound_and_metachars():
     assert "no encontrado" in B.a2a_detail_card(eng, "m-999")
 
 
+def test_evidence_card_entries_and_dirs():
+    eng = {"evidence": [
+        {"ts": "2026-07-06T10:15:30.123456", "agent": "web-exploit",
+         "action": "confirmada SQLi en /login", "target": "10.0.0.5",
+         "artifact_path": "engagements/LAB-1/exploit/sqli.txt"},
+        {"ts": "bad-ts", "agent": "operator", "action": "set_lab_scope approval_mode=auto"},
+    ]}
+    out = B.evidence_card(eng, ["LAB-1", "LAB-2"])
+    assert "Evidencia" in out
+    assert "LAB-1" in out and "LAB-2" in out                  # engagements con artefactos (code)
+    assert "web-exploit" in out and "operator" in out         # agentes
+    assert "2026\\-07\\-06 10:15" in out                       # ts humanizado (esc: guiones escapados, sin microsegundos)
+    assert "sqli.txt" in out                                  # artefacto (code)
+    assert "engagement activo" in out and "\\(2\\)" in out     # nº de trazas (bold→esc: paréntesis escapados)
+
+
+def test_evidence_card_empty_and_dirs_only():
+    assert "Sin artefactos" in B.evidence_card({}, [])
+    out = B.evidence_card({}, ["LAB-9"])                      # hay carpeta pero sin evidence[]
+    assert "LAB-9" in out and "Sin entradas de evidencia" in out
+
+
+def test_evidence_card_metachars_dont_break_md2():
+    # incluye un ts ISO INVÁLIDO con '\' (human_ts lo devuelve crudo): no debe dejar un escape MD2 colgando.
+    eng = {"evidence": [{"ts": "2026\\bad\\x", "agent": "a`b", "action": "did x\\y [z] `q`",
+                         "target": "t|1", "artifact_path": "p\\a.txt"}]}
+    out = B.evidence_card(eng, ["e`1"])
+    assert isinstance(out, str) and out
+    assert _unescaped(out, "`") % 2 == 0                      # code spans balanceados
+    assert (len(out) - len(out.rstrip("\\"))) % 2 == 0        # sin '\' de escape colgando al final
+
+
 def test_help_card_lists_key_commands():
     out = B.help_card()
     for cmd in ("/status", "/agents", "/agent", "/kill", "/cve", "/scope", "/report"):

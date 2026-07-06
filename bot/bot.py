@@ -340,6 +340,14 @@ async def creds(update, ctx):
 
 
 @authorized
+async def evidence(update, ctx):
+    """Artefactos y trazas por engagement: evidencia del engagement activo + engagements con carpeta en
+    engagements/. Lectura pura (state.py); sin mutación."""
+    await sayv2(ctx.bot, update.effective_chat.id,
+                BF.evidence_card(S.load_engagement(REPO_DIR), S.engagement_dirs(REPO_DIR)))
+
+
+@authorized
 async def a2a(update, ctx):
     """Bus A2A. Sin arg: resumen + últimos mensajes. Con arg: detalle de un message_id (drill-down)."""
     chat_id = update.effective_chat.id
@@ -776,6 +784,7 @@ def main():
     app.add_handler(CommandHandler("pivots", pivots))
     app.add_handler(CommandHandler("creds", creds))
     app.add_handler(CommandHandler("a2a", a2a))
+    app.add_handler(CommandHandler("evidence", evidence))
     app.add_handler(CommandHandler("kb", kb))
     app.add_handler(CommandHandler("lab", lab))
     app.add_handler(CommandHandler("mode", mode))

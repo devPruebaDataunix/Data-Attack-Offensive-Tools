@@ -50,6 +50,7 @@ bot cae a `claude -p` (modo degradado, sin streaming) automáticamente.
 | `/agents` `/agent <n>` | roster por zonas E1/E2/E3 · ficha de un agente |
 | `/network` `/hosts` · `/pivots` · `/creds` | frontera multi-host: hosts · túneles de pivoting · credenciales (**siempre referenciadas**) |
 | `/a2a` · `/a2a <id>` | bus de mensajes entre agentes (resumen + últimos) · detalle de un mensaje |
+| `/evidence` | artefactos y trazas por engagement (evidencia del activo + engagements con carpeta) |
 | `/triage <producto> [versión]` | CVEs priorizados (KEV/exploit/MSF/CVSS) desde el RAG |
 | `/cve <CVE-id>` | detalle de un CVE |
 | `/kb` · `/kb <consulta>` | RAG de **conocimiento**: cobertura (Capa 1+2) · busca técnicas accionables (GTFOBins/LOLBAS/ATT&CK/Atomic) |
