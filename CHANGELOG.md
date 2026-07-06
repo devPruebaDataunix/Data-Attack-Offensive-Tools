@@ -4,6 +4,25 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.35.0] - 2026-07-06
+### Added
+- **Bot · `/kb` = RAG de CONOCIMIENTO (B3).** Hasta ahora el bot solo tocaba el RAG de vulnerabilidades;
+  `/kb` expone el RAG de **técnicas**. Sin argumentos = **cobertura** de ambas capas (Capa 1 `kb.db`:
+  nº técnicas + desglose por fuente/plataforma/categoría; Capa 2 `kb_vec.db`: nº trozos + modelo de
+  embeddings + fuentes), con empty-states y aviso de «subset de prueba». **`/kb <consulta>`** = busca
+  **técnicas accionables** en la Capa 1 (GTFOBins/LOLBAS/ATT&CK/Atomic): categoría · fuente:nombre
+  (subtipo) [MITRE] · precondiciones · comando · ref. Usa el retrieval **determinista y stdlib**
+  (`query_kb.py --query`, sin venv ni embedder) — la vía fiable durante un engagement; la búsqueda
+  **semántica** (Capa 2, requiere venv+embedder) queda como extensión futura.
+### Notes
+- Presentación pura en `botfmt.py` (`kb_stats_card`/`kb_results_card` + helper `_counts_frag`), consumiendo
+  el dict CRUDO de `query_kb --stats --json` / `--query --json` — NO el render Rich `kb_render` de `state.py`
+  (lleva markup Textual). `command`/`ref`/`fuente:nombre` van en `code` (contienen `|`/`>`/`$`/`` ` ``/`\`, ahí
+  literales). El handler degrada a un empty-state amable si el RAG no está poblado o el JSON no parsea.
+  Verificado: `test_botfmt.py` **24/24** (4 nuevos, incl. blindaje anti-metacaracteres en comandos/refs),
+  `test_tgfmt.py` 7/7, `test_tui.py` 80/80, validate_suite **471/0/0**, verify_opencode **31/0**. Cambio
+  **aislado** (stdlib puro): no toca el motor ni las puertas.
+
 ## [2.34.0] - 2026-07-06
 ### Added
 - **Bot · paridad multi-host: `/network` (alias `/hosts`), `/pivots` y `/creds` (B2).** Lleva la pestaña

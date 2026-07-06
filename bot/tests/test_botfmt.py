@@ -223,6 +223,56 @@ def test_network_cards_metachars_dont_break_md2():
         assert _unescaped(out, "`") % 2 == 0                # todo code span abre y cierra
 
 
+def test_kb_stats_card_rich_and_empty():
+    rep = {"capa1_kb": {"total": 4672,
+                        "by_source": {"gtfobins": 2096, "atomic": 1598, "attack": 504, "lolbas": 474},
+                        "by_platform": {"linux": 3000, "windows": 1200, "multi": 472},
+                        "by_category": {"privesc": 1351, "execution": 900}},
+           "capa2_kb_vec": {"total": 8123, "by_source": {"hacktricks": 5000, "peass": 2000},
+                            "embed_model": "bge-small-en-v1.5"}}
+    out = B.kb_stats_card(rep)
+    assert "4672" in out and "gtfobins" in out and "privesc" in out       # Capa 1 + desglose
+    assert "8123" in out and "hacktricks" in out and "bge" in out         # Capa 2 + modelo
+    assert "Capa 1" in out and "Capa 2" in out
+    # empty-states
+    assert "Sin poblar" in B.kb_stats_card(None)
+    assert "Sin poblar" in B.kb_stats_card({"capa1_kb": {"total": 0}})
+
+
+def test_kb_stats_card_capa2_not_populated():
+    rep = {"capa1_kb": {"total": 100, "by_source": {"gtfobins": 100},
+                        "by_platform": {}, "by_category": {}},
+           "capa2_kb_vec": {"status": "no poblada (kb_vec.db no existe)"}}
+    out = B.kb_stats_card(rep)
+    assert "100" in out and "no poblada" in out
+
+
+def test_kb_results_card_rich_empty_error_none():
+    data = {"query": "env", "matches": 1, "store_total": 4672, "results": [
+        {"source": "gtfobins", "platform": "linux", "category": "privesc", "mitre_id": "T1548.001",
+         "name": "env", "subtype": "suid", "preconditions": "SUID bit set",
+         "command": "env /bin/sh -p", "description": "d",
+         "source_ref": "https://gtfobins.github.io/gtfobins/env/"}]}
+    out = B.kb_results_card(data, "env")
+    assert "PRIVESC" in out and "env" in out and "suid" in out
+    assert "T1548" in out                                    # MITRE (esc: puntos escapados)
+    assert "env /bin/sh -p" in out                           # comando en code (literal)
+    assert "gtfobins.github.io" in out                       # ref en code
+    # degradaciones
+    assert "Sin técnicas" in B.kb_results_card({"results": []}, "xyz")
+    assert "KB vacío" in B.kb_results_card({"error": "KB vacío"}, "x")
+    assert "No disponible" in B.kb_results_card(None, "x")
+
+
+def test_kb_results_card_command_metachars_dont_break_md2():
+    data = {"results": [{"source": "gtfobins", "name": "a`b", "subtype": "sudo",
+                         "category": "execution", "command": "sh -c 'x|y>z' `id`",
+                         "source_ref": "http://x/`(a)`"}]}
+    out = B.kb_results_card(data, "a*_[]")
+    assert isinstance(out, str) and out
+    assert _unescaped(out, "`") % 2 == 0                     # todo code span abre y cierra
+
+
 def test_help_card_lists_key_commands():
     out = B.help_card()
     for cmd in ("/status", "/agents", "/agent", "/kill", "/cve", "/scope", "/report"):

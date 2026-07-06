@@ -51,6 +51,7 @@ bot cae a `claude -p` (modo degradado, sin streaming) automáticamente.
 | `/network` `/hosts` · `/pivots` · `/creds` | frontera multi-host: hosts · túneles de pivoting · credenciales (**siempre referenciadas**) |
 | `/triage <producto> [versión]` | CVEs priorizados (KEV/exploit/MSF/CVSS) desde el RAG |
 | `/cve <CVE-id>` | detalle de un CVE |
+| `/kb` · `/kb <consulta>` | RAG de **conocimiento**: cobertura (Capa 1+2) · busca técnicas accionables (GTFOBins/LOLBAS/ATT&CK/Atomic) |
 | `/refresh` | actualiza el RAG en segundo plano |
 | `/findings` | hallazgos **clasificados** (🔴 real / 🟠 vigilar / 🔇 ruido) |
 | `/report` | envía el último informe |

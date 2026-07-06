@@ -331,6 +331,26 @@ async def creds(update, ctx):
 
 
 @authorized
+async def kb(update, ctx):
+    """RAG de CONOCIMIENTO. Sin args: cobertura (Capa 1+2). Con args: busca técnicas Capa 1 (determinista,
+    stdlib, sin venv/embedder — la fiable durante un engagement). La semántica (Capa 2) va aparte a futuro."""
+    q = " ".join(ctx.args or []).strip()
+    chat_id = update.effective_chat.id
+    if not q:
+        msg = await ctx.bot.send_message(chat_id, "📚 Leyendo el RAG de conocimiento…")
+        _, out = await run([PY, "rag/knowledge/query_kb.py", "--stats", "--json"], timeout=40)
+        await editv2(msg, BF.kb_stats_card(S.parse_kb_stats(out)))
+        return
+    msg = await ctx.bot.send_message(chat_id, "📚 Buscando técnicas…")
+    _, out = await run([PY, "rag/knowledge/query_kb.py", "--query", q, "--json", "--limit", "8"], timeout=40)
+    try:
+        data = json.loads(out)
+    except (ValueError, TypeError):
+        data = None
+    await editv2(msg, BF.kb_results_card(data, q))
+
+
+@authorized
 async def triage(update, ctx):
     q = " ".join(ctx.args)
     if not q:
@@ -620,6 +640,7 @@ def main():
     app.add_handler(CommandHandler("hosts", network))
     app.add_handler(CommandHandler("pivots", pivots))
     app.add_handler(CommandHandler("creds", creds))
+    app.add_handler(CommandHandler("kb", kb))
     app.add_handler(CommandHandler("triage", triage))
     app.add_handler(CommandHandler("cve", cve))
     app.add_handler(CommandHandler("refresh", refresh))

@@ -399,6 +399,83 @@ def creds_card(eng: dict) -> str:
     return F.card("Credenciales", body, icon="🔑")
 
 
+# ── /kb — RAG de CONOCIMIENTO (Capa 1 kb.db + Capa 2 kb_vec.db) ───────────────────
+# `/kb` = cobertura (query_kb --stats --json → parse_kb_stats). `/kb <q>` = técnicas Capa 1
+# (query_kb --query --json, determinista/stdlib, sin venv). NO reutiliza el render Rich `kb_render`
+# de state.py (lleva markup Textual); consume el dict CRUDO y formatea para MD2.
+def _counts_frag(d, top: int = 6) -> str:
+    """'clave n · clave n …' (top N por conteo desc); '—' si vacío. Fragmento MD2 ya escapado."""
+    if not isinstance(d, dict) or not d:
+        return F.italic("—")
+    items = sorted(d.items(), key=lambda kv: kv[1] if isinstance(kv[1], int) else 0, reverse=True)
+    frag = " · ".join(F.esc(f"{k} {v}") for k, v in items[:top])
+    return frag + (F.esc(" · …") if len(items) > top else "")
+
+
+def kb_stats_card(rep: Optional[dict]) -> str:
+    """Cobertura del RAG de conocimiento (ambas capas) desde `parse_kb_stats`. Empty-state amable si aún
+    no está poblado (típico en el Windows de desarrollo; se puebla en Kali con refresh_kb.py)."""
+    c1 = (rep or {}).get("capa1_kb") or {}
+    c2 = (rep or {}).get("capa2_kb_vec") or {}
+    t1 = c1.get("total") or 0
+    if not rep or not t1:
+        return F.card("RAG de conocimiento",
+                      F.esc("Sin poblar. Puébla con: python rag/knowledge/refresh_kb.py "
+                            "(añade --semantic para la Capa 2)."), icon="📚")
+    body = [
+        F.kv("Capa 1 (kb.db)", F.esc(f"{t1} técnicas")),
+        F.bullet(F.kv("fuentes", _counts_frag(c1.get("by_source")))),
+        F.bullet(F.kv("plataformas", _counts_frag(c1.get("by_platform")))),
+        F.bullet(F.kv("categorías", _counts_frag(c1.get("by_category")))),
+        "",
+    ]
+    t2 = c2.get("total")
+    if isinstance(t2, int):
+        head = F.esc(f"{t2} trozos") + (F.esc(f"  · modelo {c2['embed_model']}") if c2.get("embed_model") else "")
+        body += [F.kv("Capa 2 (kb_vec.db)", head),
+                 F.bullet(F.kv("fuentes", _counts_frag(c2.get("by_source"))))]
+        if t2 == 0:
+            body.append(F.italic("⚠ Capa 2 vacía — refresh_kb.py --semantic"))
+        elif t2 < 2000:
+            body.append(F.italic("⚠ subset de prueba — repobla entero: refresh_kb.py --semantic"))
+    else:
+        body.append(F.kv("Capa 2 (kb_vec.db)",
+                         F.italic(c2.get("status") or c2.get("error") or "no poblada")))
+    return F.card("RAG de conocimiento", body, icon="📚")
+
+
+def kb_results_card(data: Optional[dict], query: str) -> str:
+    """Técnicas Capa 1 para `/kb <q>` desde el JSON de `query_kb --query`. Cada resultado: categoría ·
+    fuente:nombre (subtipo) [MITRE] · precondiciones · comando (1ª línea) · ref. `command`/`ref`/`fuente:
+    nombre` en `code` (contienen `|`/`>`/`$`/`\\`, que ahí van literales)."""
+    if data is None:
+        return F.card("RAG de conocimiento",
+                      F.esc("No disponible (RAG sin poblar o ilegible). Puébla: rag/knowledge/refresh_kb.py."),
+                      icon="📚")
+    if data.get("error"):
+        return F.card("RAG de conocimiento", F.italic(str(data["error"])), icon="📚")
+    results = data.get("results") or []
+    if not results:
+        return F.card("RAG de conocimiento",
+                      F.esc(f"Sin técnicas para «{query}». Prueba otro binario/servicio/keyword."), icon="📚")
+    body = [F.italic(f"{len(results)} técnica(s) para «{S._clip(query, 60)}»")]
+    for r in results[:8]:
+        cat = (r.get("category") or "?").upper()
+        mid = f" [{r['mitre_id']}]" if r.get("mitre_id") else ""
+        body += ["", F.bullet(F.bold(cat) + F.esc(" · ")
+                              + F.code(f"{r.get('source', '?')}:{r.get('name', '?')}")
+                              + F.esc(f" ({r.get('subtype') or '—'}){mid}"))]
+        if r.get("preconditions"):
+            body.append(F.esc("   pre: ") + F.italic(S._clip(r["preconditions"], 120)))
+        if r.get("command"):
+            body.append(F.esc("   cmd: ") + F.code(r["command"].splitlines()[0][:120]))
+        if r.get("source_ref"):
+            body.append(F.esc("   ref: ") + F.code(S._clip(r["source_ref"], 80)))
+    if len(results) > 8:
+        body.append(F.italic(f"(+{len(results) - 8} más — afina la consulta)"))
+    return F.card(f"RAG conocimiento · {S._clip(query, 40)}", body, icon="📚")
+
+
 # ── /help y /start — referencia de comandos (MD2; sustituye al HELP legacy) ───────
 def help_card() -> str:
     """Ayuda rica en MarkdownV2 (antes: constante HELP en Markdown legacy). La comparten /help y /start."""
@@ -423,6 +500,8 @@ def help_card() -> str:
         F.bullet(F.code("/agent <nombre>") + F.esc(" — ficha de un agente")),
         F.bullet(F.code("/triage <producto>") + F.esc(" — CVE priorizados (KEV/MSF/CVSS)")),
         F.bullet(F.code("/cve <id>") + F.esc(" — ficha de un CVE")),
+        F.bullet(F.code("/kb") + F.esc(" — RAG de conocimiento (cobertura) · ") + F.code("/kb <consulta>")
+                 + F.esc(" busca técnicas")),
         F.bullet(F.code("/refresh") + F.esc(" — actualiza el RAG (2º plano)")),
         "",
         F.bold("Órdenes"),
