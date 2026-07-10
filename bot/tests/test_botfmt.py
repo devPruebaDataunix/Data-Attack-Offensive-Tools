@@ -400,6 +400,52 @@ def test_cards_with_metacharacters_dont_break_md2():
     assert "\\*" in detail                                    # el '*' del contenido fue escapado (esc corrió)
 
 
+import re  # noqa: E402
+
+
+def test_command_menu_valid_for_telegram():
+    # setMyCommands (C1): cada entrada cumple las restricciones que Telegram impone al menú nativo.
+    menu = B.command_menu()
+    assert menu, "el menú de comandos no puede estar vacío"
+    assert len(menu) <= 100, "Telegram limita setMyCommands a 100 comandos"
+    cmd_re = re.compile(r"^[a-z0-9_]{1,32}$")
+    seen = set()
+    for cmd, desc in menu:
+        assert cmd_re.match(cmd), f"comando inválido para Telegram: {cmd!r}"
+        assert 3 <= len(desc) <= 256, f"descripción fuera de rango ({len(desc)}): /{cmd}"
+        assert cmd not in seen, f"comando duplicado en el menú: /{cmd}"
+        seen.add(cmd)
+
+
+def _bot_cmd_to_fn_and_authorized():
+    """Analiza bot.py con AST (stdlib) -> (comando->nombre de función handler, {funciones con @authorized})."""
+    import ast
+    tree = ast.parse(open(os.path.join(BOT, "bot.py"), encoding="utf-8").read())
+    authorized = {
+        n.name for n in ast.walk(tree)
+        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and any(isinstance(d, ast.Name) and d.id == "authorized" for d in n.decorator_list)
+    }
+    cmd_to_fn = {}
+    for n in ast.walk(tree):
+        if (isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "CommandHandler"
+                and len(n.args) >= 2 and isinstance(n.args[0], ast.Constant)
+                and isinstance(n.args[1], ast.Name)):
+            cmd_to_fn[n.args[0].value] = n.args[1].id
+    return cmd_to_fn, authorized
+
+
+def test_command_menu_handlers_are_authorized():
+    # Defensa en profundidad (nit del council de seguridad): TODO comando del menú debe resolver a un
+    # handler decorado con @authorized. Si mañana alguien añade un comando sin la puerta de la allowlist y
+    # lo mete en el menú, este test lo caza. Se analiza bot.py con AST (sin importar `telegram`).
+    cmd_to_fn, authorized = _bot_cmd_to_fn_and_authorized()
+    for cmd, _ in B.command_menu():
+        fn = cmd_to_fn.get(cmd)
+        assert fn is not None, f"/{cmd} no tiene CommandHandler resoluble por AST"
+        assert fn in authorized, f"/{cmd} -> {fn}() no está decorado con @authorized"
+
+
 # ── runner standalone ───────────────────────────────────────────────────────────
 def _all_tests():
     return [(n, f) for n, f in sorted(globals().items())

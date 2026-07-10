@@ -4,6 +4,33 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.40.0] - 2026-07-10
+### Added
+- **Bot · menú nativo de comandos `setMyCommands` (C1).** El bot registra en Telegram una lista **curada** de 22
+  comandos con descripción, de modo que al teclear «/» aparece el menú nativo (estado, red multi-host, agentes,
+  conocimiento, config y órdenes) — antes el operador tenía que conocerlos de memoria o abrir `/help`. Primer
+  incremento de la categoría **C (interacción)**.
+### Security
+- **El menú se registra SOLO por chat de la allowlist** (`BotCommandScopeChat`), nunca en el ámbito global: un
+  usuario NO autorizado que encuentre el bot ve el menú **vacío** (la superficie de comandos de una herramienta
+  ofensiva no se expone; la ejecución ya estaba bloqueada por `@authorized`, esto además evita la fuga de la
+  LISTA). El registro se limita además a **chats privados** (`ChatType.PRIVATE`) para que un operador que lance
+  `/start` en un grupo no filtre el menú al resto de miembros.
+### Notes
+- La lista vive como **dato puro** en `botfmt.command_menu()` (i18n español; son campos de la API `BotCommand`,
+  TEXTO PLANO, nunca MarkdownV2). Un `Application.post_init` la registra en los chats de la allowlist ya conocidos
+  y el handler `/start` la registra en el primer contacto (una VM recién instalada), todo **best-effort** (si
+  Telegram falla —red/rate-limit/chat aún no conocido— se loguea y el bot sigue). Verificado: `test_botfmt.py`
+  **36/36** (2 nuevos: validez para Telegram —comando `^[a-z0-9_]{1,32}$`, descripción 3..256, sin duplicados,
+  ≤100— y, vía **AST**, que cada comando del menú resuelve a un handler decorado con `@authorized` —defensa en
+  profundidad contra un comando sin puerta en el menú), `test_tgfmt.py` 7/7, `test_tui.py` 82/82. **Council de 3
+  roles (security/devil/simplicity) GO**, con los arreglos aplicados: scope por-chat + guard de chat privado
+  (security), nota de texto-plano (simplicity), test AST de `@authorized` (nit de seguridad). Cableado
+  `BotCommand`/`BotCommandScopeChat`/`post_init` validado contra la librería `telegram` real; la llamada de red
+  `set_my_commands` se ejercita en Kali. Backlog (no bloquea): registrar el menú también en el primer contacto vía
+  CUALQUIER comando (no solo `/start`) y des-registrarlo (`delete_my_commands`) al quitar a un operador de la
+  allowlist.
+
 ## [2.39.0] - 2026-07-06
 ### Added
 - **Bot · `/evidence` = artefactos y trazas por engagement (B7).** Cierra la serie B (paridad con la TUI).

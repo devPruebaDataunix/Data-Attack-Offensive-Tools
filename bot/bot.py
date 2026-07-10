@@ -31,7 +31,9 @@ from functools import wraps
 from pathlib import Path
 from uuid import uuid4
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import (Update, InlineKeyboardButton, InlineKeyboardMarkup,
+                      BotCommand, BotCommandScopeChat)
+from telegram.constants import ChatType
 from telegram.error import BadRequest
 from telegram.ext import (Application, CommandHandler, MessageHandler,
                           CallbackQueryHandler, ContextTypes, filters)
@@ -224,6 +226,13 @@ async def start(update, ctx):
     mode = "Agent SDK (streaming)" if SDK_OK else "claude -p (degradado)"
     welcome = F.card("Data Attack en línea", F.kv("motor", F.esc(mode)), icon="🛡️")
     await sayv2(ctx.bot, update.effective_chat.id, welcome + "\n\n" + BF.help_card())
+    # Registra el menú «/» para ESTE chat autorizado (scope por-chat). Cubre el arranque en frío —una VM
+    # recién instalada— donde en `_post_init` el bot aún no conocía el chat. Idempotente y best-effort.
+    # SOLO en chats PRIVADOS: `@authorized` filtra por effective_user.id, pero el scope del menú se fija por
+    # effective_chat.id — en un grupo, registrarlo expondría la lista de comandos a TODOS sus miembros (fuga
+    # de superficie, aunque la ejecución siga bloqueada). En privado chat_id == user_id, así que es seguro.
+    if update.effective_chat and update.effective_chat.type == ChatType.PRIVATE:
+        await _register_command_menu(ctx.bot, update.effective_chat.id)
 
 
 @authorized
@@ -754,6 +763,30 @@ async def on_error(update, ctx):
     log.error("Error: %s", ctx.error)
 
 
+async def _register_command_menu(bot, chat_id) -> bool:
+    """Registra el menú nativo «/» de Telegram SOLO para un chat de la allowlist (scope POR-CHAT, nunca el
+    ámbito por defecto/global). OPSEC: la superficie de comandos de una herramienta ofensiva no debe
+    mostrarse a un desconocido que encuentre el bot — con el scope por-chat, quien NO está en la allowlist
+    ve un menú VACÍO (aunque la ejecución ya estaba bloqueada por @authorized, esto evita la FUGA de la
+    lista de comandos). Best-effort: si Telegram falla (red/rate-limit/chat aún no conocido), se loguea y
+    se sigue — el menú es descubrimiento, no una puerta. La lista curada vive en botfmt.command_menu."""
+    try:
+        cmds = [BotCommand(c, d) for c, d in BF.command_menu()]
+        await bot.set_my_commands(cmds, scope=BotCommandScopeChat(chat_id=chat_id))
+        return True
+    except Exception as e:  # noqa: BLE001
+        log.warning("No pude registrar el menú para el chat %s: %s", chat_id, e)
+        return False
+
+
+async def _post_init(app: Application):
+    """Al arrancar registra el menú para los chats de la allowlist YA conocidos (los que han escrito antes;
+    `BotCommandScopeChat` exige que el bot haya interactuado con el chat). Un chat nunca visto se registra
+    en su primer `/start` (ver `start`). NUNCA se toca el ámbito global -> un desconocido ve el menú vacío."""
+    n = sum([await _register_command_menu(app.bot, uid) for uid in ALLOWED])
+    log.info("Menú de comandos registrado en %d/%d chat(s) de la allowlist.", n, len(ALLOWED))
+
+
 def _print_banner():
     """Banner de la herramienta en el arranque (consola)."""
     try:
@@ -770,7 +803,7 @@ def main():
     _print_banner()
     if not TOKEN or not ALLOWED:
         raise SystemExit("Falta TELEGRAM_TOKEN o ALLOWED_USER_ID en bot/.env")
-    app = Application.builder().token(TOKEN).concurrent_updates(True).build()
+    app = Application.builder().token(TOKEN).concurrent_updates(True).post_init(_post_init).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(CommandHandler("status", status))

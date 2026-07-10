@@ -676,3 +676,44 @@ def help_card() -> str:
         F.italic("Las puertas —alcance, presupuesto, aprobación— se aplican SIEMPRE, mande quien mande."),
     ]
     return F.card("Data Attack — control inteligente", body, icon="🧭")
+
+
+# ── setMyCommands — menú nativo «/» de Telegram (C1) ─────────────────────────────
+# Lista CURADA (comando, descripción) para el menú nativo que Telegram muestra al teclear «/».
+# Es DATO PURO (no importa `telegram`): el handler la convierte a BotCommand y llama set_my_commands.
+# Restricciones de Telegram que impone el test (test_botfmt): el comando cumple ^[a-z0-9_]{1,32}$ y la
+# descripción mide 3..256 caracteres. i18n 100% español (A9). Cada entrada DEBE tener su CommandHandler
+# en bot.py (un test cruza el menú con los handlers reales para que no haya comando muerto en el menú).
+# IMPORTANTE: estas descripciones son TEXTO PLANO — van como campos de la API `BotCommand`, NO son
+# MarkdownV2. NO las pases NUNCA por el escaper de tgfmt (F.esc/F.code/…): añadiría backslashes literales
+# que Telegram mostraría crudos en el menú. Son la EXCEPCIÓN a la regla MD2 del resto de este módulo.
+_COMMAND_MENU: list = [
+    ("start", "Arranca el bot y muestra la ayuda"),
+    ("help", "Referencia de comandos"),
+    ("status", "Salud del entorno + orden en curso"),
+    ("findings", "Hallazgos: reales / vigilar / ruido"),
+    ("scope", "Alcance y restricciones del engagement"),
+    ("network", "Frontera de hosts (multi-host)"),
+    ("pivots", "Túneles de pivoting"),
+    ("creds", "Credenciales (siempre referenciadas)"),
+    ("a2a", "Bus de mensajes entre agentes"),
+    ("evidence", "Artefactos y trazas por engagement"),
+    ("agents", "Roster de agentes por zonas"),
+    ("agent", "Ficha de un agente: /agent <nombre>"),
+    ("triage", "CVE priorizados: /triage <producto>"),
+    ("cve", "Ficha de un CVE: /cve <id>"),
+    ("kb", "RAG de conocimiento (técnicas)"),
+    ("refresh", "Actualiza el RAG (segundo plano)"),
+    ("mode", "Supervisión: full / critical / auto"),
+    ("model", "Modelo del Orquestador"),
+    ("effort", "Effort del Orquestador"),
+    ("lab", "Fija el scope de un lab y lo lanza: /lab <ip>"),
+    ("kill", "Aborta la orden en curso (kill-switch)"),
+    ("report", "Genera y envía el informe"),
+]
+
+
+def command_menu() -> list:
+    """Lista curada (comando, descripción) para setMyCommands (el menú nativo «/» de Telegram). Función
+    (no solo constante) para poder validar sus invariantes en test y aislar al handler del formato del dato."""
+    return list(_COMMAND_MENU)
