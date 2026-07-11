@@ -4,6 +4,28 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.40.1] - 2026-07-11
+### Security
+- **Bot · el token de Telegram ya no se escribe en `bot/bot.log`.** La API de Telegram incrusta el token en la
+  RUTA de la URL (`…/bot<TOKEN>/getUpdates`) y `httpx` (bajo python-telegram-bot) registraba cada petición a
+  nivel INFO; con el root logger en INFO, el token acababa **en claro en `bot.log` en cada poll**. Detectado en
+  la verificación de Kali. Nuevo módulo **`bot/logsafe.py`** (stdlib puro): `install()` (a) sube `httpx`/`httpcore`
+  a WARNING —corta de raíz el log por-petición— y (b) añade un `RedactFilter` a los handlers del root que
+  enmascara el token (valor literal + patrón) en CUALQUIER línea, venga de donde venga (defensa en profundidad).
+  `bot.py` lo invoca justo tras `logging.basicConfig`. `bot.log` ya estaba en `.gitignore` (`*.log`) → el token no
+  llegaba al repo, pero sí quedaba en claro en disco en cada sondeo. **El filtro también redacta el TRACEBACK de
+  `exc_info`** (que el `Formatter` renderiza aparte, sin pasar por los filtros): sin esto, un `log.exception` ante
+  un fallo de red durante una orden (`bot.py:660`/`697`) filtraría el token que la excepción de httpx lleva en su
+  `str()` — hallazgo MUST del council, corregido cacheando el traceback ya redactado en `record.exc_text`.
+### Notes
+- Máscara ASCII `[REDACTED]` a propósito (el `FileHandler` escribe en la codificación local; evita mojibake).
+  Verificado: `test_logsafe.py` **7/7** (redacción por valor y por patrón, texto no-secreto intacto, empty/None
+  seguros, el filtro reescribe el record, redacción del **traceback de `exc_info`**, `install()` silencia httpx/
+  httpcore y engancha el filtro) + prueba funcional end-to-end (línea `getUpdates` de httpx Y un traceback con el
+  token → sale `[REDACTED]`, token ausente del fichero). `test_tgfmt` 7/7, `test_botfmt` 36/36, `test_tui` 82/82,
+  sin regresión. **Council 3-roles GO** (devil MUST del `exc_info` aplicado; `quiet_http_loggers`→privado por el
+  rol de simplicidad).
+
 ## [2.40.0] - 2026-07-10
 ### Added
 - **Bot · menú nativo de comandos `setMyCommands` (C1).** El bot registra en Telegram una lista **curada** de 22

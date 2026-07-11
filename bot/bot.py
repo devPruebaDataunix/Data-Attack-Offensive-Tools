@@ -47,6 +47,7 @@ from tui import state as S               # noqa: E402  (lógica pura compartida 
 from tui import actions as A             # noqa: E402  (mutadores del OPERADOR: lab scope, config; validados)
 import tgfmt as F                        # noqa: E402  (capa de formato Telegram MarkdownV2, fuente única)
 import botfmt as BF                      # noqa: E402  (presentación: datos state/intel -> MarkdownV2)
+import logsafe as LS                     # noqa: E402  (redacción del token en los logs; httpx lo mete en la URL)
 
 # ── Config ───────────────────────────────────────────────────────────────────
 BOT_DIR = Path(__file__).resolve().parent
@@ -81,6 +82,10 @@ PY = sys.executable or "python3"
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s",
                     handlers=[logging.FileHandler(BOT_DIR / "bot.log"), logging.StreamHandler()])
 log = logging.getLogger("databot")
+# La API de Telegram mete el token en la URL (…/bot<TOKEN>/getUpdates) y httpx registra cada petición a
+# INFO -> sin esto, el token acababa en claro en bot.log en cada poll. Silencia httpx/httpcore y redacta
+# cualquier resto (defensa en profundidad). Debe ir JUSTO tras basicConfig (ya existen los handlers).
+LS.install(TOKEN)
 
 
 # ── Seguridad: allowlist de user-id ──────────────────────────────────────────
