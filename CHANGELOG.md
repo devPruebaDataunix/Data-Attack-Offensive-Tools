@@ -4,6 +4,20 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.40.3] - 2026-07-11
+### Fixed
+- **Plugin · manifiestos regenerados (arrastraban `version: 2.39.0`).** `plugin/plugin.json` y
+  `plugin/.claude-plugin/plugin.json` seguían en 2.39.0 mientras `VERSION` iba por 2.40.2 — el bundle del plugin
+  no se regeneraba en el flujo de release. `tools/build_plugin.py` toma la versión de `VERSION` (fuente única);
+  re-ejecutado para sincronizar. Detectado en la verificación de Kali. **El proceso de release debe re-ejecutar
+  `python tools/build_plugin.py`** para que el plugin no vuelva a desfasarse. (El resto del bundle —21 agentes,
+  13 skills, hook de alcance— ya estaba en sync; solo la versión drifteaba.)
+### Notes
+- Aparte (no es un bug, decisión de diseño explícita en `build_plugin.py`): el plugin del marketplace distribuye
+  SOLO `scope_guard` («solo el hook de alcance, safety-critical»); los 11 hooks completos se cablean en el
+  despliegue por `deploy/auto-deploy.sh` (`.claude/settings.json`). Cambio mecánico (regen determinista de
+  artefactos), por debajo del umbral del council; `validate_suite` 473/0/0.
+
 ## [2.40.2] - 2026-07-11
 ### Security
 - **Bot · quitado un user-id real de Telegram de un test.** En `bot/tests/test_logsafe.py` el placeholder de
