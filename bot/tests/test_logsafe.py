@@ -24,7 +24,7 @@ def test_redacts_token_in_getupdates_url():
 
 def test_redacts_by_pattern_without_known_token():
     # aunque NO pasemos el token literal, el patrón lo caza igualmente
-    tok = "1490733616:BBFxyzabcdefghijklmnopqrstuvwxyz01"
+    tok = "1234567890:BBFxyzabcdefghijklmnopqrstuvwxyz01"
     out = LS.redact_secrets(f".../bot{tok}/getUpdates", "")
     assert tok not in out and "[REDACTED]" in out
 

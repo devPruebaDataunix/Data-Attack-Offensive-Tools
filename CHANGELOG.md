@@ -4,6 +4,14 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.40.2] - 2026-07-11
+### Security
+- **Bot · quitado un user-id real de Telegram de un test.** En `bot/tests/test_logsafe.py` el placeholder de
+  token usaba, como prefijo numérico, un **user-id de operador real** (aparecido durante la verificación en Kali);
+  se sustituye por un id sintético (`1234567890`). No es una credencial (la parte secreta siempre fue inventada),
+  pero un user-id de Telegram no debe quedar en un repo público — higiene OPSEC. Sin cambios de lógica ni de
+  producto; `test_logsafe` 7/7. Cambio de dato de test (por debajo del umbral del council).
+
 ## [2.40.1] - 2026-07-11
 ### Security
 - **Bot · el token de Telegram ya no se escribe en `bot/bot.log`.** La API de Telegram incrusta el token en la
