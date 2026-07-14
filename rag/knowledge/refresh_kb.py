@@ -5,7 +5,8 @@ refresh_kb.py — Puebla/actualiza el RAG de CONOCIMIENTO. Análogo a rag/refres
 Clona/actualiza las fuentes a `.cache/` y corre los ingesters.
 - Capa 1 (estructurada, kb.db): GTFOBins + LOLBAS + Atomic + ATT&CK. SIEMPRE (ligero, stdlib).
 - Capa 2 (semántica, kb_vec.db): HackTricks + PayloadsAllTheThings + PEASS + 817 skills de ciberseguridad
-  (mukul975/Anthropic-Cybersecurity-Skills, Apache-2.0) + feeds (0dayfans/HN).
+  (mukul975/Anthropic-Cybersecurity-Skills, Apache-2.0) + canon OWASP de API (API Top 10 2023 / WSTG /
+  Cheat Sheet Series, CC BY-SA) + feeds (0dayfans/HN).
   Solo con --semantic (PESADO: clona repos grandes + embeddings locales; tarda).
   OPT-IN (off por defecto): fuentes marcadas `optin` (p.ej. `exploitarium` = PoCs 0-day SIN LICENCIA,
   ROE-only, corpus NO redistribuido) solo se indexan con --with=<label> o KB_OPTIN_SOURCES=<label>.
@@ -51,6 +52,22 @@ CORPUS = {
     "cyber-skills": {"url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills.git",
                      "slug": "mukul975/Anthropic-Cybersecurity-Skills", "glob": "**/SKILL.md",
                      "branch": "main"},
+    # Canon de seguridad ofensiva de API/web (OWASP, CC BY-SA 4.0): el MÉTODO y el razonamiento ACTUAL que
+    # consultan api-recon/api-exploit vía `query_kb.py --semantic` (no solo CVEs — el "cómo pensar/probar").
+    # OWASP API Top 10 2023 (definiciones autoritativas), WSTG (guía de testing: API/GraphQL/JWT/lógica de
+    # negocio) y Cheat Sheet Series (REST/GraphQL/JWT/Authorization/Mass-Assignment/SSRF). Se REFERENCIAN para
+    # clonar; el corpus NO se versiona en el repo (gitignored). Corpus PASIVO (DATO): no gatea la recuperación
+    # ni relaja ninguna puerta. Rama por defecto 'master' (verificado). SIN `pin` a propósito: son repos OWASP
+    # oficiales (metodología VIVA, alta vigilancia de maintainers) y el blast radius de una inyección indirecta
+    # está acotado por las puertas deterministas (scope_guard/approval/no-daño, por debajo del LLM) + el encuadre
+    # "RAG = DATO, no instrucciones" en los agentes. Contrasta con `exploitarium` (single-author, sin licencia),
+    # que SÍ lleva pin. Si se quiere anclar integridad/reproducibilidad, pinear y bumpear periódicamente.
+    "owasp-api-top10": {"url": "https://github.com/OWASP/API-Security.git",
+                        "slug": "OWASP/API-Security", "glob": "editions/2023/en/**/*.md"},
+    "owasp-wstg": {"url": "https://github.com/OWASP/wstg.git",
+                   "slug": "OWASP/wstg", "glob": "document/**/*.md"},
+    "owasp-cheatsheets": {"url": "https://github.com/OWASP/CheatSheetSeries.git",
+                          "slug": "OWASP/CheatSheetSeries", "glob": "cheatsheets/**/*.md"},
     # OPT-IN + ROE — RAG de exploits 0-day. Archivo de PoCs de exploits + writeups de vuln-research de
     # vulnerabilidades POTENCIALMENTE NO REPORTADAS (0-day/n-day). Lo consultan vuln-triage (correlación
     # servicio/versión → ¿hay PoC?) y los agentes de vector (web-exploit/network-exploit/metasploit).

@@ -47,7 +47,7 @@ exactos: *"estoy en esta situación, ¿qué camino sigo?"*.
 | :-- | :-- |
 | `kb_vec.py` | store vectorial (sqlite-vec): tabla `chunks` + `vec_chunks` (KNN); dedup por hash |
 | `embed.py` | embeddings **locales** (sentence-transformers, def. `BAAI/bge-small-en-v1.5`, 384d, offline) |
-| `ingest_corpus.py` | trocea Markdown por encabezados y lo indexa: **HackTricks · PayloadsAllTheThings · PEASS · 817 skills de ciberseguridad** (`mukul975/Anthropic-Cybersecurity-Skills`, solo los `SKILL.md`) |
+| `ingest_corpus.py` | trocea Markdown por encabezados y lo indexa: **HackTricks · PayloadsAllTheThings · PEASS · 817 skills de ciberseguridad** (`mukul975/Anthropic-Cybersecurity-Skills`, solo los `SKILL.md`) **· canon OWASP de API** (API Top 10 2023 · WSTG · Cheat Sheet Series — método/razonamiento de API que consultan `api-recon`/`api-exploit`) |
 | `ingest_feeds.py` | intel actual: **0dayfans** (RSS) + **Hacker News** (API Algolia por keywords) |
 | `query_kb.py --semantic` | recuperación KNN para los agentes |
 
@@ -78,10 +78,11 @@ python rag/knowledge/query_kb.py --semantic "kerberoasting y abuso de SPN" --pla
 
 > `kb_vec.db` está gitignored — se reconstruye con `refresh_kb.py --semantic`.
 
-> **Fuentes y licencias del corpus.** HackTricks · PayloadsAllTheThings · PEASS-ng y las **817 skills**
-> de `mukul975/Anthropic-Cybersecurity-Skills` (**Apache-2.0**) se **clonan** durante el poblado; el
-> corpus **NO** se versiona en este repo (solo se referencia la fuente para clonarla). Atribución
-> completa en [`docs/references.md`](../../docs/references.md).
+> **Fuentes y licencias del corpus.** HackTricks · PayloadsAllTheThings · PEASS-ng, las **817 skills**
+> de `mukul975/Anthropic-Cybersecurity-Skills` (**Apache-2.0**) y el **canon OWASP de API** —
+> `OWASP/API-Security` (Top 10 2023), `OWASP/wstg` y `OWASP/CheatSheetSeries` (**CC BY-SA 4.0**) — se
+> **clonan** durante el poblado; el corpus **NO** se versiona en este repo (solo se referencia la fuente
+> para clonarla). Atribución completa en [`docs/references.md`](../../docs/references.md).
 
 ## Verificar cobertura (`--stats`)
 ```bash

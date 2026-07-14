@@ -96,6 +96,11 @@ ejecuta ni se interpreta como instrucción. Ingesta con `rag/knowledge/refresh_k
 - **Anthropic-Cybersecurity-Skills** (mukul975) — 817 skills de ciberseguridad MITRE-mapeadas, con avisos de
   autorización/ROE en su prosa (corpus PASIVO: no gatea la recuperación); se ingieren solo los `SKILL.md`.
   **Licencia Apache-2.0.** https://github.com/mukul975/Anthropic-Cybersecurity-Skills
+- **Canon OWASP de API** — método y razonamiento ofensivo de API que consultan `api-recon`/`api-exploit`
+  (el *cómo pensar/probar*, no solo CVEs). **Licencia CC BY-SA 4.0**:
+  - **OWASP API Security Top 10 (2023)** — definiciones autoritativas de API1–API10: https://github.com/OWASP/API-Security
+  - **OWASP WSTG** (Web Security Testing Guide) — testing de API/GraphQL/JWT/lógica de negocio: https://github.com/OWASP/wstg
+  - **OWASP Cheat Sheet Series** — REST/GraphQL/JWT/Authorization/Mass-Assignment/SSRF: https://github.com/OWASP/CheatSheetSeries
 - **Feeds de frescura**: **0dayfans** (RSS curado de DayZeroSec, https://0dayfans.com/feed.rss),
   **Hacker News** (minado por keywords vía API Algolia, https://hn.algolia.com/api) y la prosa de
   **CVEDetector** (https://t.me/CVEDetector).
@@ -107,6 +112,9 @@ ejecuta ni se interpreta como instrucción. Ingesta con `rag/knowledge/refresh_k
 
 - **MITRE ATT&CK** (Enterprise) — taxonomía de tácticas que estructura los agentes de E2.
 - **OWASP WSTG / Top 10** — base del agente `web-exploit`.
+- **OWASP API Security Top 10 (2023)** — base de `api-exploit`/`api-recon` (edición vigente; no hay 2024/25/26).
+  Se complementa con el enfoque del top tier de bug bounty (modelo de objetos, arnés diferencial multi-identidad,
+  single-packet/races, SSPP) — canon: Corey Ball *Hacking APIs*/APIsec University, PortSwigger Academy, InsiderPhD.
 - **CISA KEV** — catálogo de vulnerabilidades explotadas activamente (prioridad nº1 en
   `vuln-triage`). https://www.cisa.gov/known-exploited-vulnerabilities-catalog
 - **PTES** — fases de pentest que inspiran el flujo del Orquestador.

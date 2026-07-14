@@ -26,9 +26,11 @@ OAuth provider) que aparezca **no está en scope** salvo que el scope lo diga: a
    `/swagger-ui`, `/v3/api-docs`, `/openapi.yaml`, `.well-known/`. Si existe, **es el inventario** —
    parséala y extrae cada `path` × `method` × parámetros × esquema de request/response.
 2. **Reconstrucción desde tráfico.** Si NO hay spec, reconstrúyela desde tráfico observado
-   (proxy/HAR → OpenAPI, patrón `mitmproxy2swagger`/`APIClarity`). Enumera rutas con `web-fuzzing`
-   (wordlists de API: `api`, `v1`, `v2`, `internal`, `admin`) y minería de parámetros
-   (arjun/paramspider) y de endpoints en JS (LinkFinder/SecretFinder, source-maps).
+   (proxy Burp/**Caido**/mitmproxy, HAR → OpenAPI con `mitmproxy2swagger`/`APIClarity`). Para descubrir
+   rutas usa **kiterunner** — content-discovery *nativo de API* (asocia ruta × método/verbo con wordlists
+   de rutas reales, mucho mejor que el fuzzing web genérico), y como respaldo `web-fuzzing` con wordlists
+   de API (`api`, `v1`, `v2`, `internal`, `admin`). Minería de parámetros (arjun/x8/paramspider) y de
+   endpoints en JS (LinkFinder/SecretFinder, source-maps). Si hay colección **Postman**, es inventario regalado.
 3. **Versionado (API9 — inventario impropio).** Enumera TODAS las versiones y variantes: `/v1` vs
    `/v2`, `/internal`, `staging.`, el backend de la app móvil. Las APIs sombra/zombi (versiones
    viejas sin parchear) son de las más rentables — márcalas.

@@ -16,13 +16,16 @@ Cuando veas `Authorization: Bearer eyJ…` (JWT), endpoints `/.well-known/openid
 - **alg=none** (T1550.001): cambia el header a `{"alg":"none"}` y elimina la firma.
 - **Confusión RS256→HS256**: firma con la clave pública como secreto HMAC si el server no fija alg.
 - **Clave de firma débil**: crackea el HMAC offline (diccionario) y forja tokens.
-- **`kid`/`jku`/`x5u` injection**: apunta la verificación a una clave que tú controlas.
+- **Inyección por cabecera (`jwk`/`jku`/`kid`/`x5u`)**: incrusta tu clave pública en `jwk`, apunta `jku`
+  a un JWKS que tú alojas, o abusa de `kid` (path traversal a un fichero conocido, o SQLi) para que el
+  server verifique con una clave que TÚ controlas y aceptar tokens forjados.
 - **Claims sin validar**: manipula `sub`, `role`, `scope`, `exp`; confusión de audiencia (`aud`).
 - **OAuth**: `redirect_uri` abierto/parcial → robo de `code`/`token`; falta de `state` → CSRF;
   `response_type=token` (implicit) filtra el token en el fragmento; PKCE ausente.
 
 ## Herramientas (suite del repo)
-- Manipulación/replay del token con proxy (lo cubre `web-exploit`).
+- Manipulación/forja/replay del token: **JWT Editor** (extensión de Burp, automatiza `jwk`/`jku`/alg
+  confusion), **`jwt_tool`** (batería de comprobaciones + explotación), o proxy manual (lo cubre `web-exploit`).
 - Crackeo del secreto HMAC: `hashcat` modo 16500 (JWT) — tier **sensitive** (pide aprobación).
 - Descubrimiento del flujo OAuth: `recon-suite` (`httpx`/`katana`) sobre los endpoints `.well-known`.
 

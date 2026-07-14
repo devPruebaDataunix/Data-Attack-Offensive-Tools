@@ -4,6 +4,30 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.42.0] - 2026-07-14
+### Added
+- **Auditoría de vigencia de la vertical API + puesta al día al estado del arte del top tier de bug bounty.**
+  Se verificó (fuentes: OWASP API Security, PortSwigger Web Security Academy, awesome-api-security) que el
+  **OWASP API Top 10 2023 SIGUE siendo la edición vigente** (no existe 2024/2025/2026; el "OWASP Top 10 2025"
+  es el de web general, otro proyecto) — mapear a 2023 es correcto. Pero el 2023 es el *suelo* (categorías),
+  no el repertorio de técnicas del top mundial. Se cierran los huecos de método/herramienta detectados:
+  - **`api-exploit`**: sección de **MENTALIDAD** (modelo de objetos, la spec es el mapa, siempre ≥2 identidades,
+    leer cada campo, encadenar low→high); **race conditions vía single-packet attack** (Kettle BH2023 — limit-overrun/
+    TOCTOU multi-endpoint/colisiones single-endpoint/partial-construction; Turbo Intruder/Burp Repeater) como técnica
+    transversal de API4/API6; **Server-Side Parameter Pollution** + **conversión de content-type** (JSON↔XML→XXE);
+    **Autorize/Auth Analyzer** para mecanizar el arnés diferencial de BOLA/BFLA sobre toda la superficie.
+  - **`api-recon`**: **kiterunner** (content-discovery nativo de API, ruta×verbo) + proxy **Caido**/Postman.
+  - **Skill `web-api-security`**: sección Mentalidad y recursos (Corey Ball *Hacking APIs*/APIsec University,
+    PortSwigger Academy, InsiderPhD) + tooling moderno (Autorize, Turbo Intruder, kiterunner, Caido, Akto/Escape,
+    jwt_tool). **Skill `jwt-oauth`**: `jwk` header injection embebido (faltaba junto a jku/kid/x5u) + JWT Editor/jwt_tool.
+  - **RAG de conocimiento (Capa 2 semántica)**: nuevo **canon OWASP de API** — `OWASP/API-Security` (Top 10 2023),
+    `OWASP/wstg` y `OWASP/CheatSheetSeries` (CC BY-SA 4.0) — para que `api-recon`/`api-exploit` consulten *método y
+    razonamiento* por `query_kb.py --semantic`, no solo CVEs. Corpus PASIVO (DATO inerte, C11): no gatea la
+    recuperación ni relaja ninguna puerta; gitignored, solo se referencia la fuente para clonar; se puebla con `--semantic`.
+### Notes
+- Cambios de PROSA (prompts/skills) + fuentes de corpus; el motor y sus puertas no cambian. `validate_suite` sin fallos.
+- El poblado/verificación del corpus semántico es paso de **Kali** (venv aislado + embeddings), como el resto de la Capa 2.
+
 ## [2.41.0] - 2026-07-14
 ### Added
 - **Vertical de API — primer paso del entorno Bug Bounty (API / Web / IoT).** El motor nació red-team
