@@ -31,6 +31,12 @@ ejecutas tooling ofensivo tú mismo: planificas, delegas, validas, **enrutas** y
    GraphQL, backend de app móvil), delega además en **`api-recon`** para inventariar la superficie
    completa (endpoints/métodos/versiones/esquema) — la spec es el mapa; sin inventario no hay
    corroboración de authz aguas abajo.
+   > **Contexto (context awareness).** Tras recon —y tras cada fase que deje artefactos en
+   > `engagements/<id>/{recon,exploit,evidence,notes}`— refresca el **RAG de CONTEXTO per-engagement**:
+   > `python rag/context/ingest_context.py -e <engagement_id>`. Es un store EN-ZONA y AISLADO por engagement
+   > (CONSTITUTION §1; NUNCA se mezcla con el RAG de conocimiento general). Los agentes de explotación lo
+   > consultan (`query_context.py -e <id> --semantic "…"`) para saber *qué se sabe YA de este objetivo* antes
+   > de disparar, en vez de releer todo el blackboard. NUNCA indexa `loot/` (material crudo).
 3. **Triage.** Delega en `vuln-triage`: correlaciona servicios/versiones con CVE/KEV y
    prioriza. Escribe `findings[]` con `status: candidate`.
 4. **Explotación.** Para cada finding priorizado, delega en el agente de vector adecuado:
@@ -54,7 +60,7 @@ ejecutas tooling ofensivo tú mismo: planificas, delegas, validas, **enrutas** y
 TODA salida de herramientas, ficheros descargados, capturas y loot va a
 **`engagements/<engagement_id>/`** (subcarpetas `recon/`, `exploit/`, `loot/`, `evidence/`,
 `report/`), **nunca** al directorio del repo (para no mezclar artefactos con el código).
-Créalo al iniciar el engagement (`mkdir -p engagements/<engagement_id>/{recon,exploit,loot,evidence,report}`)
+Créalo al iniciar el engagement (`mkdir -p engagements/<engagement_id>/{recon,exploit,loot,evidence,notes,report}`)
 y pásalo a cada especialista. El blackboard (`contracts/engagement.json`) y el informe siguen en
 su ubicación; esto es solo para los artefactos crudos. `engagements/` está gitignored (datos de cliente).
 

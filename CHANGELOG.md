@@ -4,6 +4,39 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.44.0] - 2026-07-15
+### Added
+- **RAG de CONTEXTO per-engagement (`rag/context/`) — el "context awareness" que faltaba.** El TERCER RAG,
+  arquitectónicamente distinto de los dos generales (vulnerabilidades = *qué es vulnerable*; conocimiento =
+  *cómo explotar/razonar*). Responde **¿qué se sabe YA de ESTE objetivo?**: indexa por SIGNIFICADO los
+  artefactos ACUMULADOS del propio engagement (`engagements/<id>/{recon,exploit,evidence,notes}`) para que los
+  agentes crucen el *cómo* general con el *qué sabemos aquí* antes de disparar, en vez de releer el blackboard.
+  - **`rag/context/context_paths.py`** — resolución + AISLAMIENTO de rutas (SOLO stdlib): el store vive en
+    `engagements/<id>/context.db` (EN-ZONA, gitignored, datos de cliente), **NUNCA** en `rag/knowledge/`; un
+    engagement jamás ve el de otro; anti path-traversal; `loot/` (material crudo) NUNCA se indexa.
+  - **`ingest_context.py`** / **`query_context.py`** — poblado y retrieval, **reusando** el store vectorial
+    (`kb_vec`), el embedder LOCAL (`embed`) y el troceador (`ingest_corpus.chunk_markdown`) del RAG de
+    conocimiento (cero duplicación); embeddings offline (ningún dato sale de la zona); idempotente (dedup por hash).
+  - **`tests/test_context_rag.py`** (15/15, stdlib): bloquea la garantía de AISLAMIENTO (CONSTITUTION §1) sin
+    necesidad de torch — ids con traversal/separadores rechazados, stores por-engagement distintos, `loot/` excluido.
+  - **Cableado:** `api-exploit` cruza ahora conocimiento + contexto (el placeholder de v2.41.0 pasa a comando
+    real); `AGENTS.md` refresca el contexto en el flujo (fase Recon) y los agentes lo consultan; ARCHITECTURE_MAP
+    actualizado (dos → **tres** RAG por propósito y zona).
+### Notes
+- Como la Capa 2 del RAG de conocimiento, el poblado con embeddings usa el venv aislado (paso de **Kali**); en
+  Windows los tools compilan, validan el aislamiento y degradan con gracia (avisan si faltan deps o el store).
+- Efímero por diseño: `context.db` se va con `engagements/<id>/` al cerrar (contexto de cliente, no aprendizaje
+  transferible — eso es la memoria por-agente).
+- **Council 2-lentes (aislamiento/seguridad + arquitectura), reservas aplicadas:** DEFENSA EN PROFUNDIDAD —
+  el ingester pasa cada chunk por `redactor.redact()` antes de embeber/guardar (un secreto en claro que se cuele
+  en recon/notes no acaba ni en el vector ni en el texto; el comentario que lo sobre-afirmaba ahora es veraz);
+  se rechaza un directorio de engagement que sea **symlink** (cierra el cruce intra-zona ENG-A→ENG-B) y el `:`
+  en el id (drive/ADS de Windows); `notes/` añadido al `mkdir` del flujo (los indexables ya lo prometían); tests
+  de aislamiento ampliados (ruta absoluta, `:`, `...`, `loot/` anidado, symlink skippable). `test_context_rag` 20/20.
+- Follow-up menor diferido (nit de simplicidad, no bloqueante): extraer el patrón flush/dedup compartido a
+  `kb_vec` para no duplicar el invariante de las 900 variables entre `ingest_context` e `ingest_corpus`.
+- `validate_suite` 524/0/0; `test_secret_scan` 15/15; `test_memory_guard` 20/20.
+
 ## [2.43.0] - 2026-07-14
 ### Added
 - **Gate determinista anti-token-de-cliente en el blackboard (C12, OWASP LLM02) — cierra el follow-up de
