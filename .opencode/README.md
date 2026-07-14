@@ -14,7 +14,7 @@ config de opencode (estatica).
 
 ## opencode.json — notas
 
-- **Orquestador**: es el agente `primary` (`agent.orchestrator`, `claude-opus-4-8`); los 21
+- **Orquestador**: es el agente `primary` (`agent.orchestrator`, `claude-opus-4-8`); los 23
   especialistas son `subagents` en `agent/*.md`. Ver `AGENTS.md`.
 - **Provider Ollama (local)**: declarado para el piloto de routing (ver `tools/routing.json`).
   Keyless: habla OpenAI-compatible contra el daemon local (`http://localhost:11434/v1`). Inerte

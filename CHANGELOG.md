@@ -4,6 +4,41 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.41.0] - 2026-07-14
+### Added
+- **Vertical de API — primer paso del entorno Bug Bounty (API / Web / IoT).** El motor nació red-team
+  host-céntrico; la seguridad de API era solo una *skill* que tomaba prestados `web-fuzzing`/`sqlmap`/`nuclei`,
+  sin agente propio ni forma de **corroborar** authz. Esta release abre la vertical de API con:
+  - **`api-recon`** (fase recon, nuevo agente): inventario de la superficie de API — cosecha de spec
+    OpenAPI/Swagger, reconstrucción desde tráfico, enumeración de versiones (API9 — APIs sombra/zombi),
+    descubrimiento y fingerprint de GraphQL. *La spec es el mapa; sin inventario no hay corroboración.*
+  - **`api-exploit`** (fase explotación, nuevo agente, opus-4-8/xhigh): explotación mapeada al **OWASP API
+    Security Top 10 (2023)** completo (API1–API10 + GraphQL transversal). Su técnica insignia es el **testing
+    de autorización DIFERENCIAL multi-identidad**: la prueba corroborable de un BOLA/BFLA es el par
+    request/response de DOS identidades mostrando el acceso cruzado, no una conjetura.
+  - **`identities[]`** en `engagement.schema.json` (opcional, retrocompatible): identidades de PRUEBA que el
+    programa autoriza para el testing diferencial. El material (token/cookie) va **siempre referenciado**
+    (`secret_ref` a `engagements/<id>/loot/`, nunca en claro — lo imponen `memory_guard`/`secret_scan`),
+    igual que `credentials[]`. Las identidades **no relajan el scope**.
+  - **Skill `web-api-security`** ampliada de 4 clases a la metodología completa del Top-10 2023, con el arnés
+    diferencial, la fase de inventario y la referencia de tooling (schemathesis/RESTler/graphw00f/clairvoyance,
+    del ecosistema `awesome-api-security`).
+  - **Cableado A2A:** nuevas parejas `vuln-triage ↔ api-exploit`, `api-exploit ↔ api-recon`/`↔ sqlmap`/`↔ web-exploit`
+    (arnés diferencial compartido cuando el IDOR cruza web↔API) y `api-recon ↔ web-fuzzing`. `AGENTS.md` actualizado
+    (roster 21→**23**: 13 de fase + 10 de herramienta), `agent-cards.json` regenerado y espejo opencode sincronizado.
+### Notes
+- El motor de seguridad **no cambia**: los nuevos agentes heredan todas las puertas (scope/aprobación/no-daño/
+  anti-inyección/hops A2A); una API en scope es scope, y un BOLA sin el par de identidades queda `candidate`.
+- Siguiente en la vertical (v2.42.x): RAG de **contexto per-engagement** (context-awareness real), luego web
+  moderna (reusa el arnés), móvil e IoT-firmware. `validate_suite` 519/0/0; `test_memory_guard` 20/20.
+- **Endurecimiento tras council 3-roles (seguridad/devil/simplicidad):** redacción OBLIGATORIA del material de
+  autenticación (`Authorization`/`Cookie`/token) en la evidencia diferencial —referenciada por `identity_id`,
+  nunca el token vivo en el blackboard— en `api-exploit`/`web-exploit`/skill (el guard `secret_scan` no caza
+  tokens de cliente, es redacción determinista del agente); `secret_ref` deja de ser `required` y se añade
+  `auth_type: none` para la identidad ANÓNIMA (baseline BFLA/BOLA); `api-recon` no lee el valor del token;
+  arnés diferencial reframeado como frontera por interfaz web↔API; docs de roster 21→23 (README público,
+  ARCHITECTURE, zonas E1=4/E2=17). Pendiente (follow-up): hook determinista que bloquee tokens de cliente en claro en el blackboard.
+
 ## [2.40.3] - 2026-07-11
 ### Fixed
 - **Plugin · manifiestos regenerados (arrastraban `version: 2.39.0`).** `plugin/plugin.json` y

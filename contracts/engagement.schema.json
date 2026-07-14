@@ -49,6 +49,25 @@
         }
       }
     },
+    "identities": {
+      "type": "array",
+      "description": "Identidades de PRUEBA para testing de autorización DIFERENCIAL (BOLA/BFLA/BOPLA — OWASP API1/API3/API5 e IDOR web). Cada identidad es una cuenta/token que el programa AUTORIZA para probar control de acceso: se repite la request de una identidad con el material de OTRA y se observa el acceso cruzado (la prueba corroborable de un BOLA es 'la identidad B accedió al objeto de A'). El material (token/cookie/credencial) va SIEMPRE REFERENCIADO (secret_ref a engagements/<id>/loot/, nunca en claro — lo imponen memory_guard/secret_scan). No está en `required` (retrocompatible). Las identidades NO relajan el scope: solo se usan contra activos EN SCOPE.",
+      "items": {
+        "type": "object",
+        "required": ["identity_id", "role"],
+        "properties": {
+          "identity_id": { "type": "string", "description": "Etiqueta estable, p.ej. userA, userB, admin, anon" },
+          "role": { "type": "string", "description": "Rol/nivel de privilegio nominal del programa, p.ej. 'user', 'user (tenant B)', 'admin', 'anon'" },
+          "principal": { "type": "string", "description": "usuario/cuenta (redáctalo si es sensible)" },
+          "auth_type": { "type": "string", "enum": ["bearer", "cookie", "api-key", "basic", "oauth", "session", "none", "other"], "description": "Cómo se presenta la identidad en la request. `none` = identidad ANÓNIMA (baseline de BFLA/BOLA), que no lleva material y omite secret_ref." },
+          "secret_ref": { "type": "string", "description": "Referencia al material de autenticación (ruta a engagements/<id>/loot/… o id de keystore). NUNCA el token/cookie/credencial en claro — lo espera el patrón `^engagements/.+/loot/`. OBLIGATORIO para identidades autenticadas; una identidad anónima (auth_type: none) lo omite. Este valor y la propia identidad se referencian por identity_id en la evidencia — el token vivo NUNCA se escribe en el blackboard." },
+          "owns_objects": { "type": "array", "items": { "type": "string" }, "description": "IDs de objetos/recursos que ESTA identidad posee legítimamente (referencias no sensibles), para probar el acceso cruzado desde otra identidad" },
+          "tenant": { "type": "string", "description": "Tenant/organización si la app es multi-tenant (aislamiento horizontal)" },
+          "validated": { "type": "boolean", "description": "true cuando el material se ha comprobado que autentica (una identidad no verificada no sirve para corroborar authz)" },
+          "notes": { "type": "string" }
+        }
+      }
+    },
     "messages": {
       "type": "array",
       "description": "Bus A2A mediado: mensajes entre agentes. Un agente deja aquí su petición/respuesta y el Orquestador-router la entrega al destino. No está en `required` (retrocompatible). Cada item sigue a2a-message.schema.json.",

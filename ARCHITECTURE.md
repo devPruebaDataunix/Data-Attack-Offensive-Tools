@@ -34,7 +34,7 @@ Por eso el A2A es **mediado**, sobre dos mecanismos:
 
 ### Fallo 2 — El Orquestador no puede ser un subagente
 Como los subagentes no pueden lanzar otros subagentes, el Orquestador **es el agente
-principal** (la sesión main), descrito en `AGENTS.md`. No es uno de los 21 de la carpeta
+principal** (la sesión main), descrito en `AGENTS.md`. No es uno de los 23 de la carpeta
 `agents/`.
 
 ### Fallo 3 — El Scope Guard como agente es saltable

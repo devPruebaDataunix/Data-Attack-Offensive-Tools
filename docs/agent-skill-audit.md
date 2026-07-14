@@ -1,12 +1,12 @@
 # Auditoría de calidad de agentes y skills — v2.1.0
 
-> **Al día (v2.12.2):** hoy la suite tiene **21 agentes** y **13 skills**; la cobertura anti-inyección
-> **C11 está en 19 agentes** (los 21 menos `reporting`/`knowledge-postmortem`; los +3 del clúster AD la
+> **Al día (v2.41.0):** hoy la suite tiene **23 agentes** y **13 skills**; la cobertura anti-inyección
+> **C11 está en 21 agentes** (los 23 menos `reporting`/`knowledge-postmortem`; los +3 del clúster AD la
 > sumaron en v2.11.0). Lo que sigue es el **informe original de la auditoría de calidad de v2.1.0**,
 > conservado como registro; los cambios posteriores se leen en [CHANGELOG.md](../CHANGELOG.md).
 
 Revisión de **calidad** (no solo validez de config) de los **18 prompts de agente**
-(`.claude/agents/`) y las **9 skills** (`plugin/skills/`) que existían **en v2.1.0** (hoy **21 agentes**
+(`.claude/agents/`) y las **9 skills** (`plugin/skills/`) que existían **en v2.1.0** (hoy **23 agentes**
 y **13 skills**). Complementa la auditoría de configuración de v1.11.0 ([config-audit.md](config-audit.md))
 y el hardening de v2.0.0 (mínimo privilegio + `SubagentStop`).
 

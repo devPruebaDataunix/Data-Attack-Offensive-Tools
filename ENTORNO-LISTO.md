@@ -13,7 +13,7 @@ verificado; queda **un solo paso manual** (tu login, que no puedo hacer por ti).
 | Pieza | Estado | Verificación |
 | :--- | :--- | :--- |
 | **Plugin** (`plugin/`) | manifest en `plugin.json` (VS Code) **y** `.claude-plugin/plugin.json` (Claude) | `claude plugin validate ./plugin` → **✔ passed** |
-| **Agents** | 21 especialistas: 11 de fase + 10 de herramienta (metasploit, recon-suite, nuclei, web-fuzzing, sqlmap, netexec, sliver, ad-enum, kerberos, adcs) | auto-descubiertos |
+| **Agents** | 23 especialistas: 13 de fase + 10 de herramienta (metasploit, recon-suite, nuclei, web-fuzzing, sqlmap, netexec, sliver, ad-enum, kerberos, adcs) | auto-descubiertos |
 | **Skills** | `rag-vuln-triage`, `pentest-report` (`SKILL.md`, Open Standard) | name+description ✔ |
 | **Hooks** | gate de alcance `PreToolUse` (envoltorio `{"hooks":{…}}`) | ✔ |
 | **MCP Servers** | vacío en el plugin (eip no auto-arranca); eip opt-in en `.mcp.json.example` | ✔ |
@@ -29,7 +29,7 @@ A VS Code solo puedo hacerle clic, no escribir; y tu login es tuyo:
 1. Ventana **cyberseg-agents** → `Ctrl+Shift+P` → **Reload Window** (carga el plugin).
 2. Ventana de **Agents** → **Session Type → Claude** (no Copilot CLI).
 3. Login con **Pro** si lo pide.
-4. `/agents` → deben salir los 21. Prueba:
+4. `/agents` → deben salir los 23. Prueba:
    `Actúa como Orquestador. Lee contracts/scope.json y usa vuln-triage para "Apache HTTP Server 2.4.49".`
 
 ## ⚠️ Antes de cada engagement real

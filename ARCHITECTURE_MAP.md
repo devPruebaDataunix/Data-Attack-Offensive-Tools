@@ -10,7 +10,7 @@
 
 Suite de agentes para **pentesting / bug bounty autorizado**. Un **Orquestador** (sesión principal, `AGENTS.md`) coordina a los agentes especialistas mediante **hub-and-spoke**: él delega, recoge resultados y hace de **router de un bus A2A mediado** (los agentes se dirigen mensajes entre sí dejándolos en el **blackboard**, `contracts/engagement.json`; no hay malla directa). Un **hook de alcance** (`scope_guard.py`) bloquea de forma determinista cualquier comando contra un target fuera de `contracts/scope.json`. Dos RAG locales (SQLite): el de **vulnerabilidades** (`rag/`, KEV+EPSS+CVE recientes) que consulta `vuln-triage`, y el de **conocimiento** (`rag/knowledge/`, técnicas — Capa 1 estructurada + Capa 2 semántica) que consultan los agentes de explotación.
 
-**Estado actual:** 21 agentes especialistas (E1=3, E2=16, E3=2) + Orquestador + hook de alcance.
+**Estado actual:** 23 agentes especialistas (E1=4, E2=17, E3=2) + Orquestador + hook de alcance.
 
 ## Diagrama
 
