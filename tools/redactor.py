@@ -39,8 +39,36 @@ _PATTERNS = [
     ("jwt",            r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b", False),
     ("generic_secret",
      r"(?i)\b(?:api[_-]?key|secret|token|passwd|password)\b\s*[:=]\s*['\"]?[A-Za-z0-9/+_\-]{12,}", False),
+    # Material de AUTENTICACIÓN de CLIENTE en claro: el par diferencial de authz (BOLA/BFLA) lleva
+    # `Authorization: Bearer …` y `Cookie: session=…` VIVOS. Nunca deben quedar en claro en el
+    # blackboard (van referenciados por secret_ref/identity_id). operator_only=False: se REDACTAN en
+    # el informe y, en el blackboard, los bloquea secret_scan vía scan_client_auth (ver más abajo).
+    ("bearer",         r"(?i)\bBearer\s+[A-Za-z0-9._~+/\-]{16,}=*", False),
+    ("cookie",
+     r"(?i)(?:(?:set-)?cookie\s*:\s*[^\s;]+=[A-Za-z0-9%._~+/\-]{8,}"
+     r"|\b(?:PHPSESSID|JSESSIONID|ASP\.NET_SessionId|connect\.sid|sessionid|session|sid|"
+     r"access_token|refresh_token|id_token|auth_token|csrf_?token|xsrf_?token)"
+     r"\s*=\s*[A-Za-z0-9%._~+/\-]{16,})", False),
 ]
 _COMPILED = [(label, re.compile(rx), op_only) for label, rx, op_only in _PATTERNS]
+
+# Subconjunto de etiquetas de material de AUTENTICACIÓN de CLIENTE que secret_scan BLOQUEA de forma
+# determinista en el blackboard (contracts/engagement.json): SOLO las formas de PRESENTACIÓN de una
+# credencial VIVA — `Authorization: Bearer …` (bearer) y `Cookie:`/`Set-Cookie:`/nombres de sesión
+# (cookie) —, que el arnés diferencial de authz (BOLA/BFLA) produce y que deben ir referenciadas por
+# secret_ref/identity_id, NUNCA en claro. NO se incluyen `jwt` ni `generic_secret` A PROPÓSITO: un
+# token/secreto DESCUBIERTO del cliente (p.ej. `api_key=…` hallado en JS) es un HALLAZGO legítimo —
+# bloquearlo destruiría el finding (por eso son operator_only=False = solo se REDACTAN). Los patrones
+# bearer/cookie casan la credencial viva (token de ≥16 chars presentado como auth), no la mención de un
+# hallazgo; y una ruta de secret_ref (engagements/<id>/loot/…) no casa (no lleva "Bearer "/cookie=valor).
+CLIENT_AUTH_LABELS = frozenset({"bearer", "cookie"})
+# COBERTURA (contrato CONSCIENTE, no exhaustivo — el control primario es la redacción a nivel de prompt;
+# este gate es el backstop determinista): caza la PRESENTACIÓN en vivo — `Authorization: Bearer <token>` y
+# `Cookie:`/`Set-Cookie:`/nombres de sesión conocidos. NO caza (a propósito o por límite del regex, y así se
+# testea en tests/test_secret_scan.py): (1) un token/JWT PELADO sin esas marcas (p.ej. `"session_token":"eyJ…"`
+# como valor suelto) → el arnés DEBE serializar el material como cabecera Bearer/Cookie (lo imponen los prompts
+# de api-exploit/web-exploit); (2) `Bearer%20…` (espacio URL-encoded); (3) cookie de nombre custom en forma
+# pelada. Y SOBRE-bloquea (fail-safe, fricción aceptable) una `Cookie:` no-auth (p.ej. analítica `_ga=`).
 
 
 def scan(text, operator_only=False):
@@ -53,6 +81,21 @@ def scan(text, operator_only=False):
         if operator_only and not op_only:
             continue
         if rx.search(text):
+            found.add(label)
+    return sorted(found)
+
+
+def scan_client_auth(text):
+    """Devuelve las etiquetas de material de AUTENTICACIÓN de CLIENTE VIVO (bearer/cookie) presentes en
+    `text`. Lo usa secret_scan sobre el blackboard para BLOQUEAR un `Authorization: Bearer …`/`Cookie:`
+    de cliente escrito en claro (debe ir referenciado por secret_ref/identity_id). NO incluye jwt/
+    generic_secret (un secreto DESCUBIERTO del cliente es un hallazgo legítimo, solo se redacta) ni los
+    secretos del OPERADOR (esos ya los bloquea scan(operator_only=True))."""
+    if not text:
+        return []
+    found = set()
+    for label, rx, _op in _COMPILED:
+        if label in CLIENT_AUTH_LABELS and rx.search(text):
             found.add(label)
     return sorted(found)
 

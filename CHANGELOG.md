@@ -4,6 +4,31 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.43.0] - 2026-07-14
+### Added
+- **Gate determinista anti-token-de-cliente en el blackboard (C12, OWASP LLM02) — cierra el follow-up de
+  la vertical API.** El arnés diferencial de authz (BOLA/BFLA) produce material de auth VIVO
+  (`Authorization: Bearer …`/`Cookie:`); hasta ahora que no acabara en claro en `contracts/engagement.json`
+  era solo prompt-enforced. Ahora `secret_scan.py` lo **bloquea de forma determinista**: además de los
+  secretos del OPERADOR (que ya bloqueaba), llama a `redactor.scan_client_auth()` y devuelve `decision:block`
+  con guía para referenciar por `secret_ref`/`identity_id`. Verificado end-to-end (un Bearer vivo inyectado en
+  el blackboard → bloqueo con el motivo correcto) + `tests/test_secret_scan.py` (13/13).
+### Fixed
+- **Selección quirúrgica de patrones (evita regresión del propósito ofensivo):** `CLIENT_AUTH_LABELS` se
+  acota a `{bearer, cookie}` (las formas de PRESENTACIÓN de una credencial viva). Se excluyen A PROPÓSITO
+  `jwt`/`generic_secret`: un secreto DESCUBIERTO del cliente (p.ej. `api_key=…` en JS) es un **hallazgo
+  legítimo** y bloquearlo destruiría el finding (siguen solo redactándose). Una ruta `secret_ref` no casa.
+- **Docstring que afirmaba en falso una protección inexistente:** `tools/redactor.py` describía que
+  `secret_scan` usaba `scan_client_auth` cuando NO estaba cableado (cazado por el council de v2.42.0). Ahora
+  el cableado existe y el docstring es veraz; `secret_scan.py` refactorizado con `blocking_reason()` testeable.
+### Notes
+- Sin cambios de esquema ni de agentes/skills. **Council adversarial aplicado:** el `try` del fail-open ahora
+  envuelve también las llamadas a los detectores (no solo el import), con test que fuerza un fallo en runtime;
+  la COBERTURA se documenta como contrato consciente + test — el gate caza la presentación en vivo (Bearer/Cookie),
+  un token/JWT PELADO sin esas marcas escapa a propósito (el arnés serializa auth como cabecera; redacción de
+  prompt = control primario). Blast radius acotado: `contracts/engagement.json` está **gitignored** (no se pushea).
+- `validate_suite` 520/0/0; `test_secret_scan` 15/15; `test_memory_guard` 20/20.
+
 ## [2.42.0] - 2026-07-14
 ### Added
 - **Auditoría de vigencia de la vertical API + puesta al día al estado del arte del top tier de bug bounty.**
