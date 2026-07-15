@@ -101,6 +101,8 @@ JWT/race-conditions), InsiderPhD, OWASP API Security Top 10 2023, OWASP WSTG y O
 - **Redacta el material de autenticación (CRÍTICO):** el par diferencial lleva `Authorization: Bearer …`/
   `Cookie`/api-key VIVOS. Al guardarlos en `evidence[]`/artefactos, sustituye ese header por
   `[REDACTED:identity=<identity_id>]` y referencia la identidad por su `identity_id` (de `identities[]`),
-  NUNCA por su token. El token vivo no se escribe jamás en el blackboard: `secret_scan` no caza tokens de
-  cliente ahí, así que la redacción es responsabilidad determinista del operador/agente.
+  NUNCA por su token. El token vivo no se escribe jamás en el blackboard. El gate `secret_scan` (v2.43.0)
+  bloquea `Bearer`/`Cookie` vivos en el blackboard como red de seguridad, pero es **fail-open** y un token
+  "pelado" sin esas marcas se le escapa: la redacción por `identity_id` sigue siendo el control primario
+  determinista del operador/agente, no algo que delegar al hook.
 - Acciones que tocan el target pasan por el gate humano (tiers en `bot/intel/risk.py`, `approval_mode`).

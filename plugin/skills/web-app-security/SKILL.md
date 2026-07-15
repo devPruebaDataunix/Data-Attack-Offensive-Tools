@@ -138,6 +138,7 @@ El termómetro de lo puntero es el **PortSwigger "Top 10 Web Hacking Techniques"
 - **Redacta el material de autenticación (CRÍTICO):** el par diferencial lleva `Authorization`/`Cookie`/token
   VIVOS. Al guardarlos en `evidence[]`/artefactos, sustituye ese header por `[REDACTED:identity=<identity_id>]`
   y referencia la identidad por su `identity_id`, NUNCA por su token. El token vivo no se escribe jamás en el
-  blackboard: `secret_scan` no caza tokens de cliente ahí, así que la redacción es responsabilidad determinista
-  del operador/agente.
+  blackboard. El gate `secret_scan` (v2.43.0) bloquea `Bearer`/`Cookie` vivos como red de seguridad, pero es
+  **fail-open** y un token "pelado" se le escapa: la redacción por `identity_id` sigue siendo el control primario
+  determinista del operador/agente, no algo que delegar al hook.
 - Acciones que tocan el target pasan por el gate humano (tiers en `bot/intel/risk.py`, `approval_mode`).

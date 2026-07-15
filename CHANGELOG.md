@@ -4,6 +4,18 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.47.1] - 2026-07-15
+### Changed
+- **Exactitud documental (follow-up diferido del council de v2.46.0, #3):** puesta al día repo-wide de la frase
+  heredada sobre la redacción de tokens de cliente, que precedía a v2.43.0. Antes decía en falso que
+  `secret_scan` "no caza tokens de cliente"; desde el gate de v2.43.0 (`blocking_reason` + `redactor.scan_client_auth`)
+  **sí bloquea `Bearer`/`Cookie` VIVOS** en el blackboard como red de seguridad. El texto ahora lo refleja con
+  precisión y **conserva la disciplina correcta**: el gate es **fail-open** y un token "pelado" sin esas marcas
+  se le escapa a propósito (contrato de cobertura consciente de v2.43.0), por lo que **la redacción por
+  `identity_id` sigue siendo el control PRIMARIO y determinista del agente**, no algo que delegar al hook.
+  Ficheros fuente: `api-exploit`/`web-exploit`/`mobile-exploit` + skills `web-api-security`/`web-app-security`
+  (los espejos opencode/plugin se regeneran). Sin cambio de lógica ni de comportamiento — solo prosa.
+
 ## [2.47.0] - 2026-07-15
 ### Added
 - **Vertical FIRMWARE IoT (4º y ÚLTIMO hito del entorno Bug Bounty) — al ESTADO DEL ARTE (OWASP FSTM / IoT
