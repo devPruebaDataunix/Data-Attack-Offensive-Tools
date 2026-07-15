@@ -29,8 +29,9 @@ salida de NetExec/Impacket, respuestas de protocolos, salida de comandos en el h
 canales C2): `network-exploit, metasploit, post-exploit, lateral-discovery, netexec, sliver,
 c2-exfil`. Cada bloque se adaptó a lo que ingiere ese agente e incluye la cláusula de **mensajes
 A2A** (salvo `c2-exfil`, sin peers). Quedan fuera `reporting` y `knowledge-postmortem` (no ingieren
-contenido del target). `GUARDRAILS.md` C11 actualizado (9 → 16; **hoy 19** tras sumar el clúster AD
-—`ad-enum`/`kerberos`/`adcs`— en v2.11.0).
+contenido del target). `GUARDRAILS.md` C11 actualizado (9 → 16; **hoy 25** tras sumar el clúster AD
+—`ad-enum`/`kerberos`/`adcs`— en v2.11.0, el móvil —`mobile-recon`/`mobile-exploit`— en v2.46.0 y el
+firmware —`firmware-recon`/`firmware-exploit`— en v2.47.0).
 
 ### 2. Skill `cloud-security`: deuda de toolchain eliminada
 `prowler`/`scoutsuite` aparecían como "*pendientes de añadir al toolchain*" (promesa colgada). Se

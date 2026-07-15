@@ -8,7 +8,7 @@ de resolver la box**. Resumen: el grueso del coste está en el **Orquestador**, 
 | Componente | Por qué pesa |
 | :--- | :--- |
 | **Orquestador** (sesión principal del bot / `claude -p`) | Corre en **cada turno** con el contexto creciente (AGENTS.md + preset + blackboard). Es el **término dominante**. |
-| **Subagentes** | Uno por `Task`; coste acotado a su tarea. 6 mecánicos en haiku, 8 en sonnet, 4 en opus. |
+| **Subagentes** | Uno por `Task`; coste acotado a su tarea. 9 mecánicos en haiku, 11 en sonnet, 7 en opus. |
 | **Prompt caching** | **Automático** en Claude Code / Agent SDK (system prompt + tools + defs de agente + contexto estático). No hay que activarlo. Cambiar de modelo/effort a media sesión **invalida** la caché. |
 
 > El bot **ya imprime el coste real** al terminar cada orden: `✅ Completado · N turnos · $X.XX`
@@ -31,13 +31,13 @@ claro → agentsview se usa **siempre local** (vincula a `127.0.0.1`, telemetrí
 `AGENTSVIEW_TELEMETRY_ENABLED=0`), **nunca** con `--public-url`, y en una máquina del operador. Es
 read-only sobre los transcripts. Decláralo en el NDA/ROE como índice local de sesiones.
 
-## Tier de modelos por agente (4 opus · 11 sonnet · 6 haiku)
+## Tier de modelos por agente (7 opus · 11 sonnet · 9 haiku)
 
 | Tier | Agentes | Criterio |
 | :--- | :--- | :--- |
-| `claude-opus-4-8` | web-exploit, post-exploit, ai-security, reporting | razonamiento profundo que **rompe la box** / calidad del informe |
+| `claude-opus-4-8` | web-exploit, api-exploit, mobile-exploit, firmware-exploit, post-exploit, ai-security, reporting | razonamiento profundo que **rompe la box** / calidad del informe |
 | `claude-sonnet-4-6` | vuln-triage, sqlmap, metasploit, netexec, ad-enum, kerberos, adcs, sliver, lateral-discovery, c2-exfil, network-exploit | tool-driving con juicio; el RAG hace el trabajo pesado |
-| `claude-haiku-4-5` | osint-recon, recon-suite, active-recon, web-fuzzing, nuclei, knowledge-postmortem | recon/escaneo/parseo mecánico (sin `effort`: Haiku da 400) |
+| `claude-haiku-4-5` | osint-recon, recon-suite, active-recon, api-recon, mobile-recon, firmware-recon, web-fuzzing, nuclei, knowledge-postmortem | recon/escaneo/parseo mecánico (sin `effort`: Haiku da 400) |
 
 Principio: opus solo donde un peor razonamiento te hace **fallar la box** (y gastar MÁS turnos
 rehaciendo). Bajar de tier un agente mecánico no cambia el resultado y abarata cada llamada.
@@ -89,10 +89,10 @@ GPT-OSS-120B). Eso permite, **en laboratorio**, llevar a free **toda** la cadena
 
 | Tier (modelo Anthropic) | Agentes | Modelo NVIDIA free recomendado | Por qué |
 | :--- | :--- | :--- | :--- |
-| haiku (mecánico) | osint-recon, active-recon, recon-suite, web-fuzzing, nuclei | `meta/llama-3.3-70b-instruct` | recon/escaneo/parseo: rápido y suficiente |
+| haiku (mecánico) | osint-recon, active-recon, recon-suite, api-recon, mobile-recon, firmware-recon, web-fuzzing, nuclei | `meta/llama-3.3-70b-instruct` | recon/escaneo/parseo: rápido y suficiente |
 | sonnet (tool-driving) | sqlmap, metasploit, netexec, sliver, c2-exfil | `openai/gpt-oss-120b` | conduce tools con juicio; el RAG hace lo pesado |
 | sonnet (razona-medio) | vuln-triage, lateral-discovery, network-exploit | `nvidia/llama-3.3-nemotron-super-49b-v1` | correlación/decisión con razonamiento |
-| opus (razona-profundo) | web-exploit, post-exploit, ai-security | `deepseek-ai/deepseek-r1` | razonamiento que **rompe la box** |
+| opus (razona-profundo) | web-exploit, api-exploit, mobile-exploit, firmware-exploit, post-exploit, ai-security | `deepseek-ai/deepseek-r1` | razonamiento que **rompe la box** |
 | opus (informe) | reporting | `nvidia/llama-3.3-nemotron-super-49b-v1` | redacción estructurada |
 | — (memoria) | knowledge-postmortem | *(se queda en Anthropic)* | escribe lecciones a memoria; no arriesgar calidad |
 

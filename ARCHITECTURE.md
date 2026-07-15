@@ -1,6 +1,6 @@
 # Arquitectura — Cyberseg Agents
 
-## 1. Auditoría crítica del diseño original (los 11 agentes de entonces; hoy 21)
+## 1. Auditoría crítica del diseño original (los 11 agentes de entonces; hoy 27)
 
 Antes de construir se auditó si los 11 agentes podían "realizar su función y comunicarse
 entre ellos sin fisuras". Conclusión: la **taxonomía era correcta**, pero la **plomería
@@ -34,7 +34,7 @@ Por eso el A2A es **mediado**, sobre dos mecanismos:
 
 ### Fallo 2 — El Orquestador no puede ser un subagente
 Como los subagentes no pueden lanzar otros subagentes, el Orquestador **es el agente
-principal** (la sesión main), descrito en `AGENTS.md`. No es uno de los 23 de la carpeta
+principal** (la sesión main), descrito en `AGENTS.md`. No es uno de los 27 de la carpeta
 `agents/`.
 
 ### Fallo 3 — El Scope Guard como agente es saltable
@@ -89,8 +89,8 @@ agente, un especialista **no lo invoca**: deja un mensaje en `messages[]`
 
 | Zona | Agentes | Red | Datos | Riesgo |
 | :--- | :--- | :--- | :--- | :--- |
-| **E1 Recon** | osint-recon, active-recon | internet amplia / ruta al target | sin datos de cliente | bajo |
-| **E2 Explotación** | vuln-triage, web-exploit, network-exploit, post-exploit, lateral-discovery, c2-exfil | **solo** VLAN del engagement, kill-switch, snapshots | acceso al target | alto |
+| **E1 Recon** | osint-recon, recon-suite, active-recon, api-recon, mobile-recon, firmware-recon | internet amplia / ruta al target | sin datos de cliente | bajo |
+| **E2 Explotación** | vuln-triage, web-exploit, api-exploit, mobile-exploit, firmware-exploit, network-exploit, metasploit, ai-security, post-exploit, lateral-discovery, c2-exfil, clúster AD (ad-enum/adcs/kerberos/netexec), sqlmap/nuclei/web-fuzzing/sliver | **solo** VLAN del engagement, kill-switch, snapshots | acceso al target | alto |
 | **E3 Cierre** | reporting, knowledge-postmortem | sin egress de datos crudos, modelo ZDR | datos de cliente | medio |
 
 **Aislamiento por cliente dentro de E2:** una VM/namespace por engagement, destruida al
@@ -106,6 +106,9 @@ El Orquestador es el plano de control; no ejecuta tooling ofensivo por sí mismo
 | active-recon | Reconnaissance (activa), Discovery externa |
 | vuln-triage | (puente: correlación CVE/KEV → priorización) |
 | web-exploit | Initial Access (TA0001), Execution (TA0002) — vector web |
+| api-exploit | Initial Access, Execution — vector API (REST/GraphQL, authz diferencial) |
+| mobile-exploit | Initial Access, Execution — vector app móvil (Android/iOS); el backend se cobra en la vertical API |
+| firmware-exploit | Initial Access, Execution, Privilege Escalation — vector firmware IoT emulado |
 | network-exploit | Initial Access, Execution — vector red/infra |
 | metasploit | Initial Access, Execution, PrivEsc, Lateral Movement — operador senior de MSF |
 | post-exploit | Privilege Escalation (TA0004), Persistence (TA0003), Defense Evasion (TA0005), Credential Access (TA0006) |
@@ -115,13 +118,13 @@ El Orquestador es el plano de control; no ejecuta tooling ofensivo por sí mismo
 ## 5. Asignación de modelos (coste vs. razonamiento)
 
 Routing por tier para no quemar cupo de Pro (sin `CLAUDE_CODE_SUBAGENT_MODEL`): cada agente
-fija su propio `model`. Distribución real: **6 haiku · 11 sonnet · 4 opus-4-8** (sin fable).
+fija su propio `model`. Distribución real: **9 haiku · 11 sonnet · 7 opus-4-8** (sin fable).
 
 | Tier | Agentes | Motivo |
 | :--- | :--- | :--- |
-| `claude-haiku-4-5` | osint-recon, recon-suite, active-recon, web-fuzzing, nuclei, knowledge-postmortem | recon/escaneo/parseo mecánico: mucho dato, poco razonamiento (sin `effort`) |
+| `claude-haiku-4-5` | osint-recon, recon-suite, active-recon, api-recon, mobile-recon, firmware-recon, web-fuzzing, nuclei, knowledge-postmortem | recon/escaneo/parseo mecánico: mucho dato, poco razonamiento (sin `effort`) |
 | `claude-sonnet-4-6` | vuln-triage, sqlmap, metasploit, netexec, ad-enum, kerberos, adcs, sliver, lateral-discovery, c2-exfil, network-exploit | tool-driving con juicio / el RAG hace el trabajo pesado |
-| `claude-opus-4-8` | web-exploit, post-exploit, ai-security, reporting | razonamiento ofensivo profundo + informe |
+| `claude-opus-4-8` | web-exploit, api-exploit, mobile-exploit, firmware-exploit, post-exploit, ai-security, reporting | razonamiento ofensivo profundo + informe |
 
 > El inventario completo y siempre al día (modelo por agente) vive en `ARCHITECTURE_MAP.md`
 > (auto-generado). Esta tabla es el resumen por tier. El Orquestador (sesión principal) usa opus-4-8.

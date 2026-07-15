@@ -20,9 +20,9 @@ Confirmado contra la doc oficial de subagentes (campos de frontmatter soportados
 
 ## Decisiones INTENCIONALES (no son fallos — no se tocan)
 
-- **`effort` ausente en los 6 agentes Haiku**: los niveles de effort dependen del modelo; Haiku no
+- **`effort` ausente en los 9 agentes Haiku**: los niveles de effort dependen del modelo; Haiku no
   los usa. Correcto.
-- **Bloque `a2a` solo en los 14 agentes con pareja**: los 7 sin pares pasan por el hub. Correcto.
+- **Bloque `a2a` solo en los 20 agentes con pareja**: los 7 sin pares pasan por el hub. Correcto.
 - **`memory: project` solo en `knowledge-postmortem`**: deliberado por **seguridad** — memoria
   persistente en más agentes filtraría datos entre clientes/engagements. NO se amplía.
 - **`permissionMode: default` explícito** en cada agente: válido (redundante pero explícito).

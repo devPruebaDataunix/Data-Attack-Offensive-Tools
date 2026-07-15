@@ -4,6 +4,24 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.47.3] - 2026-07-15
+### Fixed
+- **Consistencia documental — 2ª pasada, docs de arquitectura/guardarraíles/coste (sin cambios de código de
+  producto).** La auditoría de v2.47.2 dejó al día README y mapa, pero varias docs internas seguían con conteos
+  y distribuciones anteriores al arco Bug Bounty. Puestas al día contra el estado real (`ARCHITECTURE_MAP.md`
+  autogenerado + `agent-cards.json`):
+  - **ARCHITECTURE.md:** "hoy **21**" → **27** agentes; "no es uno de los **23**" → **27**; distribución de
+    modelos **6·11·4 (21)** → **9 haiku · 11 sonnet · 7 opus (27)** con las verticales nuevas en cada tier;
+    tabla de zonas E1/E2 y mapa ATT&CK ampliados con api/mobile/firmware-recon y api/mobile/firmware-exploit.
+  - **GUARDRAILS.md:** C11 "en **16** agentes" → **25** (lista explícita al día); tabla de brechas "en los
+    **19** agentes" → **25**.
+  - **cost-optimization.md:** "6 haiku·8 sonnet·4 opus (18)" y "4 opus·11 sonnet·6 haiku" → **9·11·7 (27)**;
+    tier tables + mapeo NVIDIA lab con las verticales nuevas.
+  - **config-audit.md:** "**6** agentes Haiku" → **9**; "a2a en los **14** con pareja" → **20** (7 sin par).
+  - **ENTORNO-LISTO.md** / **SETUP-VSCODE.md:** "**23** especialistas" → **27** (17 de fase + 10 de herramienta).
+  - **agent-skill-audit.md** / **STYLE_GUIDE.md:** paréntesis "hoy **19**" → **25**; "los **16** agentes de E2" → **19**.
+  - Fuente de verdad verificada: `validate_suite` **623/0/0**; C11 confirmado en **25** ficheros de agente por grep.
+
 ## [2.47.2] - 2026-07-15
 ### Fixed
 - **Auditoría de consistencia documental tras el arco Bug Bounty (v2.41–v2.47.1) — sin cambios de código de
