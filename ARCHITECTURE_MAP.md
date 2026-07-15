@@ -3,12 +3,12 @@
 
 # 🗺️ Mapa de Arquitectura — Cyberseg Agents
 
-> **Generado:** 2026-07-03 20:48:57 UTC · **Refleja el estado real** del proyecto en ese momento.
+> **Generado:** 2026-07-15 08:41:35 UTC · **Refleja el estado real** del proyecto en ese momento.
 > Regenerar a mano: `python tools/gen_arch_diagram.py`
 
 ## Qué es esto (para reconstruir contexto si se pierde)
 
-Suite de agentes para **pentesting / bug bounty autorizado**. Un **Orquestador** (sesión principal, `AGENTS.md`) coordina a los agentes especialistas mediante **hub-and-spoke**: él delega, recoge resultados y hace de **router de un bus A2A mediado** (los agentes se dirigen mensajes entre sí dejándolos en el **blackboard**, `contracts/engagement.json`; no hay malla directa). Un **hook de alcance** (`scope_guard.py`) bloquea de forma determinista cualquier comando contra un target fuera de `contracts/scope.json`. TRES RAG locales (SQLite), por PROPÓSITO y ZONA: (1) **vulnerabilidades** (`rag/`, KEV+EPSS+CVE recientes) que consulta `vuln-triage` — *qué es vulnerable*; (2) **conocimiento** (`rag/knowledge/`, técnicas — Capa 1 estructurada + Capa 2 semántica) que consultan los agentes de explotación — *cómo explotar/razonar*; ambos GENERALES y cross-engagement. (3) **contexto per-engagement** (`rag/context/` → `engagements/<id>/context.db`) — *qué se sabe YA de ESTE objetivo*: **efímero, EN-ZONA (datos de cliente, gitignored) y AISLADO por engagement** (CONSTITUTION §1; jamás se mezcla con el de conocimiento).
+Suite de agentes para **pentesting / bug bounty autorizado**. Un **Orquestador** (sesión principal, `AGENTS.md`) coordina a los agentes especialistas mediante **hub-and-spoke**: él delega, recoge resultados y hace de **router de un bus A2A mediado** (los agentes se dirigen mensajes entre sí dejándolos en el **blackboard**, `contracts/engagement.json`; no hay malla directa). Un **hook de alcance** (`scope_guard.py`) bloquea de forma determinista cualquier comando contra un target fuera de `contracts/scope.json`. Dos RAG locales (SQLite): el de **vulnerabilidades** (`rag/`, KEV+EPSS+CVE recientes) que consulta `vuln-triage`, y el de **conocimiento** (`rag/knowledge/`, técnicas — Capa 1 estructurada + Capa 2 semántica) que consultan los agentes de explotación.
 
 **Estado actual:** 23 agentes especialistas (E1=4, E2=17, E3=2) + Orquestador + hook de alcance.
 
@@ -23,6 +23,7 @@ flowchart TB
     RAGKB[("🧠 RAG conocimiento<br/>rag/knowledge · técnicas (Capa 1+2)")]
     subgraph E1["🟦 Zona E1 · Recon (perfil de red abierto, sin datos de cliente)"]
         active_recon["active-recon<br/><i>claude-haiku-4-5</i>"]
+        api_recon["api-recon<br/><i>claude-haiku-4-5</i>"]
         osint_recon["osint-recon<br/><i>claude-haiku-4-5</i>"]
         recon_suite["recon-suite<br/><i>claude-haiku-4-5</i>"]
     end
@@ -32,6 +33,7 @@ flowchart TB
         ad_enum["ad-enum<br/><i>claude-sonnet-4-6</i>"]
         adcs["adcs<br/><i>claude-sonnet-4-6</i>"]
         ai_security["ai-security<br/><i>claude-opus-4-8</i>"]
+        api_exploit["api-exploit<br/><i>claude-opus-4-8</i>"]
         c2_exfil["c2-exfil<br/><i>claude-sonnet-4-6</i>"]
         kerberos["kerberos<br/><i>claude-sonnet-4-6</i>"]
         lateral_discovery["lateral-discovery<br/><i>claude-sonnet-4-6</i>"]
@@ -75,6 +77,7 @@ flowchart TB
 | Agente | Zona | Modelo | Permiso | Memoria | Tools | Función |
 | :--- | :---: | :--- | :--- | :--- | :--- | :--- |
 | **active-recon** | E1 | claude-haiku-4-5 | default | — | Read, Write, Edit, Grep, Glob, Bash | Recon ACTIVO / enumeración. Úsalo tras osint-recon para escanear puer… |
+| **api-recon** | E1 | claude-haiku-4-5 | default | local | Read, Write, Edit, Grep, Glob, Bash | Inventario y descubrimiento de APIs (REST/GraphQL) — la spec ES el ma… |
 | **osint-recon** | E1 | claude-haiku-4-5 | default | — | Read, Write, Edit, Grep, Glob, WebSearc… | Recon PASIVO. Úsalo al inicio de un engagement para mapear la superfi… |
 | **recon-suite** | E1 | claude-haiku-4-5 | default | — | Read, Write, Edit, Grep, Glob, Bash | Especialista en el toolkit de recon moderno — subfinder, amass, dnsx,… |
 | **nuclei** | E2 | claude-haiku-4-5 | default | — | Read, Write, Edit, Grep, Glob, Bash | Especialista en Nuclei (ProjectDiscovery), escaneo de vulnerabilidade… |
@@ -82,6 +85,7 @@ flowchart TB
 | **ad-enum** | E2 | claude-sonnet-4-6 | default | local | Read, Write, Edit, Grep, Glob, Bash | Especialista en reconocimiento interno de Active Directory con BloodH… |
 | **adcs** | E2 | claude-sonnet-4-6 | default | local | Read, Write, Edit, Grep, Glob, Bash | Especialista en Active Directory Certificate Services (AD CS) con Cer… |
 | **ai-security** | E2 | claude-opus-4-8 | default | local | Read, Write, Edit, Grep, Glob, Bash, We… | Red teaming de aplicaciones con IA/LLM. Úsalo cuando el target en sco… |
+| **api-exploit** | E2 | claude-opus-4-8 | default | local | Read, Write, Edit, Grep, Glob, Bash, We… | Explotación de APIs (REST/GraphQL) siguiendo el OWASP API Security To… |
 | **c2-exfil** | E2 | claude-sonnet-4-6 | default | — | Read, Write, Edit, Grep, Glob, Bash | Simulación CONTROLADA de C2, exfiltración e impacto para demostrar el… |
 | **kerberos** | E2 | claude-sonnet-4-6 | default | local | Read, Write, Edit, Grep, Glob, Bash | Especialista en ataques Kerberos sobre Active Directory — Kerberoasti… |
 | **lateral-discovery** | E2 | claude-sonnet-4-6 | default | local | Read, Write, Edit, Grep, Glob, Bash | Descubrimiento INTERNO y movimiento lateral desde un punto de apoyo c… |
@@ -91,7 +95,7 @@ flowchart TB
 | **post-exploit** | E2 | claude-opus-4-8 | default | local | Read, Write, Edit, Grep, Glob, Bash | Post-explotación en un host ya comprometido EN SCOPE. Úsalo para esca… |
 | **sliver** | E2 | claude-sonnet-4-6 | default | — | Read, Write, Edit, Grep, Glob, Bash | Operador de Sliver C2 (open source) para post-explotación y simulació… |
 | **sqlmap** | E2 | claude-sonnet-4-6 | default | local | Read, Write, Edit, Grep, Glob, Bash | Especialista senior en sqlmap, automatización de inyección SQL. Úsalo… |
-| **web-exploit** | E2 | claude-opus-4-8 | default | local | Read, Write, Edit, Grep, Glob, Bash, We… | Explotación de aplicaciones web (capa 7 HTTP/S). Úsalo para verificar… |
+| **web-exploit** | E2 | claude-opus-4-8 | default | local | Read, Write, Edit, Grep, Glob, Bash, We… | Explotación de aplicaciones web (capa 7 HTTP/S) mapeada al OWASP Top … |
 | **web-fuzzing** | E2 | claude-haiku-4-5 | default | local | Read, Write, Edit, Grep, Glob, Bash | Especialista en descubrimiento de contenido y fuzzing web — ffuf y fe… |
 | **knowledge-postmortem** | E3 | claude-haiku-4-5 | default | project | Read, Write, Edit, Grep, Glob | Aprendizaje basado en errores. Úsalo tras cada intento o al cierre de… |
 | **reporting** | E3 | claude-opus-4-8 | default | — | Read, Write, Edit, Grep, Glob | Redacción del informe del engagement. Úsalo al cierre para convertir … |

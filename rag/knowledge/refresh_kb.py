@@ -53,9 +53,11 @@ CORPUS = {
                      "slug": "mukul975/Anthropic-Cybersecurity-Skills", "glob": "**/SKILL.md",
                      "branch": "main"},
     # Canon de seguridad ofensiva de API/web (OWASP, CC BY-SA 4.0): el MÉTODO y el razonamiento ACTUAL que
-    # consultan api-recon/api-exploit vía `query_kb.py --semantic` (no solo CVEs — el "cómo pensar/probar").
-    # OWASP API Top 10 2023 (definiciones autoritativas), WSTG (guía de testing: API/GraphQL/JWT/lógica de
-    # negocio) y Cheat Sheet Series (REST/GraphQL/JWT/Authorization/Mass-Assignment/SSRF). Se REFERENCIAN para
+    # consultan api-recon/api-exploit y web-exploit vía `query_kb.py --semantic` (no solo CVEs — el "cómo
+    # pensar/probar"). OWASP API Top 10 2023 y **Web Top 10 2025** (definiciones autoritativas; el Web 2025 se
+    # publicó en enero 2026 — A01 Broken Access Control sigue #1, A10 "Mishandling of Exceptional Conditions"
+    # es NUEVA), WSTG (guía de testing: web/API/GraphQL/JWT/lógica de negocio) y Cheat Sheet Series
+    # (REST/GraphQL/JWT/Authorization/Mass-Assignment/SSRF). Se REFERENCIAN para
     # clonar; el corpus NO se versiona en el repo (gitignored). Corpus PASIVO (DATO): no gatea la recuperación
     # ni relaja ninguna puerta. Rama por defecto 'master' (verificado). SIN `pin` a propósito: son repos OWASP
     # oficiales (metodología VIVA, alta vigilancia de maintainers) y el blast radius de una inyección indirecta
@@ -64,6 +66,12 @@ CORPUS = {
     # que SÍ lleva pin. Si se quiere anclar integridad/reproducibilidad, pinear y bumpear periódicamente.
     "owasp-api-top10": {"url": "https://github.com/OWASP/API-Security.git",
                         "slug": "OWASP/API-Security", "glob": "editions/2023/en/**/*.md"},
+    # glob VERIFICADO (jul-2026) contra el árbol real de OWASP/Top10@master: la edición 2025 vive en
+    # `2025/docs/en/` con A01_2025..A10_2025 (NO plano como 2021); `ja/` es traducción → solo inglés.
+    # OJO: `_verify_layer2_populated()` cuenta chunks TOTALES, no por-fuente — si un día el glob deja de casar,
+    # el corpus web queda vacío en silencio. Reverifica el árbol al poblar en Kali si OWASP reestructura.
+    "owasp-web-top10": {"url": "https://github.com/OWASP/Top10.git",
+                        "slug": "OWASP/Top10", "glob": "2025/docs/en/**/*.md"},
     "owasp-wstg": {"url": "https://github.com/OWASP/wstg.git",
                    "slug": "OWASP/wstg", "glob": "document/**/*.md"},
     "owasp-cheatsheets": {"url": "https://github.com/OWASP/CheatSheetSeries.git",

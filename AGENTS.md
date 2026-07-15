@@ -40,8 +40,10 @@ ejecutas tooling ofensivo tú mismo: planificas, delegas, validas, **enrutas** y
 3. **Triage.** Delega en `vuln-triage`: correlaciona servicios/versiones con CVE/KEV y
    prioriza. Escribe `findings[]` con `status: candidate`.
 4. **Explotación.** Para cada finding priorizado, delega en el agente de vector adecuado:
-   `web-exploit` (capa 7 web), **`api-exploit`** (APIs REST/GraphQL — OWASP API Top 10 2023, con
-   testing de authz DIFERENCIAL multi-identidad), `network-exploit` (servicios/infra), **`ai-security`**
+   `web-exploit` (capa 7 web — **OWASP Top 10 2025** + WSTG, incl. control de acceso diferencial y clases
+   modernas: request smuggling/desync, cache poisoning, client-side, parser differentials; skill
+   `web-app-security`), **`api-exploit`** (APIs REST/GraphQL — OWASP API Top 10 2023, con testing de authz
+   DIFERENCIAL multi-identidad; skill `web-api-security`), `network-exploit` (servicios/infra), **`ai-security`**
    (apps con LLM/IA — OWASP LLM Top 10), o **`metasploit`** cuando el finding trae `msf_modules` o MSF
    es la herramienta idónea. Para BOLA/BFLA de API (o IDOR web) hacen falta **≥2 identidades de prueba**
    en `identities[]`: si el programa no las aportó, pídelas antes de dar por confirmado un fallo de authz. La **aprobación humana** por acción depende del modo de supervisión

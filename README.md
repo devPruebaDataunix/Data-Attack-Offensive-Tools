@@ -418,9 +418,10 @@ accionables. Dos capas, con la skill `rag-technique-lookup`:
 - **Capa 1 — estructurada** (`kb.db`): GTFOBins · LOLBAS · Atomic Red Team · MITRE ATT&CK → el comando
   concreto de privesc/credenciales/persistencia (determinista, stdlib).
 - **Capa 2 — semántica** (`kb_vec.db`): HackTricks · PayloadsAllTheThings · PEASS · **817 skills de
-  ciberseguridad** (`mukul975/Anthropic-Cybersecurity-Skills`, Apache-2.0) + feeds (0dayfans/HN/
-  CVEDetector) con **embeddings locales** (sentence-transformers) + **sqlite-vec** → recuperación por
-  significado para metodología/razonamiento.
+  ciberseguridad** (`mukul975/Anthropic-Cybersecurity-Skills`, Apache-2.0) · **canon OWASP** (API Top 10
+  2023, **Web Top 10 2025**, WSTG, Cheat Sheet Series — CC BY-SA) + feeds (0dayfans/HN/CVEDetector) con
+  **embeddings locales** (sentence-transformers) + **sqlite-vec** → recuperación por significado para
+  metodología/razonamiento.
 
 ```bash
 python rag/knowledge/refresh_kb.py              # Capa 1 (ligera)

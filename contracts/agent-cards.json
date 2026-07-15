@@ -1,12 +1,12 @@
 {
-  "version": "2.44.0",
+  "version": "2.45.0",
   "cards": [
     {
       "name": "active-recon",
       "description": "Recon ACTIVO / enumeración. Úsalo tras osint-recon para escanear puertos, identificar servicios y versiones, y hacer fingerprinting web sobre activos EN SCOPE. Envía tráfico al target.",
       "phase": "recon",
       "model": "claude-haiku-4-5",
-      "version": "2.44.0",
+      "version": "2.45.0",
       "capabilities": [],
       "consumes": [],
       "produces": [],
@@ -25,7 +25,7 @@
       "description": "Especialista en reconocimiento interno de Active Directory con BloodHound CE — recoleccion (SharpHound/bloodhound-python) y analisis de grafo (Cypher) para mapear rutas de ataque a Domain Admin, ACLs abusables, cuentas kerberoastables/AS-REP, delegaciones y DCSync. Usalo con un foothold de dominio en scope.",
       "phase": "exploitation",
       "model": "claude-sonnet-4-6",
-      "version": "2.44.0",
+      "version": "2.45.0",
       "capabilities": [
         "ad-recon",
         "bloodhound",
@@ -62,7 +62,7 @@
       "description": "Especialista en Active Directory Certificate Services (AD CS) con Certipy — enumeracion y explotacion de ESC1-ESC16 (SAN abuse, ESC8 NTLM relay a web enrollment, golden certificate, shadow credentials). Usalo cuando AD CS este en scope y la ROE autorice explotacion de dominio.",
       "phase": "exploitation",
       "model": "claude-sonnet-4-6",
-      "version": "2.44.0",
+      "version": "2.45.0",
       "capabilities": [
         "adcs",
         "certipy",
@@ -98,7 +98,7 @@
       "description": "Red teaming de aplicaciones con IA/LLM. Úsalo cuando el target en scope sea (o incorpore) un chatbot, asistente, agente o pipeline RAG basado en LLM. Cubre prompt injection, excessive agency, fuga de system prompt y ataques a vector/embedding (OWASP LLM Top 10).",
       "phase": "exploitation",
       "model": "claude-opus-4-8",
-      "version": "2.44.0",
+      "version": "2.45.0",
       "capabilities": [
         "llm-redteam",
         "prompt-injection",
@@ -131,7 +131,7 @@
       "description": "Explotación de APIs (REST/GraphQL) siguiendo el OWASP API Security Top 10 (2023). Úsalo para confirmar y explotar findings de API EN SCOPE — BOLA, broken auth, BOPLA (mass-assignment/excessive-exposure), BFLA, consumo de recursos, abuso de flujos de negocio, SSRF vía API. Su técnica insignia es el testing de autorización DIFERENCIAL multi-identidad.",
       "phase": "exploitation",
       "model": "claude-opus-4-8",
-      "version": "2.44.0",
+      "version": "2.45.0",
       "capabilities": [
         "api-exploit-confirm",
         "bola-differential",
@@ -168,7 +168,7 @@
       "description": "Inventario y descubrimiento de APIs (REST/GraphQL) — la spec ES el mapa. Úsalo cuando el activo en scope exponga rutas /api, /v1, swagger/openapi.json, un endpoint GraphQL o un backend de app móvil. Reconstruye la superficie completa (endpoints, parámetros, versiones, esquema) ANTES de explotar.",
       "phase": "recon",
       "model": "claude-haiku-4-5",
-      "version": "2.44.0",
+      "version": "2.45.0",
       "capabilities": [
         "api-inventory",
         "openapi-harvest",
@@ -200,7 +200,7 @@
       "description": "Simulación CONTROLADA de C2, exfiltración e impacto para demostrar el riesgo de negocio sin causar daño real. Úsalo en la fase final de explotación cuando la ROE autoriza demostrar impacto. Exfiltración siempre simulada (canary), nunca datos reales.",
       "phase": "post-exploitation",
       "model": "claude-sonnet-4-6",
-      "version": "2.44.0",
+      "version": "2.45.0",
       "capabilities": [],
       "consumes": [],
       "produces": [],
@@ -219,7 +219,7 @@
       "description": "Especialista en ataques Kerberos sobre Active Directory — Kerberoasting (GetUserSPNs/Rubeus), AS-REP Roasting (GetNPUsers), abuso de delegaciones (unconstrained/constrained/RBCD) y cracking offline (hashcat). Usalo con un foothold de dominio y ROE que autorice explotacion de AD.",
       "phase": "exploitation",
       "model": "claude-sonnet-4-6",
-      "version": "2.44.0",
+      "version": "2.45.0",
       "capabilities": [
         "kerberoasting",
         "asrep-roasting",
@@ -255,7 +255,7 @@
       "description": "Aprendizaje basado en errores. Úsalo tras cada intento o al cierre del engagement para extraer lecciones (qué funcionó, qué falló y por qué) y persistirlas en memoria para mejorar futuros engagements. Es el motor del bucle de feedback.",
       "phase": "reporting",
       "model": "claude-haiku-4-5",
-      "version": "2.44.0",
+      "version": "2.45.0",
       "capabilities": [],
       "consumes": [],
       "produces": [],
@@ -273,7 +273,7 @@
       "description": "Descubrimiento INTERNO y movimiento lateral desde un punto de apoyo comprometido EN SCOPE. Úsalo para mapear la red interna, identificar hosts/servicios adyacentes y demostrar pivoting controlado.",
       "phase": "post-exploitation",
       "model": "claude-sonnet-4-6",
-      "version": "2.44.0",
+      "version": "2.45.0",
       "capabilities": [
         "internal-discovery",
         "lateral-movement",
@@ -307,7 +307,7 @@
       "description": "Operador SENIOR de Metasploit Framework. Úsalo cuando un finding trae módulo MSF (campo msf_modules del RAG) o cuando MSF es la herramienta idónea — búsqueda de módulos, exploits, msfvenom, payloads, meterpreter, handlers, post-explotación, auxiliares y pivoting. Todo EN SCOPE.",
       "phase": "exploitation",
       "model": "claude-sonnet-4-6",
-      "version": "2.44.0",
+      "version": "2.45.0",
       "capabilities": [
         "msf-module-exec",
         "exploit",
@@ -340,7 +340,7 @@
       "description": "Especialista en NetExec (nxc, sucesor de CrackMapExec) + Impacket + recolección BloodHound para Active Directory e infraestructura Windows — SMB, LDAP, WinRM, MSSQL, RDP. Úsalo en pentest interno/AD sobre hosts en scope.",
       "phase": "exploitation",
       "model": "claude-sonnet-4-6",
-      "version": "2.44.0",
+      "version": "2.45.0",
       "capabilities": [
         "ad-enum",
         "cred-validation",
@@ -373,7 +373,7 @@
       "description": "Explotación de servicios de red e infraestructura (no-HTTP). Úsalo para findings sobre SMB, SSH, RDP, bases de datos expuestas, RPC, servicios con CVE/KEV de infra y credenciales por defecto, EN SCOPE.",
       "phase": "exploitation",
       "model": "claude-sonnet-4-6",
-      "version": "2.44.0",
+      "version": "2.45.0",
       "capabilities": [
         "network-exploit-confirm",
         "infra-exploit",
@@ -406,7 +406,7 @@
       "description": "Especialista en Nuclei (ProjectDiscovery), escaneo de vulnerabilidades por plantillas. Úsalo para escanear activos web/red en scope con plantillas CVE, exposiciones y misconfiguraciones; aprovecha las rutas de plantilla que ya trae el RAG.",
       "phase": "triage",
       "model": "claude-haiku-4-5",
-      "version": "2.44.0",
+      "version": "2.45.0",
       "capabilities": [],
       "consumes": [],
       "produces": [],
@@ -425,7 +425,7 @@
       "description": "Sesión principal (AGENTS.md). Planifica, delega, valida handoffs y enruta el bus A2A mediado.",
       "phase": "orchestrator",
       "model": "claude-opus-4-8",
-      "version": "2.44.0",
+      "version": "2.45.0",
       "capabilities": [
         "route-a2a",
         "delegate",
@@ -454,7 +454,7 @@
       "description": "Recon PASIVO. Úsalo al inicio de un engagement para mapear la superficie de ataque SIN tocar el target (subdominios, DNS, leaks, tecnologías, empleados). No envía tráfico intrusivo.",
       "phase": "recon",
       "model": "claude-haiku-4-5",
-      "version": "2.44.0",
+      "version": "2.45.0",
       "capabilities": [],
       "consumes": [],
       "produces": [],
@@ -475,7 +475,7 @@
       "description": "Post-explotación en un host ya comprometido EN SCOPE. Úsalo para escalada de privilegios, persistencia (demostrativa), evasión y acceso a credenciales locales. Solo tras obtener acceso autorizado.",
       "phase": "post-exploitation",
       "model": "claude-opus-4-8",
-      "version": "2.44.0",
+      "version": "2.45.0",
       "capabilities": [
         "privesc",
         "persistence-demo",
@@ -508,7 +508,7 @@
       "description": "Especialista en el toolkit de recon moderno — subfinder, amass, dnsx, naabu, httpx, katana, gau y nmap. Úsalo para descubrir activos, subdominios, DNS, puertos/servicios y superficie web. Pasivo o activo según el scope.",
       "phase": "recon",
       "model": "claude-haiku-4-5",
-      "version": "2.44.0",
+      "version": "2.45.0",
       "capabilities": [],
       "consumes": [],
       "produces": [],
@@ -527,7 +527,7 @@
       "description": "Redacción del informe del engagement. Úsalo al cierre para convertir los findings confirmados en un informe profesional (estructura estándar de pentest) con impacto de negocio, reproducción, remediación y mapeo CWE/CVSS/OWASP/ATT&CK. Redacta con calidad humana (sin tono IA). No ejecuta tooling ofensivo.",
       "phase": "reporting",
       "model": "claude-opus-4-8",
-      "version": "2.44.0",
+      "version": "2.45.0",
       "capabilities": [],
       "consumes": [],
       "produces": [],
@@ -545,7 +545,7 @@
       "description": "Operador de Sliver C2 (open source) para post-explotación y simulación de adversario controlada. Úsalo cuando la ROE autoriza C2 — generación de implants, listeners, sesiones, pivoting y tareas, todo reversible y en scope.",
       "phase": "post-exploitation",
       "model": "claude-sonnet-4-6",
-      "version": "2.44.0",
+      "version": "2.45.0",
       "capabilities": [
         "c2-implant",
         "listeners",
@@ -576,7 +576,7 @@
       "description": "Especialista senior en sqlmap, automatización de inyección SQL. Úsalo para detectar y explotar SQLi en endpoints en scope, con extracción mínima para demostrar impacto sin dañar datos.",
       "phase": "exploitation",
       "model": "claude-sonnet-4-6",
-      "version": "2.44.0",
+      "version": "2.45.0",
       "capabilities": [
         "sqli-detect",
         "sqli-exploit",
@@ -608,7 +608,7 @@
       "description": "Análisis y priorización de vulnerabilidades. Úsalo tras active-recon para correlacionar servicios/versiones con CVE/KEV/advisories actuales, descartar falsos positivos y priorizar por impacto explotable. Es el puente entre recon y explotación.",
       "phase": "triage",
       "model": "claude-sonnet-4-6",
-      "version": "2.44.0",
+      "version": "2.45.0",
       "capabilities": [
         "cve-correlation",
         "prioritization",
@@ -642,14 +642,15 @@
     },
     {
       "name": "web-exploit",
-      "description": "Explotación de aplicaciones web (capa 7 HTTP/S). Úsalo para verificar y explotar findings web EN SCOPE — inyección, auth/sesión, IDOR, SSRF, SSTI, XSS, deserialización. Es el caballo de batalla de bug bounty.",
+      "description": "Explotación de aplicaciones web (capa 7 HTTP/S) mapeada al OWASP Top 10 2025. Úsalo para verificar y explotar findings web EN SCOPE — control de acceso/IDOR (arnés diferencial), inyección (XSS/SSTI/SQLi/deserialización), auth/sesión/OAuth/SAML, SSRF, y las clases modernas — request smuggling/desync, web/framework cache poisoning, client-side (prototype pollution/DOM/postMessage), parser differentials. Es el caballo de batalla de bug bounty web.",
       "phase": "exploitation",
       "model": "claude-opus-4-8",
-      "version": "2.44.0",
+      "version": "2.45.0",
       "capabilities": [
         "web-exploit-confirm",
         "sqli-triage",
-        "web-poc"
+        "web-poc",
+        "access-control-differential"
       ],
       "consumes": [
         "findings:candidate",
@@ -681,7 +682,7 @@
       "description": "Especialista en descubrimiento de contenido y fuzzing web — ffuf y feroxbuster (directorios, ficheros, parámetros, vhosts, valores). Úsalo para enumerar superficie web oculta en activos en scope antes de explotar.",
       "phase": "exploitation",
       "model": "claude-haiku-4-5",
-      "version": "2.44.0",
+      "version": "2.45.0",
       "capabilities": [
         "content-discovery",
         "param-fuzzing",

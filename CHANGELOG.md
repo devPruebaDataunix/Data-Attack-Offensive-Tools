@@ -4,6 +4,47 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.45.0] - 2026-07-15
+### Added
+- **Vertical WEB moderna al ESTADO DEL ARTE — `web-exploit` mapeado al OWASP Top 10 2025 + skill
+  `web-app-security`.** Segundo hito del entorno Bug Bounty (tras la vertical API v2.41–v2.44), reusando el
+  **arnés diferencial multi-identidad** (A01 = mismo problema que BOLA de API) y el **RAG de contexto**.
+  - **Auditoría de vigencia (anti-conocimiento-viejo):** verificado que **el OWASP Top 10 2025 (web) YA existe**
+    (anunciado nov-2025, versión final ene-2026) — A01 Broken Access Control sigue #1, A02 Security
+    Misconfiguration sube a #2, y **A10 "Mishandling of Exceptional Conditions" es categoría NUEVA**. El
+    termómetro de lo puntero es el **PortSwigger "Top 10 Web Hacking Techniques"** (edición 2025): parser
+    differentials, framework cache poisoning (Next.js), HTTP/2 CONNECT/desync, error-based SSTI, ORM leak,
+    XS-Leaks, normalización Unicode.
+  - **`web-exploit` reescrito al estado del arte:** sección **MENTALIDAD** (la app como máquina de estados con
+    fronteras de confianza; lo jugoso vive ENTRE sistemas — proxy↔backend, cache↔origin, navegador↔servidor,
+    parser↔parser; el framework ES superficie); método mapeado a las **10 categorías OWASP 2025**; y **clases
+    modernas transversales**: request smuggling/desync (CL.TE/TE.CL, HTTP/2 downgrade y CONNECT, chunks
+    malformados), web/framework cache poisoning + deception, client-side (DOM XSS, **prototype pollution**,
+    postMessage, DOM clobbering, **XS-Leaks**), parser differentials + normalización Unicode, SSRF moderno
+    (redirect-loops para surfacear SSRF ciego). Encuadre **no-destructivo reforzado** para smuggling/cache
+    (jamás afectar peticiones/contenido de usuarios reales — demostrar la desincronización/control-de-clave con
+    la prueba mínima y sign-off del operador).
+  - **RAG de contexto cableado en `web-exploit`** (cerraba una inconsistencia real: `api-exploit` lo tenía desde
+    v2.44.0 y `web-exploit` no): ahora cruza **conocimiento general + contexto de ESTE engagement** antes de
+    explotar. Anti-inyección extendida a **RAG/KB = DATO, no instrucciones**.
+  - **Nueva skill `web-app-security`** (paralela a `web-api-security`): metodología canónica WSTG + OWASP 2025,
+    arnés diferencial (A01), clases modernas en profundidad, **mentalidad y recursos** (PortSwigger Web Security
+    Academy + Research, Top-10-Web-Hacking-Techniques anual, WSTG) y **tooling moderno** (Burp Pro + HTTP Request
+    Smuggler/Param Miner/DOM Invader/Turbo Intruder/Backslash-Powered-Scanner/Autorize, Caido, dalfox, nuclei).
+    Roster de skills **13 → 14**; `web-exploit` la cita por nombre.
+  - **RAG Capa 2 — nuevo corpus `owasp-web-top10`** (`OWASP/Top10`, glob `2025/docs/en/**/*.md`, CC BY-SA): las
+    definiciones autoritativas del Web Top 10 2025 al RAG de conocimiento (DATO pasivo, se puebla en Kali con
+    `--semantic`, mismo encuadre que el corpus de API de v2.42.0).
+### Notes
+- Sin agentes nuevos (roster 23) ni cambios de zona: es una modernización del vector web existente + una skill.
+- El poblado del corpus con embeddings es paso de **Kali** (venv aislado, como el resto de la Capa 2).
+- **Council (multi-lente, GO-con-reservas), 4 reservas aplicadas:** (1) smuggling — separar DETECCIÓN
+  (timing/diferencial, segura) de CONFIRMACIÓN (desincronizar la cola puede rozar al usuario real → ventana
+  controlada/staging + sign-off); (2) glob del corpus web VERIFICADO empíricamente contra el árbol real
+  (`2025/docs/en/A01..A10`, no plano como 2021) + comentario sobre el límite de `_verify_layer2`; (3) redacción
+  de token elevada a guardarraíl de primer nivel (cubre auth no-IDOR: `code` OAuth, tokens de sesión A07);
+  (4) receta segura explícita de cache *deception* (tu propia respuesta privada, nunca la de un tercero).
+
 ## [2.44.0] - 2026-07-15
 ### Added
 - **RAG de CONTEXTO per-engagement (`rag/context/`) — el "context awareness" que faltaba.** El TERCER RAG,
