@@ -3,14 +3,14 @@
 
 # 🗺️ Mapa de Arquitectura — Cyberseg Agents
 
-> **Generado:** 2026-07-15 10:10:29 UTC · **Refleja el estado real** del proyecto en ese momento.
+> **Generado:** 2026-07-15 11:56:47 UTC · **Refleja el estado real** del proyecto en ese momento.
 > Regenerar a mano: `python tools/gen_arch_diagram.py`
 
 ## Qué es esto (para reconstruir contexto si se pierde)
 
 Suite de agentes para **pentesting / bug bounty autorizado**. Un **Orquestador** (sesión principal, `AGENTS.md`) coordina a los agentes especialistas mediante **hub-and-spoke**: él delega, recoge resultados y hace de **router de un bus A2A mediado** (los agentes se dirigen mensajes entre sí dejándolos en el **blackboard**, `contracts/engagement.json`; no hay malla directa). Un **hook de alcance** (`scope_guard.py`) bloquea de forma determinista cualquier comando contra un target fuera de `contracts/scope.json`. Dos RAG locales (SQLite): el de **vulnerabilidades** (`rag/`, KEV+EPSS+CVE recientes) que consulta `vuln-triage`, y el de **conocimiento** (`rag/knowledge/`, técnicas — Capa 1 estructurada + Capa 2 semántica) que consultan los agentes de explotación.
 
-**Estado actual:** 25 agentes especialistas (E1=5, E2=18, E3=2) + Orquestador + hook de alcance.
+**Estado actual:** 27 agentes especialistas (E1=6, E2=19, E3=2) + Orquestador + hook de alcance.
 
 ## Diagrama
 
@@ -24,6 +24,7 @@ flowchart TB
     subgraph E1["🟦 Zona E1 · Recon (perfil de red abierto, sin datos de cliente)"]
         active_recon["active-recon<br/><i>claude-haiku-4-5</i>"]
         api_recon["api-recon<br/><i>claude-haiku-4-5</i>"]
+        firmware_recon["firmware-recon<br/><i>claude-haiku-4-5</i>"]
         mobile_recon["mobile-recon<br/><i>claude-haiku-4-5</i>"]
         osint_recon["osint-recon<br/><i>claude-haiku-4-5</i>"]
         recon_suite["recon-suite<br/><i>claude-haiku-4-5</i>"]
@@ -36,6 +37,7 @@ flowchart TB
         ai_security["ai-security<br/><i>claude-opus-4-8</i>"]
         api_exploit["api-exploit<br/><i>claude-opus-4-8</i>"]
         c2_exfil["c2-exfil<br/><i>claude-sonnet-4-6</i>"]
+        firmware_exploit["firmware-exploit<br/><i>claude-opus-4-8</i>"]
         kerberos["kerberos<br/><i>claude-sonnet-4-6</i>"]
         lateral_discovery["lateral-discovery<br/><i>claude-sonnet-4-6</i>"]
         metasploit["metasploit<br/><i>claude-sonnet-4-6</i>"]
@@ -80,6 +82,7 @@ flowchart TB
 | :--- | :---: | :--- | :--- | :--- | :--- | :--- |
 | **active-recon** | E1 | claude-haiku-4-5 | default | — | Read, Write, Edit, Grep, Glob, Bash | Recon ACTIVO / enumeración. Úsalo tras osint-recon para escanear puer… |
 | **api-recon** | E1 | claude-haiku-4-5 | default | local | Read, Write, Edit, Grep, Glob, Bash | Inventario y descubrimiento de APIs (REST/GraphQL) — la spec ES el ma… |
+| **firmware-recon** | E1 | claude-haiku-4-5 | default | local | Read, Write, Edit, Grep, Glob, Bash | Análisis ESTÁTICO y EMULACIÓN de firmware IoT (imagen de firmware) si… |
 | **mobile-recon** | E1 | claude-haiku-4-5 | default | local | Read, Write, Edit, Grep, Glob, Bash | Inventario y análisis ESTÁTICO de apps móviles (Android APK / iOS IPA… |
 | **osint-recon** | E1 | claude-haiku-4-5 | default | — | Read, Write, Edit, Grep, Glob, WebSearc… | Recon PASIVO. Úsalo al inicio de un engagement para mapear la superfi… |
 | **recon-suite** | E1 | claude-haiku-4-5 | default | — | Read, Write, Edit, Grep, Glob, Bash | Especialista en el toolkit de recon moderno — subfinder, amass, dnsx,… |
@@ -90,6 +93,7 @@ flowchart TB
 | **ai-security** | E2 | claude-opus-4-8 | default | local | Read, Write, Edit, Grep, Glob, Bash, We… | Red teaming de aplicaciones con IA/LLM. Úsalo cuando el target en sco… |
 | **api-exploit** | E2 | claude-opus-4-8 | default | local | Read, Write, Edit, Grep, Glob, Bash, We… | Explotación de APIs (REST/GraphQL) siguiendo el OWASP API Security To… |
 | **c2-exfil** | E2 | claude-sonnet-4-6 | default | — | Read, Write, Edit, Grep, Glob, Bash | Simulación CONTROLADA de C2, exfiltración e impacto para demostrar el… |
+| **firmware-exploit** | E2 | claude-opus-4-8 | default | local | Read, Write, Edit, Grep, Glob, Bash, We… | Explotación de firmware IoT (análisis dinámico, runtime y binarios em… |
 | **kerberos** | E2 | claude-sonnet-4-6 | default | local | Read, Write, Edit, Grep, Glob, Bash | Especialista en ataques Kerberos sobre Active Directory — Kerberoasti… |
 | **lateral-discovery** | E2 | claude-sonnet-4-6 | default | local | Read, Write, Edit, Grep, Glob, Bash | Descubrimiento INTERNO y movimiento lateral desde un punto de apoyo c… |
 | **metasploit** | E2 | claude-sonnet-4-6 | default | local | Read, Write, Edit, Grep, Glob, Bash | Operador SENIOR de Metasploit Framework. Úsalo cuando un finding trae… |

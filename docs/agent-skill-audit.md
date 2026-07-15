@@ -1,14 +1,14 @@
 # Auditoría de calidad de agentes y skills — v2.1.0
 
-> **Al día (v2.46.0):** hoy la suite tiene **25 agentes** y **15 skills** (v2.46.0 añadió `mobile-recon`/`mobile-exploit` + `mobile-app-security`);
+> **Al día (v2.47.0):** hoy la suite tiene **27 agentes** y **16 skills** (v2.47.0 añadió `firmware-recon`/`firmware-exploit` + `iot-firmware-security`);
 > la cobertura anti-inyección
-> **C11 está en 23 agentes** (los 25 menos `reporting`/`knowledge-postmortem`; los +3 del clúster AD la
-> sumaron en v2.11.0, los +2 del clúster móvil en v2.46.0). Lo que sigue es el **informe original de la auditoría de calidad de v2.1.0**,
+> **C11 está en 25 agentes** (los 27 menos `reporting`/`knowledge-postmortem`; los +3 del clúster AD la
+> sumaron en v2.11.0, los +2 del clúster móvil en v2.46.0, los +2 del firmware en v2.47.0). Lo que sigue es el **informe original de la auditoría de calidad de v2.1.0**,
 > conservado como registro; los cambios posteriores se leen en [CHANGELOG.md](../CHANGELOG.md).
 
 Revisión de **calidad** (no solo validez de config) de los **18 prompts de agente**
-(`.claude/agents/`) y las **9 skills** (`plugin/skills/`) que existían **en v2.1.0** (hoy **25 agentes**
-y **15 skills**). Complementa la auditoría de configuración de v1.11.0 ([config-audit.md](config-audit.md))
+(`.claude/agents/`) y las **9 skills** (`plugin/skills/`) que existían **en v2.1.0** (hoy **27 agentes**
+y **16 skills**). Complementa la auditoría de configuración de v1.11.0 ([config-audit.md](config-audit.md))
 y el hardening de v2.0.0 (mínimo privilegio + `SubagentStop`).
 
 ## Método

@@ -4,6 +4,47 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.47.0] - 2026-07-15
+### Added
+- **Vertical FIRMWARE IoT (4º y ÚLTIMO hito del entorno Bug Bounty) — al ESTADO DEL ARTE (OWASP FSTM / IoT
+  Top 10 2018 / ISVS).** Cierra el entorno BB (API v2.41-44 · web v2.45 · móvil v2.46 · firmware v2.47).
+  - **Auditoría de vigencia + huecos:** **FSTM** (Firmware Security Testing Methodology, 9 etapas; cumple SBOM
+    CISA 2025), **ISVS 1.0** (IoT Security Verification Standard, 165 requisitos V1-V5, con migración post-cuántica
+    y alineación EU CRA) e **IoT Top 10 2018** (I1-I10, la edición oficial vigente). Mapean 1:1 con el patrón
+    móvil (FSTM≈MASTG, ISVS≈MASVS, IoT Top10≈Mobile Top10).
+  - **El hallazgo estructural (capstone):** un dispositivo IoT **ES un ecosistema** = firmware + app companion +
+    API cloud + UI web + servicios de red → **las tres verticales previas ya lo cubren**. El valor firmware-
+    específico es solo **estático + EMULACIÓN + binarios embebidos**; la emulación (FSTM etapa 6) es la bisagra
+    que **reparte** la superficie a web/api/móvil/network. Esta vertical **ata todo el entorno**, no añade una
+    superficie aislada.
+  - **Hueco de esquema cerrado:** `target.schema.json` `asset_type` += **`iot-firmware`** + `firmware-recon` en
+    `discovered_by`. Retrocompatible. La imagen de firmware va referenciada a `loot/`.
+  - **Agente `firmware-recon`** (E1, FSTM 1-6, estático+emulación): `binwalk`/`unblob` (extrae el filesystem),
+    caza credenciales/backdoors (I1)/claves/certs → findings, SBOM (I5 → `vuln-triage`), mecanismo de update
+    (I4), y **emula con FirmAE/QEMU** para levantar la UI/servicios → los reparte a web/api/network/móvil.
+  - **Agente `firmware-exploit`** (E2, opus-4-8/xhigh, FSTM 7-9): inyección de comandos en CGI del dispositivo
+    (la reina), explotación de **binarios embebidos MIPS/ARM** (BOF/format-string sin ASLR/DEP, `gdb-multiarch`/
+    QEMU), **update inseguro** (I4). Sobre firmware **EMULADO** (software) o device de prueba.
+  - **Skill `iot-firmware-security`** (FSTM 9 etapas + IoT Top 10 2018 + ISVS V1-V5, tooling, frontera
+    operator-assisted). Roster de skills **15 → 16**.
+  - **RAG Capa 2 — corpus `owasp-fstm` + `owasp-isvs`** (CC BY-SA).
+  - **Roster 25 → 27** (E1=6, E2=19, E3=2); A2A simétrico (clúster firmware + enganches network/triage).
+### Notes
+- **Frontera honesta operator-assisted** (ya prevista en el plan): firmware-como-fichero + extracción +
+  emulación + explotación sobre emulado = software puro; el **dump físico del flash (UART/JTAG/SPI/chip-off)**
+  y todo **hardware/radio (BLE/Zigbee/Z-Wave/LoRa/SDR)** = operator-assisted, fuera del scope puramente software.
+- **No-daño IoT:** nada de brickear dispositivos ni flashear imágenes maliciosas a hardware real; el abuso de
+  OTA (I4) se demuestra sobre firmware emulado o device de prueba con sign-off. Emulación **aislada**.
+- El poblado del corpus con embeddings es paso de **Kali**. **Con esto el entorno Bug Bounty (API/web/móvil/
+  firmware-IoT) queda COMPLETO.**
+- **Verificación:** el council automático (Opus 4.8) fue **cortado por las salvaguardas cyber de la plataforma**
+  a mitad (mismo tipo de corte que en v2.43.0). Se hizo la verificación de las lentes manualmente y de forma
+  transparente: exactitud (FSTM/IoT Top10 2018/ISVS verificados contra fuente), esquema retrocompatible (probado),
+  A2A simétrico (validate 623/0/0), fronteras (operator-assisted; firmware-exploit vs network-exploit) y no-daño.
+  **Hardening aplicado tras la revisión propia:** guardarraíl explícito de **emulación AISLADA por defecto** —
+  el firmware emulado *llama a casa* (DNS/NTP/OTA/telemetría a la cloud real del fabricante = terceros fuera de
+  scope y posible alerta al defensor) → salida de red bloqueada/sandboxeada salvo que el scope lo diga.
+
 ## [2.46.0] - 2026-07-15
 ### Added
 - **Vertical MÓVIL (3er hito del entorno Bug Bounty) — al ESTADO DEL ARTE de un tirón (OWASP Mobile Top 10

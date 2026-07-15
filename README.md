@@ -6,7 +6,7 @@
 <h1 align="center">Data Attack — Offensive Tools</h1>
 
 <p align="center">
-  <b>Suite de 25 agentes especialistas para pentesting y bug bounty autorizado.</b><br>
+  <b>Suite de 27 agentes especialistas para pentesting y bug bounty autorizado.</b><br>
   Orquestación hub-and-spoke con bus A2A mediado sobre los subagentes nativos de Claude Code,
   con guardián de alcance determinista, doble RAG (vulnerabilidades + conocimiento ofensivo) y
   control remoto por Telegram.
@@ -33,7 +33,7 @@
 
 <!-- BADGES — capacidades -->
 <p align="center">
-  <img src="https://img.shields.io/badge/Agentes-25_especialistas-00D4FF?style=flat-square&labelColor=0D1117" alt="25 agentes">
+  <img src="https://img.shields.io/badge/Agentes-27_especialistas-00D4FF?style=flat-square&labelColor=0D1117" alt="27 agentes">
   <img src="https://img.shields.io/badge/Orquestaci%C3%B3n-Hub--and--Spoke_%2B_A2A-00D4FF?style=flat-square&labelColor=0D1117" alt="Hub-and-spoke + A2A">
   <img src="https://img.shields.io/badge/RAG_vulns-KEV%2BEPSS%2Brecientes-00D4FF?style=flat-square&labelColor=0D1117" alt="RAG vulnerabilidades">
   <img src="https://img.shields.io/badge/RAG_t%C3%A9cnicas-GTFOBins%2FATT%26CK%2BHackTricks-00D4FF?style=flat-square&labelColor=0D1117" alt="RAG de conocimiento">
@@ -67,7 +67,7 @@
 - [Actualizar](#actualizar)
 - [Plataformas soportadas](#plataformas-soportadas)
 - [Instalación rápida (Claude Code)](#instalación-rápida-claude-code)
-- [Los 25 agentes](#los-25-agentes)
+- [Los 27 agentes](#los-27-agentes)
 - [Bot de Telegram](#bot-de-telegram)
 - [Los dos RAG locales](#los-dos-rag-locales)
 - [Flujo engagement-driven](#flujo-engagement-driven)
@@ -81,7 +81,7 @@
 
 ## Qué es Data Attack
 
-Data Attack es una suite de **25 agentes especialistas** (de fase y de herramienta), un **orquestador**, un
+Data Attack es una suite de **27 agentes especialistas** (de fase y de herramienta), un **orquestador**, un
 **guardián de alcance** (hook determinista), **dos RAG locales** (vulnerabilidades KEV+EPSS+CVE recientes y
 conocimiento de técnicas ofensivas) y un **bot de Telegram** para conducir todo desde el móvil. Cubre las fases de un engagement
 ofensivo —recon, análisis, explotación y cierre— sobre el sistema nativo de **subagentes de
@@ -101,7 +101,7 @@ hops anti-bucle).
 | | Capacidad | Qué aporta |
 | :---: | :--- | :--- |
 | 🧭 | **Hub-and-spoke + bus A2A** | Un orquestador delega por fases y enruta; los agentes se dirigen mensajes A2A entre sí por el blackboard (mediado, auditado y con techo de hops), sin malla directa. |
-| 🤖 | **25 agentes especialistas** | Recon, inventario y explotación de API (REST/GraphQL, OWASP API Top 10), triage, explotación web/red/AD (Kerberos, AD CS, BloodHound), C2 simulado, red team de IA/LLM, informe y postmortem. |
+| 🤖 | **27 agentes especialistas** | Recon, inventario y explotación de API (REST/GraphQL, OWASP API Top 10), triage, explotación web/red/AD (Kerberos, AD CS, BloodHound), C2 simulado, red team de IA/LLM, informe y postmortem. |
 | 📚 | **RAG de vulnerabilidades** | `vuln-triage` prioriza por lo que de verdad se explota (CISA KEV, EPSS, exploit público) **y se mantiene fresco con CVE recién publicados** (CVEDetector + MITRE cvelistV5), sin reentrenar el modelo. |
 | 🧠 | **RAG de conocimiento** | Catálogo local de **técnicas** ofensivas (GTFOBins/LOLBAS/Atomic/ATT&CK + HackTricks/PEASS/817 skills de ciberseguridad semánticos) que los agentes de explotación consultan para el *cómo* (privesc, payloads, cadenas); skill `rag-technique-lookup`. |
 | 🛡️ | **Guardián de alcance** | `scope_guard.py` bloquea de forma determinista cualquier acción fuera de `scope.json`. |
@@ -308,13 +308,13 @@ copy contracts\scope.example.json contracts\scope.json
 #    revisa .claude/settings.json -> hooks.PreToolUse
 ```
 
-## Los 25 agentes
+## Los 27 agentes
 
 Repartidos por zona de aislamiento. Cada agente trae su modelo, sus tools y su permiso ya
 fijados; el orquestador decide a quién llamar en cada fase.
 
 <details>
-<summary><b>🟦 Zona E1 · Recon (4)</b></summary>
+<summary><b>🟦 Zona E1 · Recon (6)</b></summary>
 
 | Agente | Modelo | Función |
 | :--- | :--- | :--- |
@@ -323,11 +323,12 @@ fijados; el orquestador decide a quién llamar en cada fase.
 | **recon-suite** | haiku-4-5 | Toolkit moderno: subfinder, amass, dnsx, httpx. |
 | **api-recon** | haiku-4-5 | Inventario de API: cosecha OpenAPI/Swagger, versiones, descubrimiento GraphQL. |
 | **mobile-recon** | haiku-4-5 | Análisis ESTÁTICO de apps móviles (APK/IPA): decompila, IPC, secretos, y extrae el backend hacia la vertical API. |
+| **firmware-recon** | haiku-4-5 | Análisis ESTÁTICO + EMULACIÓN de firmware IoT (FSTM 1-6): binwalk, filesystem, secretos/backdoors, y reparte la superficie a las verticales. |
 
 </details>
 
 <details>
-<summary><b>🟥 Zona E2 · Explotación (18)</b></summary>
+<summary><b>🟥 Zona E2 · Explotación (19)</b></summary>
 
 | Agente | Modelo | Función |
 | :--- | :--- | :--- |
@@ -336,6 +337,7 @@ fijados; el orquestador decide a quién llamar en cada fase.
 | **web-exploit** | opus-4-8 | Explotación de aplicaciones web (capa 7 HTTP/S). |
 | **api-exploit** | opus-4-8 | Explotación de APIs REST/GraphQL (OWASP API Top 10 2023) con authz diferencial multi-identidad. |
 | **mobile-exploit** | opus-4-8 | Explotación de apps móviles (OWASP Mobile Top 10 2024 / MASVS 2.x / MASTG v2); dinámico Frida/objection operator-assisted. |
+| **firmware-exploit** | opus-4-8 | Explotación de firmware IoT (FSTM 7-9 / IoT Top 10 2018 / ISVS): cmd-injection en CGI, binarios embebidos MIPS/ARM, update inseguro; hardware/radio operator-assisted. |
 | **web-fuzzing** | haiku-4-5 | Descubrimiento de contenido y fuzzing con ffuf/feroxbuster. |
 | **sqlmap** | sonnet-4-6 | Inyección SQL automatizada, operador senior de sqlmap. |
 | **network-exploit** | sonnet-4-6 | Explotación de servicios de red e infraestructura no-HTTP. |
@@ -421,8 +423,8 @@ accionables. Dos capas, con la skill `rag-technique-lookup`:
   concreto de privesc/credenciales/persistencia (determinista, stdlib).
 - **Capa 2 — semántica** (`kb_vec.db`): HackTricks · PayloadsAllTheThings · PEASS · **817 skills de
   ciberseguridad** (`mukul975/Anthropic-Cybersecurity-Skills`, Apache-2.0) · **canon OWASP** (API Top 10
-  2023, **Web Top 10 2025**, WSTG, Cheat Sheet Series, **MASVS 2.x / MASTG v2 móvil** — CC BY-SA) + feeds
-  (0dayfans/HN/CVEDetector) con
+  2023, **Web Top 10 2025**, WSTG, Cheat Sheet Series, **MASVS 2.x / MASTG v2 móvil**, **FSTM / ISVS
+  firmware-IoT** — CC BY-SA) + feeds (0dayfans/HN/CVEDetector) con
   **embeddings locales** (sentence-transformers) + **sqlite-vec** → recuperación por significado para
   metodología/razonamiento.
 
@@ -501,7 +503,7 @@ Chuleta de todo lo ejecutable, por categoría. Salvo que se indique otra cosa, l
 | :--- | :--- |
 | `cd bot && ./.venv/bin/python bot.py` | Arranca el **bot de Telegram** (control remoto). |
 | `./deploy/dash.sh` | **Panel TUI de control total** (pestañas: A2A, agentes, presupuesto, RAG, evidencia, acciones). |
-| `claude` → `/agents` | Abre la **CLI de Claude Code** y lista los 25 agentes. |
+| `claude` → `/agents` | Abre la **CLI de Claude Code** y lista los 27 agentes. |
 
 ### 💰 Coste (agentsview · local)
 | Comando | Qué hace |
@@ -544,7 +546,7 @@ Chuleta de todo lo ejecutable, por categoría. Salvo que se indique otra cosa, l
 | Comando | Qué hace |
 | :--- | :--- |
 | `python tools/validate_suite.py` | Valida hooks, esquemas, agentes y la topología A2A. |
-| `python tools/verify_opencode.py` | Verifica el espejo opencode (config + 25 agentes + cruce routing↔provider). |
+| `python tools/verify_opencode.py` | Verifica el espejo opencode (config + 27 agentes + cruce routing↔provider). |
 | `python tools/sync_opencode.py` | Regenera el espejo `.opencode/agent/*.md` desde `.claude/agents/`. |
 | `python tools/build_plugin.py` | Empaqueta el plugin de Claude Code (carpeta `plugin/`). |
 | `python tools/build_agent_cards.py` | Regenera `contracts/agent-cards.json` (parejas A2A). |

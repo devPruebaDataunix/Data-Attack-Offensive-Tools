@@ -85,6 +85,19 @@ CORPUS = {
                     "slug": "OWASP/masvs", "glob": "Document/**/*.md"},
     "owasp-mastg": {"url": "https://github.com/OWASP/mastg.git",
                     "slug": "OWASP/mastg", "glob": "Document/**/*.md"},
+    # Canon de seguridad ofensiva de FIRMWARE / IoT (OWASP, CC BY-SA 4.0) — lo consultan firmware-recon/
+    # firmware-exploit. FSTM (Firmware Security Testing Methodology, 9 etapas: info→obtener→analizar→extraer-FS
+    # →analizar-FS→emular→dinámico→runtime→explotación-de-binarios; toda la metodología vive en el README.md,
+    # ~70KB) e ISVS (IoT Security Verification Standard 1.0, requisitos V1-V5: ecosistema/user-space/software-
+    # platform/comunicación/hardware). Globs VERIFICADOS (jul-2026) contra el árbol real @master: fstm =
+    # `README.md`; isvs = `en/**/*.md` (V1-IoT_Ecosystem..V5-Hardware). Mismo punto ciego de `_verify_layer2`
+    # (chunks totales, no por-fuente) — reverifica al poblar en Kali. IoT Top 10 2018 (awareness) va en los
+    # prompts/skill, no como corpus (lista corta, no metodología). NOTA: FSTM cubre la explotación de binarios
+    # embebidos y menciona hardware/radio — el motor los trata como OPERATOR-ASSISTED (fuera del scope software).
+    "owasp-fstm": {"url": "https://github.com/scriptingxss/owasp-fstm.git",
+                   "slug": "scriptingxss/owasp-fstm", "glob": "README.md"},
+    "owasp-isvs": {"url": "https://github.com/OWASP/IoT-Security-Verification-Standard-ISVS.git",
+                   "slug": "OWASP/IoT-Security-Verification-Standard-ISVS", "glob": "en/**/*.md"},
     "owasp-wstg": {"url": "https://github.com/OWASP/wstg.git",
                    "slug": "OWASP/wstg", "glob": "document/**/*.md"},
     "owasp-cheatsheets": {"url": "https://github.com/OWASP/CheatSheetSeries.git",
