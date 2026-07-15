@@ -6,10 +6,11 @@
   "required": ["target_id", "asset", "discovered_by", "in_scope"],
   "properties": {
     "target_id": { "type": "string" },
-    "asset": { "type": "string", "description": "host, dominio, IP o URL" },
-    "asset_type": { "type": "string", "enum": ["domain", "subdomain", "ip", "url", "service"] },
+    "asset": { "type": "string", "description": "host, dominio, IP, URL o —para asset_type 'mobile-app'— el package name (Android) / bundle id (iOS) de la app. El binario (APK/IPA) NO va aquí: se referencia en engagements/<id>/loot/ (material crudo de cliente), nunca en claro en el blackboard." },
+    "asset_type": { "type": "string", "enum": ["domain", "subdomain", "ip", "url", "service", "mobile-app"], "description": "'mobile-app' = app móvil (APK/IPA) como activo en scope; mobile-recon extrae su superficie de backend y crea targets 'url' para api-recon/api-exploit." },
+    "platform": { "type": "string", "enum": ["android", "ios"], "description": "Solo para asset_type 'mobile-app': plataforma del binario. Determina el toolset (jadx/apktool vs class-dump) y si el análisis dinámico exige jailbreak (iOS) — operator-assisted." },
     "in_scope": { "type": "boolean", "description": "Verificado contra scope.json" },
-    "discovered_by": { "type": "string", "enum": ["osint-recon", "active-recon", "lateral-discovery", "netexec", "ad-enum"] },
+    "discovered_by": { "type": "string", "enum": ["osint-recon", "active-recon", "lateral-discovery", "netexec", "ad-enum", "mobile-recon"] },
     "reachable_via": { "type": "string", "description": "'direct' si el host es alcanzable desde el operador; o un pivot_id (FK a pivots[].pivot_id) si solo se alcanza a través de un host comprometido. Lo fija lateral-discovery al descubrir hosts internos. Por defecto 'direct'." },
     "access_level": { "type": "string", "enum": ["none", "user", "root", "admin", "system", "domain-admin"], "description": "Nivel de acceso obtenido en este host (estado de la cadena multi-host). Por defecto 'none'." },
     "defenses": {
@@ -42,5 +43,7 @@
     },
     "technologies": { "type": "array", "items": { "type": "string" } },
     "notes": { "type": "string" }
-  }
+  },
+  "if": { "properties": { "asset_type": { "const": "mobile-app" } }, "required": ["asset_type"] },
+  "then": { "required": ["platform"], "description": "Un activo 'mobile-app' DEBE declarar 'platform' (android/ios): determina el toolset y si el dinámico exige jailbreak." }
 }

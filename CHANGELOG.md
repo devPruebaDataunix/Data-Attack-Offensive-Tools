@@ -4,6 +4,50 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.46.0] - 2026-07-15
+### Added
+- **Vertical MÓVIL (3er hito del entorno Bug Bounty) — al ESTADO DEL ARTE de un tirón (OWASP Mobile Top 10
+  2024 / MASVS 2.x / MASTG v2).** Precedida de un análisis exhaustivo de vigencia y de huecos (para no omitir
+  ningún aspecto clave). Reusa el **arnés diferencial** y el **RAG de contexto** vía la vertical API.
+  - **Auditoría de vigencia:** los TRES marcos autoritativos están renovados — **MASVS 2.x** (reestructurado en
+    categorías STORAGE/CRYPTO/AUTH/NETWORK/PLATFORM/CODE/RESILIENCE/PRIVACY; la numeración V1-V8 murió), **MASTG
+    v2.0.0** (primer estable no-beta, ene–jun 2026; verifica debilidades **MASWE**) y **OWASP Mobile Top 10
+    2024** (primer cambio desde 2016; giro a amenazas de **ecosistema**: M1 credenciales, M2 supply chain).
+  - **Principio anti-duplicación (el hallazgo clave del análisis):** el impacto móvil vive en el **backend**
+    (que ES una API) y en el ecosistema, no en romper la ofuscación → la vertical móvil **alimenta la de API**
+    en vez de reimplementarla. `mobile-recon` destila del binario la superficie de backend y la entrega a
+    `api-recon`/`api-exploit` (arnés diferencial allí); Firebase/cloud → `cloud-security`; SDKs → `vuln-triage`.
+  - **Hueco de esquema cerrado:** `target.schema.json` no podía representar una app móvil (`asset_type` solo
+    `[domain,subdomain,ip,url,service]`). Añadido **`mobile-app`** + campo **`platform`** (android/ios) +
+    `mobile-recon` en `discovered_by`. Retrocompatible. El binario (APK/IPA) va referenciado a `loot/`.
+  - **Agente `mobile-recon`** (E1, estático, agente-dirigido): decompila (jadx/apktool · class-dump), MobSF,
+    manifiesto/Info.plist (componentes exportados, deep links, ATS, `debuggable`/`allowBackup`), secretos
+    hardcoded (M1 → findings), WebViews (→ `web-exploit`), SDKs (→ `vuln-triage`), y **extrae el backend**.
+  - **Agente `mobile-exploit`** (E2, opus-4-8/xhigh): confirma estático + **guía dinámica OPERATOR-ASSISTED**
+    (Frida/objection: bypass SSL-pinning/root/jailbreak/biométrico) + storage/cripto/IPC/auth. Mapea Mobile Top
+    10 2024 (M1-M10) ↔ MASVS/MASTG. Frontera honesta: el dinámico exige device/emulador rooteado (iOS = jailbreak)
+    → el agente produce scripts/guía y el **operador** los ejecuta en su lab (como el poblado de Kali).
+  - **Skill `mobile-app-security`** (Android+iOS, los 3 frameworks, tooling, frontera operator-assisted).
+    Roster de skills **14 → 15**.
+  - **RAG Capa 2 — corpus `owasp-masvs` + `owasp-mastg`** (`Document/**/*.md`, CC BY-SA).
+  - **Roster 23 → 25** (E1=5, E2=18, E3=2); A2A simétrico (clúster móvil + enganches a API/web/triage);
+    agent-cards, plugin, arch y mirror opencode regenerados.
+### Notes
+- **Frontera operator-assisted** (como el hardware/radio de IoT): el **estático** es plenamente software; el
+  **dinámico** (instrumentación en device) lo ejecuta el operador guiado por el agente.
+- El poblado del corpus con embeddings es paso de **Kali** (venv aislado, como el resto de la Capa 2).
+- **Council multi-lente GO-con-reservas, reservas aplicadas:** (1)[consistencia A2A] `mobile-recon` entrega a
+  `api-recon` (su peer real, que releva a `api-exploit`), no directo a `api-exploit` (que no es su peer y lo
+  cortaría `a2a_guard`) — además es lo arquitectónicamente correcto (crea targets `url` → van al inventario);
+  (2)[no-daño] guardarraíl explícito: inspeccionar SOLO el sandbox de la app en scope, no otras apps/perfiles
+  del device rooteado (`scope_guard` es de red, no del filesystem local); (4)[esquema] `if asset_type==mobile-app
+  then require platform`; (5)[corpus] globs `Document/` de masvs/mastg VERIFICADOS contra el árbol real +
+  comentario sobre el punto ciego de `_verify_layer2`. Verificó como correcto: exactitud M1-M10 2024 y mapeo
+  MASVS, esquema retrocompatible, A2A simétrico end-to-end, secreto-como-hallazgo coherente con v2.43.0,
+  frontera operator-assisted inequívoca. **Follow-up diferido (#3, cosmético):** la frase heredada "`secret_scan`
+  no caza tokens de cliente" precede a v2.43.0 (el gate ya bloquea Bearer/Cookie vivos); pulir repo-wide
+  (api-exploit + mobile-exploit) para no divergir del patrón.
+
 ## [2.45.0] - 2026-07-15
 ### Added
 - **Vertical WEB moderna al ESTADO DEL ARTE — `web-exploit` mapeado al OWASP Top 10 2025 + skill

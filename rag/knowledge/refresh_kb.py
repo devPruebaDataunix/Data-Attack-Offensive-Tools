@@ -72,6 +72,19 @@ CORPUS = {
     # el corpus web queda vacío en silencio. Reverifica el árbol al poblar en Kali si OWASP reestructura.
     "owasp-web-top10": {"url": "https://github.com/OWASP/Top10.git",
                         "slug": "OWASP/Top10", "glob": "2025/docs/en/**/*.md"},
+    # Canon de seguridad ofensiva MÓVIL (OWASP MAS, CC BY-SA 4.0) — lo consultan mobile-recon/mobile-exploit.
+    # MASVS 2.x (estándar de verificación, reestructurado en STORAGE/CRYPTO/AUTH/NETWORK/PLATFORM/CODE/
+    # RESILIENCE/PRIVACY — la numeración V1-V8 vieja ya NO existe) y MASTG v2.0.0 (guía de testing, primer
+    # estable no-beta ene-2026; verifica debilidades MASWE). Glob al narrativo `Document/` (mismo criterio que
+    # WSTG: metodología/razonamiento, no los ficheros de test con código de `tests/`/`demos/`). Globs
+    # VERIFICADOS (jul-2026) contra el árbol real @master: masvs `Document/` trae 05-MASVS-STORAGE..12-PRIVACY;
+    # mastg `Document/` trae el narrativo 0x01.. — OJO al punto ciego de `_verify_layer2_populated()` (cuenta
+    # chunks TOTALES, no por-fuente): un glob roto vaciaría el corpus móvil en silencio; reverifica al poblar
+    # en Kali. El MASWE (`knowledge/`) se puede añadir aparte si se quiere la enumeración de debilidades.
+    "owasp-masvs": {"url": "https://github.com/OWASP/masvs.git",
+                    "slug": "OWASP/masvs", "glob": "Document/**/*.md"},
+    "owasp-mastg": {"url": "https://github.com/OWASP/mastg.git",
+                    "slug": "OWASP/mastg", "glob": "Document/**/*.md"},
     "owasp-wstg": {"url": "https://github.com/OWASP/wstg.git",
                    "slug": "OWASP/wstg", "glob": "document/**/*.md"},
     "owasp-cheatsheets": {"url": "https://github.com/OWASP/CheatSheetSeries.git",

@@ -3,14 +3,14 @@
 
 # 🗺️ Mapa de Arquitectura — Cyberseg Agents
 
-> **Generado:** 2026-07-15 08:41:35 UTC · **Refleja el estado real** del proyecto en ese momento.
+> **Generado:** 2026-07-15 10:10:29 UTC · **Refleja el estado real** del proyecto en ese momento.
 > Regenerar a mano: `python tools/gen_arch_diagram.py`
 
 ## Qué es esto (para reconstruir contexto si se pierde)
 
 Suite de agentes para **pentesting / bug bounty autorizado**. Un **Orquestador** (sesión principal, `AGENTS.md`) coordina a los agentes especialistas mediante **hub-and-spoke**: él delega, recoge resultados y hace de **router de un bus A2A mediado** (los agentes se dirigen mensajes entre sí dejándolos en el **blackboard**, `contracts/engagement.json`; no hay malla directa). Un **hook de alcance** (`scope_guard.py`) bloquea de forma determinista cualquier comando contra un target fuera de `contracts/scope.json`. Dos RAG locales (SQLite): el de **vulnerabilidades** (`rag/`, KEV+EPSS+CVE recientes) que consulta `vuln-triage`, y el de **conocimiento** (`rag/knowledge/`, técnicas — Capa 1 estructurada + Capa 2 semántica) que consultan los agentes de explotación.
 
-**Estado actual:** 23 agentes especialistas (E1=4, E2=17, E3=2) + Orquestador + hook de alcance.
+**Estado actual:** 25 agentes especialistas (E1=5, E2=18, E3=2) + Orquestador + hook de alcance.
 
 ## Diagrama
 
@@ -24,6 +24,7 @@ flowchart TB
     subgraph E1["🟦 Zona E1 · Recon (perfil de red abierto, sin datos de cliente)"]
         active_recon["active-recon<br/><i>claude-haiku-4-5</i>"]
         api_recon["api-recon<br/><i>claude-haiku-4-5</i>"]
+        mobile_recon["mobile-recon<br/><i>claude-haiku-4-5</i>"]
         osint_recon["osint-recon<br/><i>claude-haiku-4-5</i>"]
         recon_suite["recon-suite<br/><i>claude-haiku-4-5</i>"]
     end
@@ -38,6 +39,7 @@ flowchart TB
         kerberos["kerberos<br/><i>claude-sonnet-4-6</i>"]
         lateral_discovery["lateral-discovery<br/><i>claude-sonnet-4-6</i>"]
         metasploit["metasploit<br/><i>claude-sonnet-4-6</i>"]
+        mobile_exploit["mobile-exploit<br/><i>claude-opus-4-8</i>"]
         netexec["netexec<br/><i>claude-sonnet-4-6</i>"]
         network_exploit["network-exploit<br/><i>claude-sonnet-4-6</i>"]
         post_exploit["post-exploit<br/><i>claude-opus-4-8</i>"]
@@ -78,6 +80,7 @@ flowchart TB
 | :--- | :---: | :--- | :--- | :--- | :--- | :--- |
 | **active-recon** | E1 | claude-haiku-4-5 | default | — | Read, Write, Edit, Grep, Glob, Bash | Recon ACTIVO / enumeración. Úsalo tras osint-recon para escanear puer… |
 | **api-recon** | E1 | claude-haiku-4-5 | default | local | Read, Write, Edit, Grep, Glob, Bash | Inventario y descubrimiento de APIs (REST/GraphQL) — la spec ES el ma… |
+| **mobile-recon** | E1 | claude-haiku-4-5 | default | local | Read, Write, Edit, Grep, Glob, Bash | Inventario y análisis ESTÁTICO de apps móviles (Android APK / iOS IPA… |
 | **osint-recon** | E1 | claude-haiku-4-5 | default | — | Read, Write, Edit, Grep, Glob, WebSearc… | Recon PASIVO. Úsalo al inicio de un engagement para mapear la superfi… |
 | **recon-suite** | E1 | claude-haiku-4-5 | default | — | Read, Write, Edit, Grep, Glob, Bash | Especialista en el toolkit de recon moderno — subfinder, amass, dnsx,… |
 | **nuclei** | E2 | claude-haiku-4-5 | default | — | Read, Write, Edit, Grep, Glob, Bash | Especialista en Nuclei (ProjectDiscovery), escaneo de vulnerabilidade… |
@@ -90,6 +93,7 @@ flowchart TB
 | **kerberos** | E2 | claude-sonnet-4-6 | default | local | Read, Write, Edit, Grep, Glob, Bash | Especialista en ataques Kerberos sobre Active Directory — Kerberoasti… |
 | **lateral-discovery** | E2 | claude-sonnet-4-6 | default | local | Read, Write, Edit, Grep, Glob, Bash | Descubrimiento INTERNO y movimiento lateral desde un punto de apoyo c… |
 | **metasploit** | E2 | claude-sonnet-4-6 | default | local | Read, Write, Edit, Grep, Glob, Bash | Operador SENIOR de Metasploit Framework. Úsalo cuando un finding trae… |
+| **mobile-exploit** | E2 | claude-opus-4-8 | default | local | Read, Write, Edit, Grep, Glob, Bash, We… | Explotación de apps móviles (Android/iOS) mapeada a OWASP Mobile Top … |
 | **netexec** | E2 | claude-sonnet-4-6 | default | local | Read, Write, Edit, Grep, Glob, Bash | Especialista en NetExec (nxc, sucesor de CrackMapExec) + Impacket + r… |
 | **network-exploit** | E2 | claude-sonnet-4-6 | default | local | Read, Write, Edit, Grep, Glob, Bash | Explotación de servicios de red e infraestructura (no-HTTP). Úsalo pa… |
 | **post-exploit** | E2 | claude-opus-4-8 | default | local | Read, Write, Edit, Grep, Glob, Bash | Post-explotación en un host ya comprometido EN SCOPE. Úsalo para esca… |
