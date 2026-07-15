@@ -137,10 +137,12 @@ def build_doc(agents):
                "mediado** (los agentes se dirigen mensajes entre sí dejándolos en el **blackboard**, "
                "`contracts/engagement.json`; no hay malla directa). Un **hook de alcance** "
                "(`scope_guard.py`) bloquea de forma determinista cualquier comando contra un target "
-               "fuera de `contracts/scope.json`. Dos RAG locales (SQLite): el de **vulnerabilidades** "
-               "(`rag/`, KEV+EPSS+CVE recientes) que consulta `vuln-triage`, y el de **conocimiento** "
-               "(`rag/knowledge/`, técnicas — Capa 1 estructurada + Capa 2 semántica) que consultan los "
-               "agentes de explotación.")
+               "fuera de `contracts/scope.json`. Tres RAG locales (SQLite) por propósito: el de "
+               "**vulnerabilidades** (`rag/`, KEV+EPSS+CVE recientes) que consulta `vuln-triage`; el de "
+               "**conocimiento** (`rag/knowledge/`, técnicas — Capa 1 estructurada + Capa 2 semántica, con "
+               "el canon OWASP API/Web/WSTG/MASVS/MASTG/FSTM/ISVS) que consultan los agentes de explotación; "
+               "y el de **contexto** per-engagement (`rag/context/`, efímero y AISLADO por engagement, "
+               "EN-ZONA — *qué se sabe YA de ESTE objetivo*).")
     doc.append("")
     doc.append(f"**Estado actual:** {len(agents)} agentes especialistas "
                f"(E1={n_by_zone['E1']}, E2={n_by_zone['E2']}, E3={n_by_zone['E3']}) "

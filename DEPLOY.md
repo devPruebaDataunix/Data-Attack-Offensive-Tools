@@ -66,7 +66,7 @@ Flags: `--update` (todo a lo último), `--skip-tools`, `--no-rag`, `--no-bot`.
 ./deploy/verify.sh --update     # además actualiza todo a su última versión
 ```
 `verify.sh` comprueba también la **réplica opencode** (`tools/verify_opencode.py`: opencode.json
-+ 23 agentes + cruce `routing.json`↔provider) y, si el routing enruta a Ollama o a un provider free
++ 27 agentes + cruce `routing.json`↔provider) y, si el routing enruta a Ollama o a un provider free
 (Groq/Cerebras/…), su disponibilidad / que esté exportada su clave de entorno.
 Comprueba además (no críticos) `gum`, `textual` y `agentsview` (asistente, panel TUI y analítica de coste).
 

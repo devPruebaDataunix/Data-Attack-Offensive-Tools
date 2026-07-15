@@ -8,7 +8,7 @@
 <p align="center">
   <b>Suite de 27 agentes especialistas para pentesting y bug bounty autorizado.</b><br>
   Orquestación hub-and-spoke con bus A2A mediado sobre los subagentes nativos de Claude Code,
-  con guardián de alcance determinista, doble RAG (vulnerabilidades + conocimiento ofensivo) y
+  con guardián de alcance determinista, tres RAG locales (vulnerabilidades · conocimiento ofensivo · contexto per-engagement) y
   control remoto por Telegram.
 </p>
 
@@ -69,7 +69,7 @@
 - [Instalación rápida (Claude Code)](#instalación-rápida-claude-code)
 - [Los 27 agentes](#los-27-agentes)
 - [Bot de Telegram](#bot-de-telegram)
-- [Los dos RAG locales](#los-dos-rag-locales)
+- [Los tres RAG locales](#los-tres-rag-locales)
 - [Flujo engagement-driven](#flujo-engagement-driven)
 - [Las tres zonas de aislamiento](#las-tres-zonas-de-aislamiento)
 - [Seguridad](#seguridad)
@@ -82,8 +82,8 @@
 ## Qué es Data Attack
 
 Data Attack es una suite de **27 agentes especialistas** (de fase y de herramienta), un **orquestador**, un
-**guardián de alcance** (hook determinista), **dos RAG locales** (vulnerabilidades KEV+EPSS+CVE recientes y
-conocimiento de técnicas ofensivas) y un **bot de Telegram** para conducir todo desde el móvil. Cubre las fases de un engagement
+**guardián de alcance** (hook determinista), **tres RAG locales** (vulnerabilidades KEV+EPSS+CVE recientes,
+conocimiento de técnicas ofensivas y contexto per-engagement) y un **bot de Telegram** para conducir todo desde el móvil. Cubre las fases de un engagement
 ofensivo —recon, análisis, explotación y cierre— sobre el sistema nativo de **subagentes de
 Claude Code**, con un espejo equivalente para **opencode**.
 
@@ -133,12 +133,13 @@ flowchart TB
     end
     BB[("🗒️ Blackboard · engagement.json<br/>targets · findings · mensajes A2A · evidencia")]
     RAGDB[("📚 RAG vulnerabilidades<br/>KEV+EPSS+recientes")]
-    RAGKB[("🧠 RAG conocimiento<br/>técnicas · Capa 1+2")]
-    subgraph E1["🟦 E1 · Recon (3)"]
-        R["osint-recon · active-recon · recon-suite"]
+    RAGKB[("🧠 RAG conocimiento<br/>técnicas · Capa 1+2 · canon OWASP")]
+    RAGCTX[("🎯 RAG contexto<br/>per-engagement · aislado · efímero")]
+    subgraph E1["🟦 E1 · Recon (6)"]
+        R["osint-recon · active-recon · recon-suite<br/>api-recon · mobile-recon · firmware-recon"]
     end
-    subgraph E2["🟥 E2 · Explotación (16)"]
-        X["vuln-triage · nuclei · web-exploit · web-fuzzing · sqlmap<br/>network-exploit · metasploit · netexec · ad-enum · kerberos · adcs<br/>post-exploit · lateral-discovery · sliver · c2-exfil · ai-security"]
+    subgraph E2["🟥 E2 · Explotación (19)"]
+        X["vuln-triage · nuclei · web-exploit · api-exploit · web-fuzzing · sqlmap<br/>mobile-exploit · firmware-exploit · network-exploit · metasploit · netexec<br/>ad-enum · kerberos · adcs · post-exploit · lateral-discovery · sliver · c2-exfil · ai-security"]
     end
     subgraph E3["🟩 E3 · Cierre (2)"]
         C["reporting · knowledge-postmortem"]
@@ -154,6 +155,7 @@ flowchart TB
     BB -.->|reinyecta lecciones| ORQ
     X -->|consulta CVE| RAGDB
     X -->|consulta técnica| RAGKB
+    X -->|contexto del target| RAGCTX
 ```
 
 > El mapa completo y siempre al día vive en [ARCHITECTURE_MAP.md](ARCHITECTURE_MAP.md) — se
@@ -400,10 +402,11 @@ modos. El timeout cuenta como denegación.
 
 </details>
 
-## Los dos RAG locales
+## Los tres RAG locales
 
-El conocimiento de los agentes se actualiza **sin reentrenar el modelo**, vía dos RAG locales en
-**SQLite** (sin dependencias externas en la consulta; aptos para la zona E2 aislada):
+Los agentes trabajan **sin reentrenar el modelo** con **tres RAG locales** en **SQLite** (sin dependencias
+externas en la consulta; aptos para la zona E2 aislada), cada uno con un propósito distinto — *qué es
+vulnerable*, *cómo explotar* y *qué se sabe YA de ESTE objetivo*:
 
 ### 1) RAG de vulnerabilidades — *"qué es vulnerable"* (`rag/vulns.db`)
 Lo consulta `vuln-triage` para priorizar por explotación **real** (CISA KEV → exploit público → EPSS →
@@ -436,8 +439,21 @@ python rag/knowledge/query_kb.py --semantic "privesc cuando sudo permite tar" --
 python rag/knowledge/query_kb.py --stats        # cobertura de ambas capas (verificar población)
 ```
 
-Detalle de ambos en [rag/README.md](rag/README.md) y [rag/knowledge/README.md](rag/knowledge/README.md)
-(incluye ruta de producción a Supabase + n8n para equipo).
+### 3) RAG de contexto — *"qué se sabe YA de ESTE objetivo"* (`rag/context/`)
+Distinto de los dos generales: es **per-engagement**, **efímero** y **EN-ZONA** (bajo `engagements/<id>/`,
+gitignored, portador de datos de cliente → **nunca** se mezcla con el RAG de conocimiento; aislamiento
+CONSTITUTION §1). Indexa por significado los artefactos que el propio engagement acumula
+(`recon`/`exploit`/`evidence`/`notes`, **nunca** `loot/`) para que los agentes crucen el *cómo* general con el
+*qué sabemos aquí* antes de disparar, en vez de releer el blackboard. Reusa el store vectorial y el embedder
+local del RAG de conocimiento (cero duplicación, embeddings offline).
+
+```bash
+python rag/context/ingest_context.py -e <engagement_id>                       # indexa los artefactos del engagement
+python rag/context/query_context.py -e <engagement_id> --semantic "auth de /orders" --k 6
+```
+
+Detalle en [rag/README.md](rag/README.md), [rag/knowledge/README.md](rag/knowledge/README.md) y
+[rag/context/README.md](rag/context/README.md) (incluye ruta de producción a Supabase + n8n para equipo).
 
 ## Flujo engagement-driven
 
@@ -474,7 +490,7 @@ especificar antes de ejecutar, y auditar la coherencia antes de reportar.
 - **Secretos fuera del repo:** token y user-id en `bot/.env` (ignorado por git).
 - **Regla de evidencia:** sin fuente, no se explota; sin evidencia, no es un hallazgo.
 - **Gobierno por [CONSTITUTION.md](CONSTITUTION.md)** y auditoría de coherencia previa al informe.
-- **Capa de guardarraíles deterministas** (gate de alcance, validación del blackboard, anti-inyección en 19 agentes, detector de secretos, kill-switch de consumo, **validador del bus A2A** —emisor/destino conocidos + topología de pares + techo de hops—, **auditoría de subagentes**, **sanitización de la memoria de aprendizaje**, **anti-alboroto** y **anti-bucle**) mapeada a OWASP LLM Top 10 — ver [GUARDRAILS.md](GUARDRAILS.md).
+- **Capa de guardarraíles deterministas** (gate de alcance, validación del blackboard, anti-inyección en 25 agentes, detector de secretos, kill-switch de consumo, **validador del bus A2A** —emisor/destino conocidos + topología de pares + techo de hops—, **auditoría de subagentes**, **sanitización de la memoria de aprendizaje**, **anti-alboroto** y **anti-bucle**) mapeada a OWASP LLM Top 10 — ver [GUARDRAILS.md](GUARDRAILS.md).
 - **Historial de versiones** en [CHANGELOG.md](CHANGELOG.md) (SemVer) y en las [releases](https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases).
 
 ## Referencia de comandos
@@ -525,10 +541,10 @@ Chuleta de todo lo ejecutable, por categoría. Salvo que se indique otra cosa, l
 | Comando | Qué hace |
 | :--- | :--- |
 | `python rag/knowledge/refresh_kb.py` | Puebla la Capa 1 (GTFOBins/LOLBAS/Atomic/ATT&CK). |
-| `python rag/knowledge/refresh_kb.py --semantic` | + Capa 2 semántica (HackTricks/PaTT/PEASS/817 skills/feeds; pesado). |
+| `python rag/knowledge/refresh_kb.py --semantic` | + Capa 2 semántica (HackTricks/PaTT/PEASS/817 skills/**canon OWASP API·Web·MASVS·MASTG·FSTM·ISVS**/feeds; pesado). |
 | `python rag/knowledge/query_kb.py --query "<bin>" --category privesc` | Técnica accionable (Capa 1). |
 | `python rag/knowledge/query_kb.py --semantic "<pregunta>" --k 6` | Recuperación por significado (Capa 2). |
-| `python rag/knowledge/query_kb.py --stats` | Cobertura de ambos RAG de conocimiento (verificar población). |
+| `python rag/knowledge/query_kb.py --stats` | Cobertura de ambas capas del RAG de conocimiento (verificar población). |
 | `python benchmark/run_gate.py --eval <id> --target <lab>` | Lanza + gradúa el GATE contra un lab (LAB-only). |
 | `python tools/tune_maxturns.py` | Recomienda `maxTurns` por agente según los turnos reales usados. |
 
@@ -566,12 +582,13 @@ cyberseg-agents/
 ├── templates/      → plantilla de informe + brief del engagement
 ├── tools/          → análisis de coherencia + generador del mapa de arquitectura
 ├── rag/            → RAG de vulnerabilidades KEV+EPSS+recientes (SQLite)
-│   └── knowledge/  → RAG de conocimiento: técnicas (Capa 1 estructurada + Capa 2 semántica)
+│   ├── knowledge/  → RAG de conocimiento: técnicas (Capa 1 estructurada + Capa 2 semántica) + canon OWASP
+│   └── context/    → RAG de contexto per-engagement (efímero, aislado por engagement, EN-ZONA)
 ├── benchmark/      → eval-harness (EDD + pass@k): mide la capacidad de cierre autónomo
 ├── bot/            → bot de Telegram (Claude Agent SDK) + clasificador de riesgo
 ├── deploy/         → auto-deploy y verificación del toolchain en Kali (+ Docker: Dockerfile/compose)
 ├── dryrun/         → prueba end-to-end segura (sin atacar)
-├── .claude/        → settings, hooks (alcance, presupuesto, supervisión, blackboard, secretos, A2A, auditoría de subagentes) y los 23 subagentes
+├── .claude/        → settings, hooks (alcance, presupuesto, supervisión, blackboard, secretos, A2A, auditoría de subagentes) y los 27 subagentes
 └── .opencode/      → espejo de los agentes para opencode
 ```
 

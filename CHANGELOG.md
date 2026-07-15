@@ -4,6 +4,23 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.47.2] - 2026-07-15
+### Fixed
+- **Auditoría de consistencia documental tras el arco Bug Bounty (v2.41–v2.47.1) — sin cambios de código de
+  producto.** Verificación exhaustiva (validate 623/0/0, tests 20/15/20, CORPUS 13 fuentes con globs verificados,
+  sin versiones fantasma) + puesta al día del README y docs para eliminar incongruencias y datos de versiones
+  anteriores:
+  - **Bug real en `tools/gen_arch_diagram.py`:** la intro de `ARCHITECTURE_MAP.md` (autogenerada) tenía
+    hardcodeado **"Dos RAG"** y omitía el **RAG de contexto** (añadido en v2.44.0) → cada regeneración revertía
+    la corrección. Arreglado a **"Tres RAG"** (vulnerabilidades · conocimiento con canon OWASP · contexto
+    per-engagement) y regenerado el mapa.
+  - **README:** diagrama mermaid actualizado (E1 3→**6** con api/mobile/firmware-recon, E2 16→**19** con api/
+    mobile/firmware-exploit, **tercer nodo RAG de contexto** + su arista); sección "Los **dos**/**tres** RAG
+    locales" reescrita con el 3er RAG (contexto per-engagement) + comandos; TOC, badges y overview (dos/doble →
+    **tres** RAG); "anti-inyección en **19**→**25** agentes" (verificado: 27 − reporting/knowledge-postmortem);
+    árbol de estructura con `rag/context/`; Capa 2 cita el canon OWASP.
+  - **DEPLOY.md** y **docs/assets/STYLE_GUIDE.md:** conteo de agentes **23 → 27**.
+
 ## [2.47.1] - 2026-07-15
 ### Changed
 - **Exactitud documental (follow-up diferido del council de v2.46.0, #3):** puesta al día repo-wide de la frase
