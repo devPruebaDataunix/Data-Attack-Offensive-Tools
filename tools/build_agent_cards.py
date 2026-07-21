@@ -25,6 +25,7 @@ VERSION_FILE = os.path.join(ROOT, "VERSION")
 # Fase por agente (campo informativo de la card). a2a.phase en el frontmatter lo sobreescribe.
 NAME_PHASE = {
     "osint-recon": "recon", "active-recon": "recon", "recon-suite": "recon", "api-recon": "recon",
+    "code-recon": "recon",
     "vuln-triage": "triage", "nuclei": "triage",
     "web-exploit": "exploitation", "network-exploit": "exploitation", "ai-security": "exploitation",
     "metasploit": "exploitation", "sqlmap": "exploitation", "web-fuzzing": "exploitation",

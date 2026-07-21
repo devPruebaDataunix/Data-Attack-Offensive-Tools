@@ -67,6 +67,14 @@ LOOT_PATTERNS = [
     ("ntlm_pair",  re.compile(r"\b[a-fA-F0-9]{32}:[a-fA-F0-9]{32}\b")),                    # LM:NT (secretsdump)
 ]
 
+# Referencia `file:line` de código fuente (white-box, code-recon). Una técnica generalizada NUNCA
+# necesita un `src/db/user.ts:42` concreto — eso es un identificador del código del cliente (zona E3)
+# que filtraría entre clientes del operador. Se exige la forma `<ruta>.<ext>:<línea>` (con `:línea`)
+# para FP ~0: un nombre de fichero suelto sin línea no dispara; la técnica debe usar `<handler>`.
+CODE_REF_RE = re.compile(
+    r"(?<![\w])[\w./\\-]+\.(?:ts|tsx|js|jsx|mjs|cjs|py|go|java|rb|php|cs|rs|c|cc|cpp|hpp|kt|swift|scala|pl|sh|sql):\d+",
+    re.I)
+
 
 def is_memory_path(file_path):
     """True si `file_path` cae bajo `.claude/agent-memory*/` (project o local)."""
@@ -136,6 +144,10 @@ def find_violations(text, scope):
     for label, rx in LOOT_PATTERNS:
         if rx.search(text):
             violations.append(f"loot:{label}")
+
+    # 5) Referencias `file:line` del código del cliente (white-box). Identificador de E3, no técnica.
+    for m in sorted(set(CODE_REF_RE.findall(text))):
+        violations.append(f"code_ref:{m}")
 
     # Únicas y ordenadas, para un mensaje estable.
     return sorted(set(violations))

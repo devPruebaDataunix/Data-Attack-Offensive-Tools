@@ -17,7 +17,7 @@
 2. **Inicia sesión** (suscripción Pro): abre un terminal integrado en VS Code y ejecuta
    `claude`. Sigue el login por navegador (OAuth). Solo la primera vez.
 3. **Confirma que los agentes cargan**: en la sesión de Claude Code escribe `/agents`.
-   Deben aparecer los 27 especialistas (recon, analysis, exploitation, closing).
+   Deben aparecer los 28 especialistas (recon, analysis, exploitation, closing).
 4. **Define el alcance autorizado** antes de cualquier acción:
    ```
    copy contracts\scope.example.json contracts\scope.json

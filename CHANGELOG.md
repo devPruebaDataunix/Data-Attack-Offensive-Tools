@@ -4,6 +4,61 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.52.0] - 2026-07-21
+### Added
+- **Vertical white-box `code-recon` (mejora "A" del análisis de Shannon) — el único hueco de capacidad
+  real que quedaba.** Nuevo agente de recon (`.claude/agents/recon/code-recon.md`, haiku-4-5, Zona E1→E3)
+  para engagements que **autorizan revisión white-box**: cuando el programa declara repos en
+  `scope.json → source_repos[]`, `code-recon` hace análisis **ESTÁTICO** del código (fingerprint del stack,
+  rutas/entrypoints incl. no-HTTP —colas/cron/webhooks—, **sinks** peligrosos y **lógica de authz** con
+  `file:line`, secretos hardcodeados y SBOM). No explota: **enriquece `targets[].source_hints`** y **siembra
+  hipótesis** en `findings[]` (`code_ref`, `status: candidate`) que rutea a `web-exploit`/`api-exploit`
+  para **confirmación DINÁMICA** — el código es un LEAD para priorizar el testing, no la prueba. Roster
+  **27 → 28** (18 de fase + 10 de herramienta).
+- **Esquema (retrocompatible):** `target.schema.json += source_hints[]` (kind route/sink/authz-logic/secret/
+  entrypoint + `source_ref` `repo_id:file:line` + `maps_to`; `secret_ref` con `pattern` `^engagements/.+/loot/`);
+  `finding.schema.json += code_ref` (procedencia en código; nombre deliberadamente distinto de `source_refs[]`
+  de CVE/KEV); `scope.example.json += source_repos[]` (repo_id/local_path bajo `engagements/<id>/recon/src/`,
+  `maps_to_targets`, autorización white-box). Las **dependencias** no son un `kind`: se entregan a `vuln-triage`.
+- **Bus A2A:** clúster white-box bidireccional `code-recon ↔ web-exploit`/`api-exploit` (la pista de código
+  dirige la confirmación; el exploit pide contexto de vuelta), `↔ api-recon` (superficie de API vista en el
+  código) y `↔ vuln-triage` (SBOM → CVE/KEV). Los cuatro peers declaran `code-recon` (topología C14 correcta).
+### Security
+- **El código fuente es DATO DE CLIENTE (zona E3, CONSTITUTION §6) y vector de inyección de primer orden
+  (C11).** `code-recon` trata todo el repo —comentarios, docstrings, README, fixtures— como **texto inerte**:
+  la autorización vive en `scope.json`, no en el repositorio. **`code-recon` no tiene `Bash`** (toolset
+  `Read, Grep, Glob, Write, Edit`): no clona de red, no ejecuta SAST ni nada — el código nunca se ejecuta; el
+  SAST (`semgrep`/`gitleaks`) es **operator-assisted**. Escribe por `Write`/`Edit` para que sus escrituras
+  pasen por los guards PostToolUse (que solo disparan con Write/Edit/MultiEdit).
+- **Barreras deterministas añadidas a raíz del council de 3 lentes (NO-GO cazado y cerrado):**
+  - **(corrección)** El toolset original era `…, Bash` **sin `Write`/`Edit`** — el agente habría escrito por
+    Bash, **esquivando `secret_scan`/`validate_blackboard`/`a2a_guard`**. Corregido: Write/Edit sí, Bash no.
+  - **(seguridad)** Con `Bash`, `scope_guard` habría **permitido `git clone`** del VCS in-scope. Al quitar
+    `Bash`, el vector de clone/exfil desaparece de forma determinista.
+  - **(seguridad)** `secret_scan` ahora bloquea un secreto de cliente **pegado en claro** en
+    `source_hints[].label`/`maps_to`/`source_ref`, y un `kind:secret` cuyo `secret_ref` no apunte a
+    `engagements/<id>/loot/` (antes era ciego a un secreto hardcodeado del código volcado a un campo de texto).
+  - **(seguridad)** `memory_guard` ahora bloquea **referencias `file:line` de código** en la memoria del
+    agente (un `src/db/user.ts:42` es identificador del cliente; filtraría entre clientes del operador).
+  - **(corrección)** `validate_blackboard`/`validate_engagement`: un finding con `code_ref` **no puede ir
+    `confirmed`/`exploited` sin `evidence`** — el código no confirma nada por sí solo.
+  - **(simplicidad)** `finding.source_ref` → **`code_ref`** (evita la colisión casi-homónima con
+    `source_refs[]`); se retiró `kind: dependency` (duplicaba lo que ya hace `vuln-triage`).
+- **Diferido y documentado (NO overclaim):** el confinamiento de `Read`/`Grep`/`Glob` a
+  `engagements/<id>/recon/src/` y el rechazo de **symlinks** que escapen de la zona **no** están impuestos aún
+  (los guards de ruta gatean `Bash`, no las tools de lectura) — esa contención de sistema de ficheros es la
+  que aporta la mejora **"C"** (contenedor efímero por-engagement, en el roadmap). El proof-state completo del
+  finding es la mejora **"F"**. Hasta entonces, la contención de lectura de `code-recon` es disciplina de
+  prompt + los guards anteriores, no aislamiento de FS.
+### Changed
+- Sincronizado el conteo de roster **27 → 28** en toda la documentación (README, AGENTS.md, DEPLOY,
+  SETUP-VSCODE, ENTORNO-LISTO, `plugin.json` ×2, docs/config-audit, docs/agent-skill-audit, STYLE_GUIDE);
+  `ARCHITECTURE_MAP.md` regenerado (E1=7); espejo opencode regenerado (28 agentes).
+- Tests: nuevo `tests/test_code_recon.py` (**38/0**, incl. los casos y barreras del council: toolset
+  Write/Edit-sin-Bash, `code_ref` sin colisión, `kind` sin `dependency`, `secret_ref` con pattern, topología
+  A2A bidireccional, y las 3 barreras deterministas —validate_engagement/memory_guard/secret_scan—);
+  `validate_suite` **657/0/0**; `test_memory_guard` 20/0 y `test_secret_scan` 15/0 sin regresión.
+
 ## [2.51.0] - 2026-07-21
 ### Added
 - **Evals de verticales bug bounty (web/API) en el eval-harness (mejora "E" del análisis de Shannon).**

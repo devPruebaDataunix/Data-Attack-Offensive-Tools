@@ -6,7 +6,7 @@
 <h1 align="center">Data Attack — Offensive Tools</h1>
 
 <p align="center">
-  <b>Suite de 27 agentes especialistas para pentesting y bug bounty autorizado.</b><br>
+  <b>Suite de 28 agentes especialistas para pentesting y bug bounty autorizado.</b><br>
   Orquestación hub-and-spoke con bus A2A mediado sobre los subagentes nativos de Claude Code,
   con guardián de alcance determinista, tres RAG locales (vulnerabilidades · conocimiento ofensivo · contexto per-engagement) y
   control remoto por Telegram.
@@ -33,7 +33,7 @@
 
 <!-- BADGES — capacidades -->
 <p align="center">
-  <img src="https://img.shields.io/badge/Agentes-27_especialistas-00D4FF?style=flat-square&labelColor=0D1117" alt="27 agentes">
+  <img src="https://img.shields.io/badge/Agentes-28_especialistas-00D4FF?style=flat-square&labelColor=0D1117" alt="28 agentes">
   <img src="https://img.shields.io/badge/Orquestaci%C3%B3n-Hub--and--Spoke_%2B_A2A-00D4FF?style=flat-square&labelColor=0D1117" alt="Hub-and-spoke + A2A">
   <img src="https://img.shields.io/badge/RAG_vulns-KEV%2BEPSS%2Brecientes-00D4FF?style=flat-square&labelColor=0D1117" alt="RAG vulnerabilidades">
   <img src="https://img.shields.io/badge/RAG_t%C3%A9cnicas-GTFOBins%2FATT%26CK%2BHackTricks-00D4FF?style=flat-square&labelColor=0D1117" alt="RAG de conocimiento">
@@ -67,7 +67,7 @@
 - [Actualizar](#actualizar)
 - [Plataformas soportadas](#plataformas-soportadas)
 - [Instalación rápida (Claude Code)](#instalación-rápida-claude-code)
-- [Los 27 agentes](#los-27-agentes)
+- [Los 28 agentes](#los-28-agentes)
 - [Bot de Telegram](#bot-de-telegram)
 - [Los tres RAG locales](#los-tres-rag-locales)
 - [Flujo engagement-driven](#flujo-engagement-driven)
@@ -81,7 +81,7 @@
 
 ## Qué es Data Attack
 
-Data Attack es una suite de **27 agentes especialistas** (de fase y de herramienta), un **orquestador**, un
+Data Attack es una suite de **28 agentes especialistas** (de fase y de herramienta), un **orquestador**, un
 **guardián de alcance** (hook determinista), **tres RAG locales** (vulnerabilidades KEV+EPSS+CVE recientes,
 conocimiento de técnicas ofensivas y contexto per-engagement) y un **bot de Telegram** para conducir todo desde el móvil. Cubre las fases de un engagement
 ofensivo —recon, análisis, explotación y cierre— sobre el sistema nativo de **subagentes de
@@ -101,7 +101,7 @@ hops anti-bucle).
 | | Capacidad | Qué aporta |
 | :---: | :--- | :--- |
 | 🧭 | **Hub-and-spoke + bus A2A** | Un orquestador delega por fases y enruta; los agentes se dirigen mensajes A2A entre sí por el blackboard (mediado, auditado y con techo de hops), sin malla directa. |
-| 🤖 | **27 agentes especialistas** | Recon, inventario y explotación de API (REST/GraphQL, OWASP API Top 10), triage, explotación web/red/AD (Kerberos, AD CS, BloodHound), C2 simulado, red team de IA/LLM, informe y postmortem. |
+| 🤖 | **28 agentes especialistas** | Recon (incl. white-box de código), inventario y explotación de API (REST/GraphQL, OWASP API Top 10), triage, explotación web/red/AD (Kerberos, AD CS, BloodHound), C2 simulado, red team de IA/LLM, informe y postmortem. |
 | 📚 | **RAG de vulnerabilidades** | `vuln-triage` prioriza por lo que de verdad se explota (CISA KEV, EPSS, exploit público) **y se mantiene fresco con CVE recién publicados** (CVEDetector + MITRE cvelistV5), sin reentrenar el modelo. |
 | 🧠 | **RAG de conocimiento** | Catálogo local de **técnicas** ofensivas (GTFOBins/LOLBAS/Atomic/ATT&CK + HackTricks/PEASS/817 skills de ciberseguridad semánticos) que los agentes de explotación consultan para el *cómo* (privesc, payloads, cadenas); skill `rag-technique-lookup`. |
 | 🛡️ | **Guardián de alcance** | `scope_guard.py` bloquea de forma determinista cualquier acción fuera de `scope.json`. |
@@ -310,13 +310,13 @@ copy contracts\scope.example.json contracts\scope.json
 #    revisa .claude/settings.json -> hooks.PreToolUse
 ```
 
-## Los 27 agentes
+## Los 28 agentes
 
 Repartidos por zona de aislamiento. Cada agente trae su modelo, sus tools y su permiso ya
 fijados; el orquestador decide a quién llamar en cada fase.
 
 <details>
-<summary><b>🟦 Zona E1 · Recon (6)</b></summary>
+<summary><b>🟦 Zona E1 · Recon (7)</b></summary>
 
 | Agente | Modelo | Función |
 | :--- | :--- | :--- |
@@ -326,6 +326,7 @@ fijados; el orquestador decide a quién llamar en cada fase.
 | **api-recon** | haiku-4-5 | Inventario de API: cosecha OpenAPI/Swagger, versiones, descubrimiento GraphQL. |
 | **mobile-recon** | haiku-4-5 | Análisis ESTÁTICO de apps móviles (APK/IPA): decompila, IPC, secretos, y extrae el backend hacia la vertical API. |
 | **firmware-recon** | haiku-4-5 | Análisis ESTÁTICO + EMULACIÓN de firmware IoT (FSTM 1-6): binwalk, filesystem, secretos/backdoors, y reparte la superficie a las verticales. |
+| **code-recon** | haiku-4-5 | Recon white-box de CÓDIGO (repos en `scope.source_repos[]`): stack, rutas/entrypoints, sinks y lógica de authz con `file:line`, secretos; siembra hipótesis que web/api-exploit confirman dinámicamente. |
 
 </details>
 
@@ -519,7 +520,7 @@ Chuleta de todo lo ejecutable, por categoría. Salvo que se indique otra cosa, l
 | :--- | :--- |
 | `cd bot && ./.venv/bin/python bot.py` | Arranca el **bot de Telegram** (control remoto). |
 | `./deploy/dash.sh` | **Panel TUI de control total** (pestañas: A2A, agentes, presupuesto, RAG, evidencia, acciones). |
-| `claude` → `/agents` | Abre la **CLI de Claude Code** y lista los 27 agentes. |
+| `claude` → `/agents` | Abre la **CLI de Claude Code** y lista los 28 agentes. |
 
 ### 💰 Coste (agentsview · local)
 | Comando | Qué hace |
@@ -562,7 +563,7 @@ Chuleta de todo lo ejecutable, por categoría. Salvo que se indique otra cosa, l
 | Comando | Qué hace |
 | :--- | :--- |
 | `python tools/validate_suite.py` | Valida hooks, esquemas, agentes y la topología A2A. |
-| `python tools/verify_opencode.py` | Verifica el espejo opencode (config + 27 agentes + cruce routing↔provider). |
+| `python tools/verify_opencode.py` | Verifica el espejo opencode (config + 28 agentes + cruce routing↔provider). |
 | `python tools/sync_opencode.py` | Regenera el espejo `.opencode/agent/*.md` desde `.claude/agents/`. |
 | `python tools/build_plugin.py` | Empaqueta el plugin de Claude Code (carpeta `plugin/`). |
 | `python tools/build_agent_cards.py` | Regenera `contracts/agent-cards.json` (parejas A2A). |

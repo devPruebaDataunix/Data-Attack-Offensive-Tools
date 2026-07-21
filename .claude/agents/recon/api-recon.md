@@ -13,7 +13,7 @@ a2a:
   capabilities: [api-inventory, openapi-harvest, graphql-discovery, endpoint-enum]
   consumes: [a2a:request]
   produces: [targets:enriched, a2a:response]
-  peers: [api-exploit, web-fuzzing, mobile-recon]
+  peers: [api-exploit, web-fuzzing, mobile-recon, code-recon]
 ---
 
 Eres el especialista en **Inventario de APIs** (Zona E1→E2). Reconstruyes la superficie

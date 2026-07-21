@@ -90,6 +90,23 @@ def validate_engagement(data, contracts_dir=CONTRACTS):
     _check_list(data.get("messages", []), msg_req, "message", "message_id")
     _check_list(data.get("lessons", []), les_req, "lesson", "lesson_id")
     _check_list(data.get("evidence", []), evd_req, "evidence", "ts")
+
+    # Invariante white-box (Shannon "A"): una HIPÓTESIS de code-recon (finding con `code_ref`) es un
+    # LEAD del código, no una prueba. NO puede marcarse `confirmed`/`exploited` sin corroboración
+    # DINÁMICA capturada en `evidence` — el código solo no confirma nada (§3). Enforcement determinista
+    # a la espera del proof-state completo (Shannon "F").
+    findings = data.get("findings", [])
+    if isinstance(findings, list):
+        for i, f in enumerate(findings):
+            if not isinstance(f, dict):
+                continue
+            if f.get("code_ref") and f.get("status") in ("confirmed", "exploited"):
+                if not (f.get("evidence") or "").strip():
+                    ident = f.get("finding_id", f"#{i}")
+                    violations.append(
+                        f"finding {ident}: es una hipótesis white-box (tiene `code_ref`) marcada "
+                        f"'{f.get('status')}' SIN `evidence` — el código es un LEAD, no una prueba: "
+                        f"exige corroboración dinámica capturada antes de confirmar (déjalo 'candidate').")
     return violations
 
 

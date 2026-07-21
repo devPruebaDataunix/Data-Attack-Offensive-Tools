@@ -14,7 +14,7 @@ a2a:
   capabilities: [cve-correlation, prioritization, source-backed-triage]
   consumes: [targets:enriched, a2a:response]
   produces: [findings:candidate, a2a:request]
-  peers: [web-exploit, network-exploit, metasploit, ai-security, api-exploit, mobile-recon, mobile-exploit, firmware-recon, firmware-exploit]
+  peers: [web-exploit, network-exploit, metasploit, ai-security, api-exploit, mobile-recon, mobile-exploit, firmware-recon, firmware-exploit, code-recon]
 ---
 
 Eres el especialista en **Análisis y Triage de Vulnerabilidades** (Zona E2). Conviertes el

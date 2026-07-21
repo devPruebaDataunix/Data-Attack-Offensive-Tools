@@ -13,7 +13,7 @@ verificado; queda **un solo paso manual** (tu login, que no puedo hacer por ti).
 | Pieza | Estado | Verificación |
 | :--- | :--- | :--- |
 | **Plugin** (`plugin/`) | manifest en `plugin.json` (VS Code) **y** `.claude-plugin/plugin.json` (Claude) | `claude plugin validate ./plugin` → **✔ passed** |
-| **Agents** | 27 especialistas: 17 de fase + 10 de herramienta (metasploit, recon-suite, nuclei, web-fuzzing, sqlmap, netexec, sliver, ad-enum, kerberos, adcs) | auto-descubiertos |
+| **Agents** | 28 especialistas: 18 de fase + 10 de herramienta (metasploit, recon-suite, nuclei, web-fuzzing, sqlmap, netexec, sliver, ad-enum, kerberos, adcs) | auto-descubiertos |
 | **Skills** | `rag-vuln-triage`, `pentest-report` (`SKILL.md`, Open Standard) | name+description ✔ |
 | **Hooks** | gate de alcance `PreToolUse` (envoltorio `{"hooks":{…}}`) | ✔ |
 | **MCP Servers** | vacío en el plugin (eip no auto-arranca); eip opt-in en `.mcp.json.example` | ✔ |

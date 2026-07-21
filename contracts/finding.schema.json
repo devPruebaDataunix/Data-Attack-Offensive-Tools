@@ -31,6 +31,9 @@
     "remediation": { "type": "string" },
     "discovered_by": { "type": "string" },
     "confirmed_by": { "type": "string" },
+    "code_ref": {
+      "type": "string",
+      "description": "Procedencia en CÓDIGO (white-box) de un finding que nació como HIPÓTESIS de `code-recon`: `<repo_id>:<ruta>:<línea>`. Es una pista de origen — el finding NO se da por confirmado por el código solo; exige corroboración DINÁMICA (proof-by-exploit): un finding con `code_ref` pero sin `evidence` sigue siendo `candidate`, y `validate_blackboard` bloquea marcarlo `confirmed`/`exploited` sin evidencia. Referencia `file:line`, nunca el código en claro. Nombre deliberadamente distinto de `source_refs[]` (CVE/KEV/advisories que respaldan) para no confundirlos." },
     "source_refs": {
       "type": "array",
       "description": "Fuentes que respaldan (CVE/KEV/advisory). Sin fuente no se explota.",

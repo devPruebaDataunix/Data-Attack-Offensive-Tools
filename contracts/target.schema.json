@@ -42,6 +42,21 @@
       }
     },
     "technologies": { "type": "array", "items": { "type": "string" } },
+    "source_hints": {
+      "type": "array",
+      "description": "Pistas de CÓDIGO (white-box) que escribe `code-recon` desde un repo declarado en `scope.json → source_repos[]` y asocia a este activo en vivo. Cada pista es una PISTA para priorizar el testing DINÁMICO, NO una vuln confirmada: el finding se confirma en ejecución (§3). NUNCA contiene código en claro ni secretos — solo la referencia `file:line` y una etiqueta no sensible. El código es dato de cliente (zona E3): vive en `engagements/<id>/recon/src/`, referenciado, nunca volcado al blackboard. No está en `required` (retrocompatible).",
+      "items": {
+        "type": "object",
+        "required": ["kind", "source_ref"],
+        "properties": {
+          "kind": { "type": "string", "enum": ["route", "sink", "authz-logic", "secret", "entrypoint"], "description": "route=endpoint/handler HTTP expuesto; sink=llamada peligrosa (SQL/exec/deserialize/SSTI/SSRF/path); authz-logic=dónde se decide el control de acceso (materia prima del testing diferencial BOLA/BFLA/IDOR); secret=credencial/clave hardcodeada (REFERENCIADA por secret_ref, nunca el valor); entrypoint=punto de entrada no-HTTP (cola/cron/webhook/CLI) que el recon de red no ve. Las DEPENDENCIAS no son un kind: se entregan a `vuln-triage` por A2A / `technologies[]`, no se duplican aquí." },
+          "source_ref": { "type": "string", "description": "Ubicación en el código: `<repo_id>:<ruta/relativa>:<línea>`. Es una REFERENCIA, no el contenido." },
+          "label": { "type": "string", "description": "Etiqueta breve NO sensible, p.ej. 'raw SQL string-concat en getUser' o 'jwt.verify con algoritmo del header'. Sin código en claro ni secretos (para kind=secret, el valor va en secret_ref→loot/, nunca aquí)." },
+          "maps_to": { "type": "string", "description": "Endpoint/ruta en vivo que esta pista sugiere probar (p.ej. 'GET /api/users/{id}'), para que web/api-exploit lo priorice sobre el target real." },
+          "secret_ref": { "type": "string", "pattern": "^engagements/.+/loot/", "description": "SOLO para kind=secret: referencia al material en `engagements/<id>/loot/`, NUNCA el valor en claro. El `pattern` fuerza que sea una referencia a loot/ (no un secreto pegado); lo refuerzan memory_guard/secret_scan." }
+        }
+      }
+    },
     "notes": { "type": "string" }
   },
   "if": { "properties": { "asset_type": { "const": "mobile-app" } }, "required": ["asset_type"] },

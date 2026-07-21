@@ -20,6 +20,17 @@
     "ips": ["203.0.113.1"],
     "notes": "No tocar infraestructura de correo ni terceros (AWS account compartida)."
   },
+  "source_repos": [
+    {
+      "repo_id": "app-backend",
+      "local_path": "engagements/ACME-2026-001/recon/src/app-backend",
+      "vcs_url": "git@internal.acme.example:acme/app-backend.git",
+      "ref": "main@a1b2c3d",
+      "languages": ["typescript", "go"],
+      "maps_to_targets": ["https://app.acme.example"],
+      "authorization": "Revisión white-box del código autorizada en SOW-2026-0042 §4. El operador provee el checkout LOCAL en local_path (bajo engagements/<id>/, gitignored); code-recon NO clona de red. Presencia aquí = autorización white-box; un repo no listado NO está en scope."
+    }
+  ],
   "constraints": {
     "no_dos": true,
     "no_social_engineering": true,

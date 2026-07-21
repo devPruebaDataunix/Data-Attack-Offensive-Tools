@@ -56,6 +56,54 @@ def blocking_reason(text):
             "propio motor y para el material de auth VIVO de las identidades de prueba.)")
 
 
+LOOT_REF_RE = None  # compilado perezosamente
+
+
+def source_hint_reason(text):
+    """Motivo de bloqueo si una PISTA de código white-box (`targets[].source_hints[]`, escrita por
+    code-recon) filtra un secreto de cliente EN CLARO o rompe la disciplina de referencia — o None.
+    El código es zona E3: los campos `label`/`maps_to` son NO sensibles y el material de un
+    `kind:secret` va SIEMPRE en `secret_ref` (`^engagements/.+/loot/`), nunca pegado. Distinto del scan
+    de auth VIVO: aquí cazamos un DSN/API-key/clave hardcodeada del código volcada a un campo de texto.
+    Fail-open ante cualquier error (no rompemos el flujo)."""
+    try:
+        import re as _re
+        from redactor import scan  # detector genérico (operator_only=False)
+        data = json.loads(text)
+        hints = []
+        for t in (data.get("targets") or []):
+            if isinstance(t, dict):
+                for h in (t.get("source_hints") or []):
+                    if isinstance(h, dict):
+                        hints.append(h)
+    except Exception:
+        return None
+    loot_ref = _re.compile(r"^engagements/.+/loot/")
+    bad = []
+    for h in hints:
+        # (a) secreto genérico pegado en un campo NO sensible (label/maps_to/source_ref).
+        for field in ("label", "maps_to", "source_ref"):
+            v = h.get(field)
+            if isinstance(v, str) and v:
+                try:
+                    if scan(v, operator_only=False):
+                        bad.append(f"secreto en source_hints.{field}")
+                except Exception:
+                    pass
+        # (b) kind:secret cuyo secret_ref no es una referencia a loot/ (o falta) = secreto pegado.
+        if h.get("kind") == "secret":
+            sr = h.get("secret_ref")
+            if not (isinstance(sr, str) and loot_ref.match(sr)):
+                bad.append("source_hints[kind=secret] sin secret_ref -> engagements/<id>/loot/")
+    if not bad:
+        return None
+    return ("Una pista de código white-box (targets[].source_hints[]) filtra material de cliente en "
+            "claro o rompe la disciplina de referencia: " + "; ".join(sorted(set(bad))) + ". El código "
+            "es zona E3: los `label`/`maps_to` son NO sensibles y todo secreto va REFERENCIADO en "
+            "`secret_ref` -> engagements/<id>/loot/, nunca pegado. Mueve el valor a loot/ y deja solo la "
+            "referencia file:line.")
+
+
 def main():
     try:
         event = json.load(sys.stdin)
@@ -84,7 +132,7 @@ def main():
     except Exception:
         sys.exit(0)
 
-    reason = blocking_reason(text)
+    reason = blocking_reason(text) or source_hint_reason(text)
     if reason:
         print(json.dumps({"decision": "block", "reason": reason}))
     sys.exit(0)
