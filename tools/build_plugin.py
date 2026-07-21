@@ -66,18 +66,25 @@ def build_agents():
 
 
 def build_hooks():
-    """Solo el hook de alcance (safety-critical). El regen del mapa es una util de repo,
-    no se incluye en el plugin para evitar dependencias de rutas del repo."""
+    """Hooks safety-critical del plugin: el gate de ALCANCE (scope_guard) y el gate de CABECERA
+    obligatoria del programa (header_guard, no-op salvo que el scope declare required_http_header).
+    El regen del mapa es una util de repo, no se incluye en el plugin para evitar dependencias de
+    rutas del repo."""
     os.makedirs(os.path.join(PLUGIN, "hooks"), exist_ok=True)
     os.makedirs(os.path.join(PLUGIN, "scripts"), exist_ok=True)
-    shutil.copy(os.path.join(ROOT, ".claude", "hooks", "scope_guard.py"),
-                os.path.join(PLUGIN, "scripts", "scope_guard.py"))
+    for script in ("scope_guard.py", "header_guard.py"):
+        shutil.copy(os.path.join(ROOT, ".claude", "hooks", script),
+                    os.path.join(PLUGIN, "scripts", script))
     hooks = {
         "hooks": {
             "PreToolUse": [{
                 "matcher": "Bash",
-                "hooks": [{"type": "command",
-                           "command": 'python "${CLAUDE_PLUGIN_ROOT}/scripts/scope_guard.py"'}],
+                "hooks": [
+                    {"type": "command",
+                     "command": 'python "${CLAUDE_PLUGIN_ROOT}/scripts/scope_guard.py"'},
+                    {"type": "command",
+                     "command": 'python "${CLAUDE_PLUGIN_ROOT}/scripts/header_guard.py"'},
+                ],
             }],
         }
     }

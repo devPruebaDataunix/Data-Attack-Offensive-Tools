@@ -4,6 +4,35 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.48.0] - 2026-07-20
+### Added
+- **Gate determinista de CABECERA obligatoria del programa (`header_guard.py`, hook `PreToolUse`/Bash).**
+  Muchos programas de bug bounty EXIGEN identificar todo tu tráfico con una cabecera fija (p.ej. Bugcrowd:
+  `BUGCROWD: <handle>`). Nuevo hook **fail-closed** que, cuando `contracts/scope.json` declara
+  `constraints.required_http_header`, **bloquea** cualquier invocación de una herramienta HTTP conocida
+  (curl/wget/httpx/ffuf/feroxbuster/gobuster/dirsearch/nuclei/sqlmap/katana/wpscan/dalfox/wfuzz/gospider/…)
+  contra un target cuando la cabecera **no** va en un flag de cabecera real. Sin `required_http_header`
+  declarado, el hook es **no-op** (la exigencia es del programa, no del motor).
+- Registrado en `.claude/settings.json` (tras `scope_guard`) y en el **plugin** (`tools/build_plugin.py` ahora
+  empaqueta `scope_guard.py` **y** `header_guard.py`). Nuevo `tests/test_header_guard.py` (**37/0**), suite
+  `validate_suite` **626/0/0**. Ningún cambio de comportamiento en engagements sin cabecera requerida.
+- **Endurecido con council de 3 lentes (seguridad · abogado del diablo · simplicidad) antes del release:**
+  - La cabecera solo cuenta si va en un **flag de cabecera** (`-H`/`--header`/`--headers`/`-header`), no en
+    cualquier parte de la línea → cierra falsos negativos donde la cadena colaba por la URL, el body `-d`, el
+    user-agent `-A`, un comentario o un nombre de fichero.
+  - Tokenización con **shlex** (respeta comillas) y **unión de continuaciones de línea `\`+salto** → evita
+    partir en falso un comando multilínea y bloquearlo.
+  - Detecta la herramienta aunque se ejecute **como script** (`python3 sqlmap.py`).
+  - **Exención por proxy explícito** (`-x`/`--proxy`/`proxychains`): el operador gestiona la inyección de la
+    cabecera → resuelve el workflow Burp/mitmproxy que antes quedaba bloqueado.
+  - Lista ampliada a tools sin `-H` por CLI (nikto/whatweb/wafw00f/testssl) como **solo-proxy**; `EXEMPT_FLAGS`
+    depurada de flags cortos ambiguos.
+  - El motivo de bloqueo **ya no ecoa el comando** (solo el nombre de la tool) → no filtra `Authorization:
+    Bearer` a logs/transcript (coherente con la doctrina de redacción de secretos).
+  - Encuadre HONESTO en docstring: es una **red de seguridad de mejor esfuerzo** para tools HTTP conocidas por
+    `Bash`, no una garantía total (binarios propios, intérpretes crudos, httpie, headless, `WebFetch`/MCP y
+    proxies que no inyecten siguen siendo responsabilidad del operador).
+
 ## [2.47.3] - 2026-07-15
 ### Fixed
 - **Consistencia documental — 2ª pasada, docs de arquitectura/guardarraíles/coste (sin cambios de código de
