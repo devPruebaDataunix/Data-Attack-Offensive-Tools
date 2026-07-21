@@ -51,6 +51,20 @@ DOMAIN_RE = re.compile(r"\b(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}\
 IP_RE = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
 URL_RE = re.compile(r"https?://([^/\s:]+)", re.I)
 
+# Metacaracteres de shell/plantilla que NUNCA aparecen en un hostname/IP real. Si un "host"
+# capturado (p.ej. de una URL `https://$host/…` o `https://{target}/…`) los contiene, es una
+# VARIABLE/PLACEHOLDER sin expandir, no un target verificable. No se puede comprobar su scope de
+# forma determinista => se deniega (fail-closed) con un motivo accionable, en vez del confuso
+# "Dominio {host} NO está en in_scope" que hacía perder turnos al subagente. Bloquear un placeholder
+# es correcto: fuerza a lanzar una invocación por host LITERAL, que el guard sí puede verificar.
+PLACEHOLDER_RE = re.compile(r"[\$\{\}\(\)`%<>\\!*]")
+
+
+def _is_placeholder(token):
+    """True si `token` contiene un metacarácter de shell/plantilla (variable/placeholder sin
+    expandir): no es un host verificable."""
+    return bool(PLACEHOLDER_RE.search(token))
+
 
 def _is_target_domain(token):
     """True solo si `token` (algo tipo a.b.c) es un host de red real: su última etiqueta es un
@@ -149,6 +163,17 @@ def main():
     if scope is None:
         deny("No existe contracts/scope.json. Define el alcance autorizado antes de "
              "lanzar comandos contra cualquier target (fail-closed).")
+
+    # Placeholders/variables sin expandir ($host, {target}, ${T}…): no son verificables. Se deniega
+    # con un motivo accionable ANTES del chequeo in/out, para que el subagente expanda a host literal
+    # en vez de perder turnos creyendo que un host real quedó fuera de scope.
+    placeholders = sorted(t for t in targets if _is_placeholder(t))
+    if placeholders:
+        deny(f"Target no verificable: «{placeholders[0]}» contiene una variable/placeholder de "
+             f"shell sin expandir. scope_guard exige hostnames/IPs LITERALES para comprobar el "
+             f"alcance de forma determinista. Expande la variable y lanza UNA invocación por host "
+             f"literal (sin $var, {{}}, ni bucles con variable de host). Bloqueado por scope_guard "
+             f"(fail-closed).")
 
     in_scope = scope.get("in_scope", {})
     out_scope = scope.get("out_of_scope", {})

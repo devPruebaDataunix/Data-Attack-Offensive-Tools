@@ -4,6 +4,28 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.50.0] - 2026-07-21
+### Fixed
+- **Precisión de dos guards deterministas — falsos positivos que hacían perder turnos a los subagentes,
+  con council anti-bypass antes del merge.**
+  - **`header_guard`:** el CUERPO de un here-document (`cat > f <<EOF … EOF`) ya se trata como **DATO**, no
+    como comando — escribir un script o un resumen que solo *menciona* una herramienta HTTP (`nuclei`,
+    `curl`) dejaba de ser un falso positivo. Endurecido tras council: ancla `(?<!<)<<(?!<)` (excluye
+    here-strings `<<<`), filtro de comillas/comentario, y **exigir la línea terminadora** para entrar en
+    modo "saltar cuerpo" — cierra el bypass **fail-open** (here-string / `<<` en string o comentario /
+    left-shift `$((1<<n))`) que habría dejado pasar un `curl` sin cabecera tras un `<<` espurio.
+  - **`scope_guard`:** un target con variable/placeholder sin expandir (`https://$host/…`, `{target}`) se
+    deniega ahora con un motivo **ACCIONABLE** ("expande a host literal") en vez del confuso "Dominio {host}
+    NO está en in_scope". Sigue **fail-closed**: un placeholder nunca se permite (no se puede colar scope
+    con `for h in lista; do curl https://$h`).
+### Changed
+- Council de 3 lentes: FIX 2 (placeholder) **GO**; FIX 1 (heredoc) destapó un bypass fail-open que se
+  **endureció a fail-closed** antes del merge (ancla + terminador + filtro comillas/comentario).
+- Plugin regenerado (`tools/build_plugin.py`) para empaquetar los guards actualizados. Tests: nuevo
+  `tests/test_guards.py` (**35/0**, incl. los 5 de regresión de los bypass del council); `test_header_guard`
+  **37/0**; `validate_suite` **628/0/0**. Sin cambio de comportamiento para engagements sin
+  `required_http_header` ni comandos con placeholders.
+
 ## [2.49.0] - 2026-07-21
 ### Added
 - **Checkpoint por-tarea + reanudación resumible (mejora "B" del análisis de Shannon).** Nueva propiedad

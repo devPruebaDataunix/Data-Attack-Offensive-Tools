@@ -19,6 +19,9 @@ ALCANCE HONESTO (léelo — es una red de seguridad de MEJOR ESFUERZO, no una ga
   wafw00f, testssl.sh) quedan como **solo-proxy**: pásalas por un proxy que inyecte la cabecera.
 - Un comando con **proxy explícito** (‑x/‑‑proxy o envuelto en proxychains) se EXIME: se asume que el
   operador configuró el proxy para inyectar la cabecera (responsabilidad del operador, documentada).
+- El CUERPO de un here-document (`cat > f <<EOF … EOF`) se trata como DATO, no como comando: escribir un
+  script o un resumen que *menciona* una herramienta HTTP no es lanzarla. El caso exótico de ejecutar un
+  heredoc (`bash <<EOF … EOF`) queda, por tanto, fuera de cobertura (igual que `bash script.sh`).
 - Lo que el gate NO puede ver y sigue siendo responsabilidad del operador: binarios compilados propios,
   intérpretes crudos (`python -c "import requests…"`), httpie (`http`) y clientes con sintaxis de cabecera
   no estándar, navegadores headless, tráfico por `WebFetch`/MCP (este hook solo mira `Bash`), y proxies que
@@ -89,6 +92,85 @@ def load_scope():
             except Exception:
                 return None
     return None
+
+
+# `(?<!<)<<(?!<)` casa el operador heredoc `<<` pero NO el here-string `<<<` (que es de una sola
+# línea y NO abre cuerpo). El delimitador es una palabra, opcionalmente citada (`<<'EOF'`).
+HEREDOC_OPEN_RE = re.compile(r"(?<!<)<<(?!<)[-~]?\s*(['\"]?)([A-Za-z_]\w*)\1")
+
+
+def _in_quote_or_comment(prefix: str) -> bool:
+    """True si el final de `prefix` cae dentro de una comilla o de un comentario `#`. Se usa para
+    descartar un `<<` que aparece dentro de un string/comentario (`echo "a << b"`, `# ver <<x`): ahí
+    NO es un operador de redirección, así que no debe abrir modo 'saltar cuerpo'."""
+    sq = dq = False
+    i = 0
+    while i < len(prefix):
+        c = prefix[i]
+        if c == "\\" and dq:
+            i += 2
+            continue
+        if c == "'" and not dq:
+            sq = not sq
+        elif c == '"' and not sq:
+            dq = not dq
+        elif c == "#" and not sq and not dq:
+            return True  # comentario hasta fin de línea
+        i += 1
+    return sq or dq
+
+
+def _line_openers(line: str):
+    """Aperturas de heredoc REALES en `line`: excluye `<<<` (ancla) y los `<<` dentro de comillas o
+    comentario. Devuelve [(delimitador, admite_indentado)]."""
+    res = []
+    for m in HEREDOC_OPEN_RE.finditer(line):
+        if _in_quote_or_comment(line[: m.start()]):
+            continue
+        dashed = m.group(0)[2:3] in ("-", "~")
+        res.append((m.group(2), dashed))
+    return res
+
+
+def strip_heredocs(command: str) -> str:
+    """Elimina el CUERPO de los here-documents (`cmd <<EOF … EOF`, `cat > f <<'EOF' … EOF`).
+
+    El cuerpo de un heredoc es DATO que se escribe a un fichero/variable/`cat`, no una invocación:
+    un script o un resumen que *menciona* `nuclei -u https://… -tags …` no está lanzando nuclei. Sin
+    esto, `split_subcommands` troceaba por saltos de línea y leía esa línea del cuerpo como si fuera
+    una invocación HTTP sin cabecera => falso positivo al escribir ficheros.
+
+    FAIL-CLOSED por diseño: solo se entra en modo 'saltar cuerpo' si (a) el `<<` es un operador real
+    (no `<<<`, ni dentro de comillas/comentario) y (b) EXISTE más adelante la línea terminadora con el
+    delimitador. Un `<<palabra` espurio (here-string, string, comentario, left-shift `$((1<<n))`) casi
+    nunca tiene esa terminadora, así que NO se salta nada y esas líneas se ESCANEAN (fail-closed) — se
+    cierra el bypass que abriría un `curl` sin cabecera tras un `<<` falso. Se conserva SIEMPRE la línea
+    de apertura (lleva el comando real, p.ej. `cat > f`). Residual honesto: ejecutar un heredoc real
+    (`bash <<EOF … curl … EOF`) queda fuera de cobertura, igual que `bash script.sh`."""
+    lines = command.split("\n")
+    n = len(lines)
+    keep = [True] * n
+    i = 0
+    while i < n:
+        openers = _line_openers(lines[i])
+        if not openers:
+            i += 1
+            continue
+        j = i + 1
+        for delim, dashed in openers:  # FIFO, como bash con varios heredocs en una línea
+            term_idx = None
+            for k in range(j, n):
+                t = lines[k].strip() if dashed else lines[k].rstrip()
+                if t == delim:
+                    term_idx = k
+                    break
+            if term_idx is None:
+                break  # sin terminadora: NO es cuerpo de heredoc -> no se salta (fail-closed)
+            for x in range(j, term_idx + 1):
+                keep[x] = False   # cuerpo + terminadora: dato, no se escanea
+            j = term_idx + 1
+        i = max(j, i + 1)
+    return "\n".join(l for l, k in zip(lines, keep) if k)
 
 
 def join_continuations(command: str) -> str:
@@ -187,7 +269,7 @@ def header_gate(command: str, required_header: str, extra_tools=None):
     if extra_tools:
         tools |= {str(t) for t in extra_tools}
 
-    for sub in split_subcommands(join_continuations(command)):
+    for sub in split_subcommands(join_continuations(strip_heredocs(command))):
         toks = tokenize(sub)
         if not http_tool_in(toks, tools):
             continue
