@@ -561,6 +561,46 @@ async def scope(update, ctx):
     await sayv2(ctx.bot, update.effective_chat.id, BF.scope_card(S.load_scope(REPO_DIR)))
 
 
+@authorized
+async def resume(update, ctx):
+    """Reanuda el engagement en curso desde el blackboard (checkpoint por-tarea, Shannon B). Lee
+    `tasks[]`: el Orquestador NO re-ejecuta las `done`, continúa por pending/running/failed y por la
+    frontera de hosts sin agotar. Reusa el camino de confirmación+ejecución (misma aprobación por
+    acción y streaming). No relaja ninguna puerta: la reanudación re-valida scope/ROE."""
+    if ctx.chat_data.get("order"):
+        await update.message.reply_text(
+            "⏳ Ya hay una orden en curso. Mira /status o abórtala con /kill antes de reanudar.")
+        return
+    eng = S.load_engagement(REPO_DIR)
+    if not eng or not eng.get("engagement_id"):
+        await update.message.reply_text(
+            "No hay engagement que reanudar (falta contracts/engagement.json). Lanza una orden nueva.")
+        return
+    eid = eng.get("engagement_id")
+    phase = eng.get("phase", "?")
+    if phase == "closed":
+        await say(ctx.bot, update.effective_chat.id,
+                  f"El engagement `{eid}` está *closed*. No hay nada que reanudar.")
+        return
+    tasks = eng.get("tasks", []) or []
+    done = [t for t in tasks if t.get("status") == "done"]
+    pend = [t for t in tasks if t.get("status") in ("pending", "running", "failed")]
+    lines = [f"🔄 *Reanudar* `{eid}` · fase *{phase}*",
+             f"Tareas: {len(done)} done · {len(pend)} pendientes."]
+    for t in pend[:8]:
+        lines.append(f"  ◦ `{t.get('task_id', '?')}` {t.get('agent', '?')} — "
+                     f"{_truncate_body(t.get('objective', ''), 70)} [{t.get('status')}]")
+    await say(ctx.bot, update.effective_chat.id, "\n".join(lines))
+    task = (
+        f"Reanuda el engagement {eid} desde el blackboard (contracts/engagement.json). Regla 0 primero "
+        "(lee contracts/scope.json). Lee `tasks[]`: NO re-ejecutes las que están `done`; continúa por "
+        "las `pending`/`running`/`failed` y por la frontera de hosts EN SCOPE sin agotar. Mantén "
+        "`tasks[]` al día (registra cada delegación y su retorno real; nada en segundo plano). No "
+        "rehagas trabajo ya completado."
+    )
+    await _confirm(update, ctx, task)
+
+
 # ── Lenguaje natural -> Orquestador (con pregunta de scope y confirmación) ────
 @authorized
 async def freetext(update, ctx):
@@ -814,6 +854,7 @@ def main():
     app.add_handler(CommandHandler("status", status))
     app.add_handler(CommandHandler("kill", kill))
     app.add_handler(CommandHandler("abort", kill))
+    app.add_handler(CommandHandler("resume", resume))
     app.add_handler(CommandHandler("health", health))
     app.add_handler(CommandHandler("agents", agents))
     app.add_handler(CommandHandler("agent", agent))

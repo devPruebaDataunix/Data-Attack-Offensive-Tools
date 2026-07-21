@@ -4,6 +4,36 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.49.0] - 2026-07-21
+### Added
+- **Checkpoint por-tarea + reanudación resumible (mejora "B" del análisis de Shannon).** Nueva propiedad
+  **`tasks[]`** en el blackboard (`contracts/engagement.schema.json`, retrocompatible, NO en `required`):
+  ledger de las delegaciones del Orquestador (`task_id`/`agent`/`objective`/`status` +
+  `phase`/`ref_finding`/`ref_target`/`output_ref`/`depends_on`/`attempts`/`notes`). Un engagement cortado
+  (contexto agotado, corte del proveedor, reinicio) se **reanuda** saltando las tareas `done`/`skipped` en
+  vez de re-ejecutarlas. El blackboard ya era resumible por diseño; esto lo hace explícito por-tarea.
+- **Comando `/resume` en el bot de Telegram** (`@authorized`): lee el blackboard, resume tareas `done` vs
+  pendientes y **reutiliza** el camino de confirmación+ejecución existente (misma aprobación humana
+  por-acción + streaming) para pedir al Orquestador que continúe desde el estado. Añadido al menú nativo.
+- **Regla dura en `AGENTS.md` (playbook del Orquestador):** el Task tool es **SÍNCRONO** — prohibido lanzar
+  especialistas en segundo plano (background / `&` / fire-and-forget), que quedan **huérfanos** y pierden su
+  trabajo (era la causa de que una fase cerrara sin findings ni artefactos). Nueva sección "Ejecución
+  síncrona y reanudación (checkpoint)" con el ciclo del ledger; el paralelismo legítimo del Task tool en un
+  mismo turno se preserva.
+### Changed
+- **Council de 3 lentes (corrección/consistencia · abogado del diablo · simplicidad) — GO-con-reservas, todas
+  aplicadas antes del release:** `skipped` no se re-ejecuta al reanudar (R1); una `running`/`failed` de vector
+  CON ESTADO se **re-valida contra el blackboard**, sin replay ciego —spray=lockout, C2=implante duplicado—
+  (R4); una `done` cuyo `output_ref` no exista se degrada a `failed`, el artefacto/finding es autoritativo
+  (R5); se respeta `depends_on` al reanudar (R6); la entrega A2A que es delegación se registra también en
+  `tasks[]` (R2); la regla no-background se acota al Task-tool del Orquestador, no al proceso del bot que
+  hospeda la corrida (R3); `attempts` deslindado de `loop_guard`/`max_repeat` (R9); campo `notes` para
+  auditoría del corte (R7).
+- Tests: nuevo `tests/test_tasks_checkpoint.py` (**20/0**: esquema + validación jsonschema válido/inválido +
+  reglas de `AGENTS.md` + menú `/resume`); `bot/tests/test_botfmt` **36/36** (incl. que `/resume` esté
+  `@authorized`); suite `validate_suite` **627/0/0**. Retrocompatible: los engagements sin `tasks[]` funcionan
+  igual que antes.
+
 ## [2.48.0] - 2026-07-20
 ### Added
 - **Gate determinista de CABECERA obligatoria del programa (`header_guard.py`, hook `PreToolUse`/Bash).**

@@ -73,6 +73,29 @@
       "description": "Bus A2A mediado: mensajes entre agentes. Un agente deja aquí su petición/respuesta y el Orquestador-router la entrega al destino. No está en `required` (retrocompatible). Cada item sigue a2a-message.schema.json.",
       "items": { "$ref": "a2a-message.schema.json" }
     },
+    "tasks": {
+      "type": "array",
+      "description": "Ledger de DELEGACIONES del Orquestador (checkpoint por-agente). Cada vez que el Orquestador delega en un especialista, registra aquí la tarea y actualiza su `status`. Sirve para REANUDAR un engagement cortado (una sesión fresca lee `tasks[]` y SALTA las `done` y `skipped` en vez de re-ejecutarlas) — el blackboard ya es la fuente de verdad resumible; esto lo hace explícito a nivel de tarea. El ARTEFACTO/finding es autoritativo, no la etiqueta: una `done` cuyo `output_ref` no exista se degrada a `failed` al reanudar. No está en `required` (retrocompatible). NO relaja ninguna puerta: la reanudación re-valida scope y ROE como siempre. El Task tool del Orquestador es SÍNCRONO — una tarea no queda `done` hasta que el especialista retorna (nunca se marca por lanzar en segundo plano).",
+      "items": {
+        "type": "object",
+        "required": ["task_id", "agent", "objective", "status"],
+        "properties": {
+          "task_id": { "type": "string", "description": "ID estable de la delegación, p.ej. T-001" },
+          "agent": { "type": "string", "description": "subagent_type delegado (debe existir en agent-cards.json)" },
+          "objective": { "type": "string", "description": "La tarea concreta (una sola), tal como se delegó" },
+          "status": { "type": "string", "enum": ["pending", "running", "done", "failed", "skipped"], "description": "pending=registrada, running=en curso, done=el especialista retornó y cumplió el criterio, failed=retornó con fallo, skipped=omitida deliberadamente (ya cubierta o fuera de ROE). Al reanudar SOLO se re-ejecutan `pending`/`running`/`failed`; `done` y `skipped` NO se re-ejecutan. Una `running`/`failed` de vector CON ESTADO se RE-VALIDA contra el blackboard antes de re-delegar (no replay ciego: cuidado con spray=lockout y C2=implante duplicado)." },
+          "phase": { "type": "string", "description": "Fase del engagement en que se delegó (recon/triage/exploitation…)" },
+          "ref_finding": { "type": "string", "description": "FK opcional a finding.finding_id que motiva esta tarea" },
+          "ref_target": { "type": "string", "description": "FK opcional a target.target_id sobre el que opera" },
+          "output_ref": { "type": "string", "description": "Qué dejó al terminar: claves del blackboard escritas y/o ruta de artefacto en engagements/<id>/. NUNCA material sensible en claro." },
+          "depends_on": { "type": "string", "description": "task_id previo que debe estar `done` antes de ejecutar esta (encadenamiento). Al reanudar, NO ejecutes una tarea cuya `depends_on` no esté `done`." },
+          "attempts": { "type": "integer", "minimum": 0, "maximum": 10, "description": "Nº de intentos ya hechos sobre ESTA tarea (higiene anti-bucle a nivel de delegación). Distinto de `loop_guard`/C19, que cuenta repeticiones idénticas de COMANDO en su propia ventana (`constraints.max_repeat`, def. 5); aquí es el techo de reintentos de una delegación." },
+          "notes": { "type": "string", "description": "Motivo/observación opcional: por qué `skipped` (dedup vs fuera de ROE), por qué `failed`, o nota de reanudación. Ayuda a la auditoría del corte." },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
     "lessons": {
       "type": "array",
       "description": "Aprendizaje basado en errores. Escrito por knowledge-postmortem.",

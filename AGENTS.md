@@ -100,6 +100,43 @@ Cada vez que invocas a un especialista, dale SIEMPRE:
 - **Criterio de done:** qué debe haber escrito en el blackboard al terminar.
 - **Directorio de salida:** dónde dejar los artefactos crudos (`engagements/<engagement_id>/…`).
 - **Recordatorio de scope.**
+- **Registro:** anota la delegación en `tasks[]` (ver "Ejecución síncrona y reanudación").
+
+## Ejecución síncrona y reanudación (checkpoint)
+El **Task tool es SÍNCRONO**: al delegar en un especialista **esperas su retorno** antes de
+continuar. **NUNCA lances un especialista "en segundo plano" (background)** — ni con `&` de shell ni
+fire-and-forget: si cierras la fase sin esperar, el subagente queda **huérfano** y su trabajo se
+pierde (sin findings, sin artefactos). Delegar = invocar **y esperar**. Delegaciones en paralelo del
+Task tool en un mismo turno sí son válidas (la plataforma las espera); lo prohibido es cerrar la
+fase/turno dando por hecho un trabajo que aún corre suelto. (Esta regla es sobre las **delegaciones
+Task-tool del Orquestador**; el proceso del bot/TUI que *hospeda* la corrida sí va en segundo plano,
+pero rastreado con lock + `/status` + `/kill` — es otra capa y es correcta. Un beacon C2 o un spray
+largo se modelan como **estado en el blackboard** (`pivots[]` up, sesión sliver), no como un Task
+huérfano.)
+
+**Ledger de tareas (`tasks[]` del blackboard) — reanudación resumible.** El engagement debe poder
+**retomarse** si tu sesión se corta (contexto agotado, corte del proveedor, reinicio). Para cada
+delegación mantén una entrada en `tasks[]` (`contracts/engagement.json`, esquema
+`engagement.schema.json`):
+1. **Antes** de invocar: registra la tarea con `status: "running"` (o `pending`), su `agent`,
+   `objective`, `phase` y `ref_finding`/`ref_target` si aplica.
+2. **Al retornar** el especialista: fija `status` a `done` (cumplió el criterio de done), `failed`
+   (retornó con fallo) o `skipped`, rellena `output_ref` (claves del blackboard escritas / ruta de
+   artefacto) e incrementa `attempts`.
+3. **Al reanudar** (sesión fresca o comando `/resume` del bot): lee `tasks[]` y continúa por las
+   `pending`/`running`/`failed` y por la frontera de hosts sin agotar. **NO re-ejecutes** las `done`
+   ni las `skipped`. El blackboard es el handoff de contexto; `tasks[]` es el marcador de progreso.
+   Salvaguardas de reanudación:
+   - **El artefacto manda, no la etiqueta.** Si el `output_ref` de una `done` (sus claves del
+     blackboard o su artefacto) NO existe de verdad, degrádala a `failed` y re-ejecútala.
+   - **Nada de replay ciego.** Una `running`/`failed` de un vector CON ESTADO (explotación, spray, C2,
+     post-ex) NO se reproduce a ciegas: re-valídala contra el blackboard (¿el finding ya está
+     `exploited`? ¿la credencial tiene `validated_on`? ¿el pivot está `up`?). Especial cuidado con
+     spray (**lockout**) y C2 (**implante duplicado**); la aprobación por-acción es el freno.
+   - **Respeta `depends_on`.** No ejecutes una tarea cuya `depends_on` no esté `done`.
+
+Esto **no relaja ninguna puerta**: cada tarea reanudada re-valida scope (`scope_guard`) y ROE.
+Complementa —no sustituye— la frontera de hosts y los `next_step` de los findings.
 
 ## Validación de handoffs (anti-fisuras)
 Tras cada agente, valida que su salida cumple el esquema correspondiente
@@ -224,7 +261,10 @@ con quién está en `contracts/agent-cards.json` (campo `a2a_peers` de cada card
 5. **Incrementa `hops`** en cada salto de la cadena. El hook `a2a_guard.py` (C14/C15) valida emisor/
    destino y aplica el **techo de hops** (`constraints.max_a2a_hops` en `scope.json`, def. 50):
    si una conversación se desboca, se bloquea (anti-bucle, LLM10). No lo sortees.
-6. Registra la entrega en `evidence[]` (quién→quién, finding, ts) — trazabilidad (C10).
+6. Registra la entrega en `evidence[]` (quién→quién, finding, ts) — trazabilidad (C10). Si la entrega
+   hace que el `to_agent` **ejecute trabajo** (es una delegación), regístrala también en `tasks[]`:
+   una entrega A2A es una delegación, y sin ese registro la reanudación podría re-dispararla o
+   perderla (ver "Ejecución síncrona y reanudación").
 
 > El hook `a2a_router_nudge.py` (PostToolUse sobre `Task`) **refuerza** este ciclo: tras cada
 > retorno de subagente, si quedan mensajes `pending` te inyecta un recordatorio con la lista. NO
@@ -252,6 +292,9 @@ anótalo en su frontmatter `a2a.peers` y regenera el registro con `python tools/
 
 ## Qué NO hacer
 - No fusionar dos clientes en el mismo `engagement.json`.
+- **No lanzar especialistas en segundo plano** (background / `&` / fire-and-forget): el Task tool es
+  síncrono; espera su retorno o el trabajo se **orfana y se pierde** (ver "Ejecución síncrona y
+  reanudación"). No marques una tarea `done` en `tasks[]` sin el retorno real del especialista.
 - No saltarse el alcance ni el no-daño bajo NINGÚN modo de supervisión (la aprobación humana por
   acción sí depende de `approval_mode`; el scope y el no-daño, nunca).
 - No inventar CVEs ni comandos: si `vuln-triage` no lo respaldó con fuente, no se explota.

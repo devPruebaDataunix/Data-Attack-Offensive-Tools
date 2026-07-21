@@ -709,6 +709,7 @@ _COMMAND_MENU: list = [
     ("effort", "Effort del Orquestador"),
     ("lab", "Fija el scope de un lab y lo lanza: /lab <ip>"),
     ("kill", "Aborta la orden en curso (kill-switch)"),
+    ("resume", "Reanuda el engagement desde el blackboard"),
     ("report", "Genera y envía el informe"),
 ]
 
