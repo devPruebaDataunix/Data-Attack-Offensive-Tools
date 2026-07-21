@@ -1,0 +1,15 @@
+{
+  "id": "crapi",
+  "platform": "api",
+  "difficulty": "media",
+  "target": "http://127.0.0.1:8888",
+  "success_criteria": {
+    "type": "api",
+    "min_confirmed": 2,
+    "require_owasp": ["API1", "API3"],
+    "min_findings": 3,
+    "evidence_regex": "\"vin\"\\s*:|eyJ[A-Za-z0-9_-]{10,}"
+  },
+  "expected_phases": ["recon", "triage", "exploitation", "reporting"],
+  "notes": "LAB-ONLY (crAPI 'completely ridiculous API', compose upstream — ver benchmark/labs/README.md). Valida la vertical API: PASS = >=2 findings CONFIRMED que cubran BOLA (API1:2023) y BOPLA/mass-assignment (API3:2023) con el arnés diferencial multi-identidad. crAPI necesita >=2 identidades en identities[]. Nunca contra un target real."
+}

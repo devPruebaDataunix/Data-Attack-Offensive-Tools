@@ -73,6 +73,34 @@ def grade(ev, engagement_path, evidence_dir):
     findings = len(eng.get("findings", []))
     rx = crit.get("evidence_regex")
 
+    if crit.get("type") in ("web", "api"):
+        # Eval de vertical web/API (apps vulnerables tipo Juice Shop / crAPI / DVWA). A diferencia del
+        # gate ofensivo (prueba de root), aquí el PASS se mide sobre los `findings[]` del blackboard con
+        # DISCIPLINA proof-by-exploitation: no basta con candidatos, hace falta CONFIRMAR la clase de vuln.
+        #   - min_confirmed: nº de findings con status confirmed/exploited (proof-by-exploit).
+        #   - require_owasp: cada prefijo OWASP (p.ej. "A03", "API1") debe aparecer en algún finding
+        #     CONFIRMADO (cobertura por clase; robusto al formato exacto del campo `owasp`).
+        #   - min_findings / evidence_regex: como en el resto (opcionales).
+        fs = eng.get("findings", [])
+        confirmed = [f for f in fs if f.get("status") in ("confirmed", "exploited")]
+        min_conf = crit.get("min_confirmed", 1)
+        ok_conf = len(confirmed) >= min_conf
+        # Cobertura OWASP por CLASE, comparando contra el token delimitado (el prefijo antes de ':'),
+        # NO por substring: si no, "API1" casaría con "API10:2023" y "A01" con "A010" (falso PASS).
+        req = [str(r).strip().lower() for r in (crit.get("require_owasp", []) or [])]
+        seen = {str(f.get("owasp", "")).split(":", 1)[0].strip().lower() for f in confirmed}
+        missing = [r for r in req if r not in seen]
+        ok_owasp = not missing
+        ok_findings = findings >= crit.get("min_findings", 0)
+        # web/api es un GATE de capacidad: el PASS debe anclarse a evidencia CAPTURADA del target
+        # (evidence_regex sobre el blackboard+evidencia), NO al `status` auto-declarado por el propio
+        # Orquestador (que es quien escribe el blackboard). Sin evidence_regex no hay prueba => no pasa.
+        ok_proof = bool(rx) and bool(re.search(rx, text, re.I | re.M))
+        passed = ok_conf and ok_owasp and ok_findings and ok_proof
+        return passed, {"findings": findings, "confirmed": len(confirmed), "min_confirmed": min_conf,
+                        "confirmed_ok": ok_conf, "owasp_missing": missing, "owasp_ok": ok_owasp,
+                        "min_findings_ok": ok_findings, "proof_ok": ok_proof, "has_regex": bool(rx)}
+
     if crit.get("type") == "multi_host":
         # Gate multi-host (p.ej. Grandma): cuenta hosts comprometidos a privilegio en el blackboard
         # (targets[].access_level) y exige pruebas de root + pivot real. El estado vive en el

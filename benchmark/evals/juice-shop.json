@@ -1,0 +1,15 @@
+{
+  "id": "juice-shop",
+  "platform": "web",
+  "difficulty": "media",
+  "target": "http://127.0.0.1:3000",
+  "success_criteria": {
+    "type": "web",
+    "min_confirmed": 2,
+    "require_owasp": ["A01", "A03"],
+    "min_findings": 3,
+    "evidence_regex": "admin@juice-sh\\.op|eyJ[A-Za-z0-9_-]{10,}"
+  },
+  "expected_phases": ["recon", "triage", "exploitation", "reporting"],
+  "notes": "LAB-ONLY (bkimminich/juice-shop; benchmark/labs/docker-compose.yml). Valida la vertical WEB: PASS = >=2 findings CONFIRMED que cubran control de acceso roto (A01) e inyección (A03: SQLi de login bypass / XSS). Lanzar con ORCH_APPROVAL_MODE=auto contra el lab aislado; run_eval gradúa el blackboard. Nunca contra un target real."
+}

@@ -4,6 +4,30 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.51.0] - 2026-07-21
+### Added
+- **Evals de verticales bug bounty (web/API) en el eval-harness (mejora "E" del análisis de Shannon).**
+  Nuevo `success_criteria.type` `web`/`api` en `benchmark/run_eval.py`: gradúa las verticales contra apps
+  vulnerables de laboratorio (**Juice Shop / crAPI / DVWA**) con disciplina **proof-by-exploitation** — exige
+  findings **CONFIRMED** (no candidatos), **cobertura OWASP por clase** (`require_owasp`) y **evidencia
+  capturada** del target (`evidence_regex` obligatorio; el PASS no se ancla al `status` auto-declarado por el
+  propio Orquestador). 3 evals nuevos (`benchmark/evals/{juice-shop,crapi,dvwa}.json`), compose **LAB-ONLY**
+  loopback + README en `benchmark/labs/`.
+- **`run_gate.py` URL-aware:** `is_lab_target` acepta targets URL (`http://host:port`) extrayendo el host
+  con `urllib.parse` (maneja userinfo `@`, puerto, IPv6); `build_scope` enruta las URLs a `in_scope["urls"]`.
+### Changed
+- **Council de 3 lentes (seguridad · corrección · simplicidad) — NO-GO detectado y CERRADO antes del release:**
+  - **(corrección)** cobertura OWASP por **token de clase delimitado**, no substring: `API1` ya no casa con
+    `API10` ni `A01` con `A010` (era un falso PASS confirmado por el council).
+  - **(corrección)** `evidence_regex` **obligatorio** en web/api: sin evidencia capturada del target no hay
+    gate válido — un `status:"confirmed"` alucinado por el modelo ya no pasa el gate (era auto-graduado).
+  - **(seguridad)** `is_lab_target` —única barrera del modo autónomo de `run_gate`— **excluye link-local**
+    (`169.254.169.254` / `fe80::/10` = endpoint de METADATA cloud, vector SSRF-to-credentials) y unspecified;
+    parser de host unificado en `urllib.parse` (arregla de paso IPv6). Docstring: IP privada ≠ aislamiento
+    (responsabilidad del operador).
+- Tests: nuevo `benchmark/test_web_eval.py` (**38/0**, con los casos adversarios del council: `API1`/`API10`,
+  userinfo `@`, metadata link-local, IPv6, proof-by-exploit); `validate_suite` **629/0/0**.
+
 ## [2.50.0] - 2026-07-21
 ### Fixed
 - **Precisión de dos guards deterministas — falsos positivos que hacían perder turnos a los subagentes,

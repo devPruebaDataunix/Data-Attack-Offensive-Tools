@@ -1,0 +1,15 @@
+{
+  "id": "dvwa",
+  "platform": "web",
+  "difficulty": "facil",
+  "target": "http://127.0.0.1:4280",
+  "success_criteria": {
+    "type": "web",
+    "min_confirmed": 2,
+    "require_owasp": ["A03"],
+    "min_findings": 2,
+    "evidence_regex": "uid=\\d+\\([a-z_]|[0-9a-f]{32}"
+  },
+  "expected_phases": ["recon", "triage", "exploitation", "reporting"],
+  "notes": "LAB-ONLY (vulnerables/web-dvwa; benchmark/labs/docker-compose.yml; DVWA Security=Low). Smoke de la vertical WEB: PASS = >=2 findings CONFIRMED de inyección (A03: SQLi + command injection). Fija DVWA en nivel Low antes de lanzar. Nunca contra un target real."
+}

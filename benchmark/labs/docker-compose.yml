@@ -1,0 +1,26 @@
+# benchmark/labs/docker-compose.yml — APPS VULNERABLES DE LABORATORIO (bug bounty verticals).
+#
+# ⚠️ LAB-ONLY, AISLADO. Estas imágenes son DELIBERADAMENTE vulnerables. Levántalas SOLO en una VM/red
+# aislada (loopback), NUNCA expuestas a Internet ni en una máquina con datos reales. Se enlazan a
+# 127.0.0.1 a propósito. Son los targets de los evals `juice-shop` y `dvwa` (benchmark/evals/*.json)
+# para validar las verticales WEB del motor de forma reproducible. crAPI (vertical API) tiene su propio
+# stack multi-servicio: ver benchmark/labs/README.md.
+#
+#   docker compose -f benchmark/labs/docker-compose.yml up -d     # arranca
+#   python benchmark/run_gate.py --eval juice-shop                # lanza el engagement contra el lab y gradúa
+#   docker compose -f benchmark/labs/docker-compose.yml down -v   # destruye (desechable)
+services:
+  juice-shop:
+    image: bkimminich/juice-shop:v17.1.1
+    container_name: bench-juice-shop
+    ports:
+      - "127.0.0.1:3000:3000"   # solo loopback: no exponer nunca
+    restart: "no"
+
+  dvwa:
+    image: ghcr.io/digininja/dvwa:latest
+    container_name: bench-dvwa
+    ports:
+      - "127.0.0.1:4280:80"     # solo loopback: no exponer nunca
+    restart: "no"
+    # Tras el primer arranque: /setup.php -> "Create / Reset Database", y DVWA Security = Low.

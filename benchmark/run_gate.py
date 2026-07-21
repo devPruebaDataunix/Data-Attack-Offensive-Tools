@@ -35,6 +35,7 @@ import shutil
 import subprocess
 import sys
 from datetime import datetime, timezone
+from urllib.parse import urlsplit
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -60,26 +61,51 @@ CIDR_RE = re.compile(r"^(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}$")
 PLACEHOLDER = re.compile(r"RELLENAR", re.I)
 
 
+def _target_host(t):
+    """Host de un target IP/CIDR/dominio/URL http(s)://host[:port]/path (las evals web/API usan URL).
+    Usa `urlsplit` de stdlib, que maneja correctamente userinfo (`user:pass@host` -> host REAL, el que
+    curl/navegador conectan), puerto e IPv6 entre corchetes (`[::1]`). Devuelve '' si no hay host."""
+    t = (t or "").strip()
+    if CIDR_RE.match(t):
+        return t
+    parts = urlsplit(t if "://" in t else "//" + t)   # el prefijo // fuerza a parsear host:port
+    return parts.hostname or ""
+
+
 def is_lab_target(t):
-    """True solo si `t` es un objetivo de LABORATORIO: IP privada/loopback, CIDR privado, o dominio con
-    sufijo de lab. Cualquier IP pública o dominio 'real' => False (no se lanza)."""
+    """True solo si `t` (IP/CIDR/dominio/URL) apunta a un LABORATORIO: IP privada/loopback (IPv4 o IPv6),
+    CIDR privado, o dominio con sufijo de lab. Se EXCLUYE link-local a propósito (169.254.169.254 y
+    fe80::/10 = endpoint de METADATA cloud, vector SSRF-to-credentials) y unspecified (0.0.0.0/::).
+    OJO: una IP privada (RFC1918/ULA) NO prueba aislamiento — puede ser una subred corporativa real; el
+    aislamiento host-only es responsabilidad del OPERADOR. Cualquier IP pública o dominio 'real' => False.
+    Es la ÚNICA barrera en el modo autónomo de run_gate: fail-safe (rechaza de más)."""
     t = (t or "").strip()
     if not t or PLACEHOLDER.search(t):
         return False
-    if IP_RE.match(t) or CIDR_RE.match(t):
+    host = _target_host(t)
+    if not host:
+        return False
+    if CIDR_RE.match(host):
         try:
-            net = ipaddress.ip_network(t, strict=False)
+            net = ipaddress.ip_network(host, strict=False)
         except ValueError:
             return False
-        return net.is_private or net.is_loopback or net.is_link_local
-    host = t.lower().rstrip(".")
+        return (net.is_private or net.is_loopback) and not net.is_link_local
+    try:
+        ip = ipaddress.ip_address(host)
+        return (ip.is_private or ip.is_loopback) and not ip.is_link_local and not ip.is_unspecified
+    except ValueError:
+        pass   # no es IP literal: trátalo como dominio
+    host = host.lower().rstrip(".")
     return host.rsplit(".", 1)[-1] in LAB_SUFFIXES if "." in host else host in {"localhost"}
 
 
 def build_scope(ev, target, max_actions=1500):
     """scope.json ACOTADO al target del lab, en modo autónomo (approval_mode=auto, no_dos)."""
     in_scope = {"domains": [], "ips": [], "cidrs": [], "urls": []}
-    if IP_RE.match(target):
+    if re.match(r"^https?://", target, re.I):
+        in_scope["urls"].append(target)      # target web/API: scope_guard extrae el host de la URL
+    elif IP_RE.match(target):
         in_scope["ips"].append(target)
     elif CIDR_RE.match(target):
         in_scope["cidrs"].append(target)
