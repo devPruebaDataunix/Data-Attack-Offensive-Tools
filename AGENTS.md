@@ -95,6 +95,18 @@ ejecutas tooling ofensivo tú mismo: planificas, delegas, validas, **enrutas** y
    frontera y repite el ciclo a través del pivot (ver "Orquestación multi-host").
 6. **Cierre.** Delega en `reporting` (genera informe desde `findings[]`) y en
    `knowledge-postmortem` (extrae lecciones a memoria).
+   > **Grado de prueba reconciliado con la ROE (`proof_state` — mejora Shannon "F").** El informe se
+   > filtra por el **grado de prueba** de cada finding, un eje ORTOGONAL a `status`: `proven-by-exploit`
+   > (PoC reproducible), `evidenced` (corroborado por comportamiento observado), `roe-capped` (REAL y
+   > respaldado por FUENTE —CVE/KEV/exploit público— pero la ROE prohibió llevar la prueba hasta el
+   > final) y `speculative` (hipótesis sin corroborar). `reporting` **INCLUYE** {proven-by-exploit,
+   > evidenced, roe-capped} y **descarta solo `speculative`** (`is_reportable` en `tools/blackboard.py`
+   > lo hace determinista; si falta el campo se DERIVA de `status`). La clave: un finding real que la
+   > ROE impidió explotar (los "12 Citrix": vulnerables por versión, no explotados por decisión de
+   > alcance) va marcado **`roe-capped`, no `candidate`** — así el informe lo recoge con la salvedad de
+   > verificación en vez de perderlo. `roe-capped` **exige fuente** (`validate_blackboard`/
+   > `analyze_engagement` lo imponen); sin ella es `speculative`. No relaja ninguna puerta ni infla la
+   > realidad: `roe-capped` **no** es `proven-by-exploit`.
 7. **Aprendizaje.** Antes de cada nueva fase de explotación, lee `lessons[]` del
    blackboard y pásalas como contexto al agente de explotación correspondiente.
 

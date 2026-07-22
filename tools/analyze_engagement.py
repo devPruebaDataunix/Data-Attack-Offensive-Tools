@@ -36,10 +36,18 @@ try:
 except Exception:
     pass
 
+# Reutiliza el gate de proof-state (mejora Shannon "F") de tools/blackboard.py — UNA sola fuente de
+# verdad: el reportable se decide por proof_state EFECTIVO (descarta solo `speculative`, conserva
+# `roe-capped`), no por el viejo status∈{confirmed,exploited}. NO se reimplementa aquí: una copia
+# divergiría justo en el caso `roe-capped`. blackboard.py es un sibling garantizado en tools/; si
+# faltara/estuviera roto, que falle RUIDOSAMENTE (mejor que un informe silenciosamente deshonesto).
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from blackboard import (  # noqa: E402
+    effective_proof_state, is_reportable, PROOF_NEEDS_EVIDENCE, _PROOF_STATUS_OK, _KNOWN_STATUSES)
+
 URL_RE = re.compile(r"https?://([^/\s:]+)", re.I)
 IP_RE = re.compile(r"^(?:\d{1,3}\.){3}\d{1,3}$")
 SEVERITIES = {"info", "low", "medium", "high", "critical"}
-REPORTABLE = {"confirmed", "exploited"}
 
 
 # ── matching de alcance (ESPEJO de .claude/hooks/scope_guard.py) ────────────────
@@ -172,18 +180,34 @@ def main():
     if targets and out_n == 0:
         OK(f"{len(targets)} targets del blackboard, todos dentro de scope")
 
-    # 4) Findings
+    # 4) Findings (reportabilidad por proof_state EFECTIVO — mejora Shannon "F")
     findings = eng.get("findings", []) or []
     bad = 0
+    roe_capped = 0
     for f in findings:
         fid = f.get("finding_id", "?")
-        st = (f.get("status") or "").lower()
+        ps = effective_proof_state(f)
+        reportable = is_reportable(f)
         if f.get("target_id") and f["target_id"] not in tids:
             WARN(f"finding {fid}: target_id '{f['target_id']}' no existe en targets[]")
-        if st in REPORTABLE and not (f.get("evidence") or "").strip():
-            FAIL(f"finding {fid} [{st}] SIN evidence — viola 'evidencia o no existe' (§3)"); bad += 1
-        if st in REPORTABLE and not (f.get("source_refs") or f.get("cve") or f.get("exploit_sources")):
-            FAIL(f"finding {fid} [{st}] SIN fuente (source_refs/cve) — 'sin fuente no se explota' (§3,§4)"); bad += 1
+        # Evidencia: la exigen los estados que AFIRMAN prueba dinámica (evidenced/proven-by-exploit,
+        # y por derivación confirmed/exploited). `roe-capped` NO la exige — por definición no se
+        # explotó; se respalda en la FUENTE, no en un PoC.
+        if reportable and ps in PROOF_NEEDS_EVIDENCE and not (f.get("evidence") or "").strip():
+            FAIL(f"finding {fid} [{ps}] SIN evidence — viola 'evidencia o no existe' (§3)"); bad += 1
+        # Fuente: TODO reportable la exige (incluido roe-capped, que se sostiene EN la fuente).
+        if reportable and not (f.get("source_refs") or f.get("cve") or f.get("exploit_sources")):
+            FAIL(f"finding {fid} [{ps}] SIN fuente (source_refs/cve) — 'sin fuente no se explota' (§3,§4)"); bad += 1
+        # Coherencia status<->proof_state también en el AUTOR de cierre (defensa en profundidad: el
+        # write-time la impone, pero si el blackboard se mutó fuera del path Write/Edit no chillaría).
+        # Solo con proof_state EXPLÍCITO (espejo del opt-in write-time).
+        raw_ps = f.get("proof_state")
+        st = (f.get("status") or "").lower()
+        if raw_ps in _PROOF_STATUS_OK and st in _KNOWN_STATUSES and st not in _PROOF_STATUS_OK[raw_ps]:
+            FAIL(f"finding {fid}: proof_state '{raw_ps}' INCOHERENTE con status '{st}' "
+                 f"(coherentes: {sorted(_PROOF_STATUS_OK[raw_ps])}) — alinea ambos ejes (§3)"); bad += 1
+        if ps == "roe-capped":
+            roe_capped += 1
         sev = (f.get("severity") or "").lower()
         if sev and sev not in SEVERITIES:
             WARN(f"finding {fid}: severidad inválida '{sev}'")
@@ -192,12 +216,15 @@ def main():
             WARN(f"finding {fid}: cvss fuera de [0,10]: {cvss}")
     if findings and bad == 0:
         OK(f"{len(findings)} findings, todos con evidencia y fuente donde corresponde")
+    if roe_capped:
+        WARN(f"{roe_capped} hallazgo(s) 'roe-capped': reales pero no explotados por límite de ROE — "
+             f"el informe los INCLUYE con esa salvedad (no se descartan como 'speculative')")
 
     # 5) Informe (coherencia blanda)
     reports = sorted(glob.glob(os.path.join(ROOT, "report", "INFORME-*.md")))
     if reports:
-        n_rep = sum(1 for f in findings if (f.get("status") or "").lower() in REPORTABLE)
-        OK(f"informe presente ({len(reports)}); findings reportables (confirmed/exploited): {n_rep}")
+        n_rep = sum(1 for f in findings if is_reportable(f))
+        OK(f"informe presente ({len(reports)}); findings reportables (proven/evidenced/roe-capped): {n_rep}")
 
     return _summary(ok, warn, fail)
 

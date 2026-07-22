@@ -19,6 +19,66 @@ import tempfile
 CONTRACTS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "contracts")
 
 
+# ── Proof-state reconciliado con ROE (mejora Shannon "F") ───────────────────────
+# Dos ejes ORTOGONALES por finding: `status` (ciclo de vida) y `proof_state` (grado de prueba).
+# El gate de informe se decide por el proof_state EFECTIVO: descarta solo `speculative` y, en
+# particular, CONSERVA `roe-capped` (real pero no explotado por ROE) — que con el viejo criterio
+# de `status` se perdía como `candidate`. Retrocompatible: si un finding no trae `proof_state`, se
+# DERIVA de `status`. Funciones puras, solo stdlib (no tocan disco) — reutilizables por el hook
+# validate_blackboard, por analyze_engagement (audit) y por el dashboard.
+PROOF_STATES = ("speculative", "evidenced", "proven-by-exploit", "roe-capped")
+REPORTABLE_PROOF = ("evidenced", "proven-by-exploit", "roe-capped")  # se informan; se descarta 'speculative'
+PROOF_NEEDS_EVIDENCE = ("evidenced", "proven-by-exploit")           # afirman prueba dinámica -> exigen `evidence`
+_STATUS_TO_PROOF = {
+    "exploited": "proven-by-exploit",
+    "confirmed": "evidenced",
+    "candidate": "speculative",
+    # false_positive / out_of_scope -> None (nunca reportables)
+}
+# Emparejamientos COHERENTES status <-> proof_state. Un `proof_state` explícito que contradice el
+# `status` es un error de datos con consecuencias: `exploited`+`roe-capped` relajaría la exigencia de
+# evidencia (roe-capped no la pide); `exploited`+`speculative` haría DESAPARECER del informe algo que
+# sí se explotó. Un demostrado (evidenced/proven) exige un status dinámico (confirmed/exploited); un
+# `roe-capped` (real, no demostrado) solo casa con `candidate`. Se valida solo si el status es conocido.
+_PROOF_STATUS_OK = {
+    "speculative":       {"candidate", "false_positive", "out_of_scope"},
+    "evidenced":         {"confirmed", "exploited"},
+    "proven-by-exploit": {"confirmed", "exploited"},
+    "roe-capped":        {"candidate"},
+}
+_KNOWN_STATUSES = {"candidate", "confirmed", "exploited", "false_positive", "out_of_scope"}
+
+
+def finding_has_source(f):
+    """True si el finding trae alguna FUENTE que lo respalde (source_refs/cve/exploit_sources)."""
+    if not isinstance(f, dict):
+        return False
+    return bool(f.get("source_refs") or f.get("cve") or f.get("exploit_sources"))
+
+
+def effective_proof_state(f):
+    """Grado de prueba EFECTIVO: el `proof_state` explícito si es válido; si falta, se DERIVA de
+    `status` (retrocompatible). Devuelve None si el finding no es reportable por su status
+    (false_positive/out_of_scope) y no declara un proof_state reconocido."""
+    if not isinstance(f, dict):
+        return None
+    ps = f.get("proof_state")
+    if ps in PROOF_STATES:
+        return ps
+    return _STATUS_TO_PROOF.get((f.get("status") or "").lower())
+
+
+def is_reportable(f):
+    """¿Va este finding al informe? Regla F: NO si `status` es false_positive/out_of_scope; en otro
+    caso, reportable sii su proof_state EFECTIVO está en REPORTABLE_PROOF — es decir, se descarta
+    SOLO `speculative` y se CONSERVA `roe-capped`."""
+    if not isinstance(f, dict):
+        return False
+    if (f.get("status") or "").lower() in ("false_positive", "out_of_scope"):
+        return False
+    return effective_proof_state(f) in REPORTABLE_PROOF
+
+
 def atomic_write_json(path, data, indent=2):
     """Escribe `data` como JSON en `path` de forma atómica (tmp en el mismo dir + os.replace)."""
     d = os.path.dirname(os.path.abspath(path)) or "."
@@ -107,6 +167,36 @@ def validate_engagement(data, contracts_dir=CONTRACTS):
                         f"finding {ident}: es una hipótesis white-box (tiene `code_ref`) marcada "
                         f"'{f.get('status')}' SIN `evidence` — el código es un LEAD, no una prueba: "
                         f"exige corroboración dinámica capturada antes de confirmar (déjalo 'candidate').")
+
+            # Invariantes de proof-state (Shannon "F"). OPT-IN: solo disparan cuando el finding
+            # declara `proof_state` EXPLÍCITO, para no romper blackboards legacy que solo usan
+            # `status` (esos los audita analyze_engagement por derivación). Un proof_state que
+            # AFIRMA prueba dinámica exige `evidence`; `roe-capped` (real pero no explotado) exige
+            # una FUENTE — así no se convierte en un canal para colar hipótesis sin respaldo.
+            ps = f.get("proof_state")
+            if ps is not None:
+                ident = f.get("finding_id", f"#{i}")
+                if ps not in PROOF_STATES:
+                    violations.append(
+                        f"finding {ident}: proof_state inválido '{ps}' (usa {list(PROOF_STATES)}).")
+                else:
+                    if ps in PROOF_NEEDS_EVIDENCE and not (f.get("evidence") or "").strip():
+                        violations.append(
+                            f"finding {ident}: proof_state '{ps}' AFIRMA prueba dinámica pero no trae "
+                            f"`evidence` (PoC/comportamiento observado) — respáldalo, o usa 'roe-capped' "
+                            f"(si la ROE impidió explotarlo, con fuente) o 'speculative'.")
+                    if ps == "roe-capped" and not finding_has_source(f):
+                        violations.append(
+                            f"finding {ident}: proof_state 'roe-capped' (real pero no explotado por ROE) "
+                            f"exige una FUENTE que lo respalde (source_refs/cve/exploit_sources) — sin "
+                            f"fuente es 'speculative', no un hallazgo reportable (§3/§4).")
+                    st = (f.get("status") or "").lower()
+                    if st in _KNOWN_STATUSES and st not in _PROOF_STATUS_OK[ps]:
+                        violations.append(
+                            f"finding {ident}: proof_state '{ps}' es INCOHERENTE con status '{st}' "
+                            f"(coherentes: {sorted(_PROOF_STATUS_OK[ps])}) — un demostrado no es "
+                            f"'roe-capped', un 'roe-capped' no está 'exploited', y un explotado no es "
+                            f"'speculative' (desaparecería del informe). Alinea status y proof_state.")
     return violations
 
 

@@ -4,6 +4,60 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.55.0] - 2026-07-22
+### Added
+- **Proof-state reconciliado con la ROE (mejora "F" del análisis de Shannon) — CIERRA la serie A–F.**
+  Un hallazgo tenía un solo eje, `status` (candidate/confirmed/exploited/…), que mezclaba *cuánta prueba
+  tengo* con *hasta dónde me dejó llegar la ROE*. F separa ambos con un eje ORTOGONAL, `proof_state`, para
+  no **perder hallazgos reales** que la ROE impidió explotar (el caso "los 12 Citrix": vulnerables por
+  versión y respaldados por KEV, no explotados por decisión de alcance — con el criterio viejo morían como
+  `candidate` y se caían del informe).
+- **Esquema (retrocompatible):** `finding.proof_state` = `speculative` (hipótesis sin corroborar — se
+  descarta) · `evidenced` (corroborado por comportamiento observado — exige `evidence`) · `proven-by-exploit`
+  (PoC reproducible — exige `evidence`) · `roe-capped` (**real y respaldado por FUENTE pero no explotado por
+  ROE — se INCLUYE en el informe con esa salvedad**; exige fuente). Y `finding.confidence` (low/medium/high),
+  confianza en el verdadero-positivo, ortogonal al grado de prueba. Ninguno es `required`; si faltan se DERIVA
+  el proof_state de `status` (exploited→proven-by-exploit, confirmed→evidenced, candidate→speculative).
+- **Gate de informe determinista.** `tools/blackboard.py` gana `effective_proof_state`, `is_reportable`
+  (reporta {proven-by-exploit, evidenced, roe-capped}; descarta solo `speculative` y, por status,
+  false_positive/out_of_scope) y `finding_has_source` — reutilizables por el hook, la auditoría y el dashboard.
+  `.claude/agents/closing/reporting.md`, `templates/report-template.md` (fila **Verificación** + nota de
+  hallazgo limitado por ROE) y `docs/reporting-guide.md` (sección de proof_state) aplican el gate y **prohíben
+  omitir un `roe-capped`**. Los productores fijan el campo: `vuln-triage` (default `speculative`, eleva a
+  `roe-capped` lo respaldado que la ROE no deja explotar), `web-exploit`/`api-exploit` (`evidenced`/
+  `proven-by-exploit`), y el playbook del Orquestador (`AGENTS.md`) documenta el modelo.
+### Security
+- **Barreras deterministas del proof-state.** `validate_engagement` (hook `validate_blackboard`, C5) añade
+  invariantes OPT-IN (solo disparan con `proof_state` explícito, para no romper blackboards legacy):
+  `evidenced`/`proven-by-exploit` **sin `evidence`** → bloqueo (no se afirma prueba dinámica sin prueba);
+  `roe-capped` **sin FUENTE** (source_refs/cve/exploit_sources) → bloqueo (evita que `roe-capped` sea un canal
+  para colar hipótesis sin respaldo — "sin fuente no se explota", §3/§4); `proof_state` fuera de enum → bloqueo.
+  La regla white-box de "A" (`code_ref` no va confirmed/exploited sin evidence) sigue intacta. `analyze_engagement`
+  (C9, audit) reutiliza `is_reportable`: exige evidence a los reportables que afirman prueba dinámica (no a
+  `roe-capped`), exige fuente a TODO reportable, y cuenta+avisa los `roe-capped` (se reportan, no se descartan).
+- **No relaja ninguna puerta ni infla la realidad.** `roe-capped` **no** es `proven-by-exploit`; el informe
+  refleja el grado de prueba real y no reivindica una explotación que la ROE impidió.
+- **Council de 3 lentes (GO de los 3; endurecimiento aplicado antes del push):** (1) *coherencia
+  status↔proof_state* — `validate_engagement` **y** `analyze_engagement` (defensa en profundidad, write-time
+  + audit de cierre) bloquean emparejamientos contradictorios (`exploited`+`roe-capped` relajaría la
+  exigencia de evidencia; `exploited`+`speculative` haría DESAPARECER del informe algo explotado): un
+  demostrado exige status dinámico, un `roe-capped` solo casa con `candidate`. (2) *una sola fuente de
+  verdad* — `analyze_engagement` importa el gate de `tools/blackboard.py` en vez de reimplementarlo (la
+  copia previa divergía justo en `roe-capped` y, de ejecutarse, lo habría descartado); si el gate faltara,
+  falla ruidosamente. (3) *C21 ampliado* — `blackboard_guard` cubre ahora también `Path(...).write_text/
+  write_bytes` y `shutil.copy*/move` de Python (idiomas comunes no ofuscados que escribirían el blackboard),
+  cerrando el hueco de bypass del guard de secreto/esquema. (4) *doc precisa* — `web-exploit`/`api-exploit`
+  aclaran que `roe-capped` deja el `status` en `candidate` (ejes ortogonales), evitando un bloqueo confuso.
+- **CONSTITUTION.md v2.2.0** — enmienda del §3 ("evidencia o no existe") para carvear la excepción tasada
+  `roe-capped`: reportable con la salvedad "no explotado por ROE", sustentada en la FUENTE y sin afirmar
+  explotación. Reconcilia el texto supremo con el código; no debilita la regla (lo demostrado sigue
+  exigiendo evidencia).
+### Tests
+- `tests/test_proof_state.py` (nuevo): esquema (enums, retrocompat), helpers de `blackboard.py` (derivación +
+  gate, con `roe-capped` conservado y `speculative`/false_positive/out_of_scope descartados), invariantes
+  write-time (evidence/fuente/enum/opt-in + regla code_ref viva), audit (`analyze_engagement` importa el gate),
+  y coherencia de consumidores/doc. Sin agente nuevo → sin cambios de roster (roster 29 intacto).
+
 ## [2.54.0] - 2026-07-22
 ### Added
 - **Adquisición de SESIÓN autenticada (mejora "D" del análisis de Shannon) — login flows + TOTP.**

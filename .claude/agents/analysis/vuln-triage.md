@@ -61,6 +61,15 @@ Escribe `findings[]` con esquema `finding.schema.json`: `status: "candidate"`, `
 `cvss`, `cwe`, `cve[]`, `attack_technique` (ID ATT&CK), `owasp` si aplica, y
 **`source_refs[]` obligatorio** (URL/ID de la fuente). Sin fuente, no es un finding.
 
+**Grado de prueba (`proof_state` — mejora Shannon "F").** Tú creas hipótesis, así que tu default es
+`proof_state: "speculative"` (o déjalo vacío: se deriva de `candidate`). La confirmación dinámica
+(`evidenced`/`proven-by-exploit`) es de los agentes de explotación. **Caso importante:** si el
+finding está **respaldado por fuente sólida** (KEV / exploit público) pero **la ROE prohíbe
+explotarlo** (p.ej. no tocar producción) y por tanto nunca pasará por explotación, NO lo dejes como
+`candidate` (el informe lo descartaría): márcalo/propónlo al Orquestador como `proof_state:
+"roe-capped"` con su `confidence` — es real y **debe** ir al informe con la salvedad de "no
+explotado por ROE". Un `roe-capped` **exige fuente**; sin ella es `speculative`.
+
 ## Criterio de done
 `findings[]` poblado y priorizado, cada uno con fuente verificable y vector sugerido
 (web/red). Devuelve al Orquestador la cola priorizada.

@@ -40,6 +40,10 @@ BLOCK = [
     "cp loot/x contracts/engagement.json",
     "python3 -c \"open('contracts/engagement.json','w').write('x')\"",
     "truncate -s0 contracts/engagement.json",
+    # Idiomas Python COMUNES no ofuscados (M2 del council de seguridad):
+    'python3 -c "from pathlib import Path; Path(\'contracts/engagement.json\').write_text(d)"',
+    'python3 -c "import shutil; shutil.copy(\'loot/x\', \'contracts/engagement.json\')"',
+    'python3 -c "import shutil; shutil.move(\'tmp.json\', \'contracts/engagement.json\')"',
 ]
 for cmd in BLOCK:
     ok(bg.blocking_reason(cmd) is not None, f"bloquea: {cmd[:50]}")
@@ -53,6 +57,8 @@ ALLOW = [
     "echo hola > salida.txt",
     "cat contracts/scope.json > /tmp/s.json",
     "ls contracts/",
+    # LEER el blackboard para copiarlo a otro sitio NO es escribirlo (el BB va en los args, no es el destino):
+    'python3 -c "p.write_bytes(open(\'contracts/engagement.json\',\'rb\').read())"',
 ]
 for cmd in ALLOW:
     ok(bg.blocking_reason(cmd) is None, f"permite: {cmd[:50]}")

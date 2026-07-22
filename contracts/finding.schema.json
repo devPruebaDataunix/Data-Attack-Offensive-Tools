@@ -13,6 +13,14 @@
       "enum": ["candidate", "confirmed", "exploited", "false_positive", "out_of_scope"]
     },
     "severity": { "type": "string", "enum": ["info", "low", "medium", "high", "critical"] },
+    "proof_state": {
+      "type": "string",
+      "enum": ["speculative", "evidenced", "proven-by-exploit", "roe-capped"],
+      "description": "GRADO DE PRUEBA reconciliado con la ROE (mejora Shannon F) — eje ORTOGONAL a `status` (ciclo de vida) y a `severity` (impacto). Separa 'cuánta prueba tengo' de 'hasta dónde me dejó llegar la ROE', para no PERDER hallazgos reales que la ROE impidió explotar. Valores: `speculative` = hipótesis sin corroborar (incluye las `code_ref` white-box de la mejora A y las 'versión vulnerable' de vuln-triage aún no confirmadas) — el informe la DESCARTA; `evidenced` = corroborada por comportamiento observado (respuesta diferencial de authz, fingerprint+versión), sin exploit armado — exige `evidence`; `proven-by-exploit` = demostrada ejecutando el exploit con PoC reproducible — exige `evidence`; `roe-capped` = REAL y respaldada por FUENTE (CVE/KEV/advisory) pero la ROE prohibió llevar la prueba hasta el final (no explotar producción, no exfiltrar de verdad) — **el informe la INCLUYE con esa salvedad**, NO la descarta; exige una fuente (source_refs/cve/exploit_sources). `reporting` reporta {proven-by-exploit, evidenced, roe-capped} y solo descarta `speculative`. RETROCOMPATIBLE: si falta, se DERIVA de `status` (exploited→proven-by-exploit, confirmed→evidenced, candidate→speculative; false_positive/out_of_scope no se reportan). Lo imponen `validate_blackboard` (write-time, opt-in) y `analyze_engagement` (audit)." },
+    "confidence": {
+      "type": "string",
+      "enum": ["low", "medium", "high"],
+      "description": "Confianza del analista en que el hallazgo es un VERDADERO POSITIVO — ortogonal a `proof_state` y `severity`. Un `roe-capped` con KEV+exploit público puede ser `high` aunque no se explotara; una hipótesis `speculative` white-box suele ser `low`/`medium`. Orienta la priorización del informe; no sustituye a la prueba." },
     "cvss": { "type": "number", "minimum": 0, "maximum": 10 },
     "cvss_vector": { "type": "string", "description": "Vector CVSS 3.1, p.ej. CVSS:3.1/AV:N/..." },
     "epss": { "type": "number", "minimum": 0, "maximum": 1, "description": "Probabilidad EPSS (del RAG)" },

@@ -10,8 +10,9 @@ guards de secreto. Este guard lo bloquea de forma determinista.
 
 Cobertura (contrato CONSCIENTE, no un sandbox completo): caza los patrones de escritura COMUNES que
 nombran el blackboard —redirección `>`/`>>`, `tee`, `sed -i`, `cp`/`mv`/`dd`/`install`/`truncate`,
-`open(...,'w'/'a')` de Python—. Un agente decidido podría ofuscar (base64, variable con la ruta): el
-confinamiento DURO es el contenedor efímero (mejora C) + que las tools nunca emiten material a stdout.
+`open(...,'w'/'a')`, `Path(...).write_text/write_bytes` y `shutil.copy*/move` de Python—. Un agente
+decidido podría ofuscar (base64, variable con la ruta): el confinamiento DURO es el contenedor efímero
+(mejora C) + que las tools nunca emiten material a stdout.
 LEER el blackboard (cat/jq/grep/python-read) NO se bloquea. Fail-open ante ambigüedad.
 
 Protocolo Claude Code (igual que scope_guard.py): stdin JSON {tool_name, tool_input.command}; para
@@ -34,6 +35,10 @@ _WRITE_PATTERNS = [
     (re.compile(r"\b(?:cp|mv|dd|install|rsync|truncate)\b[^|;&]*" + _BB, re.I), "cp/mv/dd/install/truncate al blackboard"),
     (re.compile(r"open\s*\([^)]*" + _BB + r"[^)]*,\s*[\"'][wa]", re.I), "open(..., 'w'/'a') de Python sobre el blackboard"),
     (re.compile(r"\.write\s*\([^)]*\)[^;]*" + _BB, re.I), ".write() de Python sobre el blackboard"),
+    # `Path("…engagement.json").write_text/bytes(…)` — la ruta va ANTES del método (el arg es el
+    # contenido). NO casamos el blackboard DENTRO de los args de write_* (ahí sería contenido/lectura).
+    (re.compile(r"[\"'][^\"']*" + _BB + r"[\"']\s*\)?\s*\.write_(?:text|bytes)", re.I), "Path('…engagement.json').write_text/bytes"),
+    (re.compile(r"shutil\.(?:copy\w*|move)\s*\([^)]*" + _BB, re.I), "shutil.copy*/move al blackboard"),
 ]
 
 

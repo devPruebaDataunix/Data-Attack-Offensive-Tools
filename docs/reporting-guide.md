@@ -51,7 +51,31 @@ Regla de oro de redacción: **traduce el hallazgo a impacto de negocio.**
 | **Evidencia** | Request/response, PoC, captura (placeholder) | `evidence[]` (redactar secretos) |
 | **Remediación** | Acción concreta y verificable, priorizada | `finding.remediation` |
 | **Referencias** | CVE/KEV/EPSS/advisory | `finding.source_refs` |
-| **Estado** | Confirmado / Explotado | `finding.status` |
+| **Verificación** | Grado de prueba + confianza (ver abajo) | `finding.proof_state` + `confidence` |
+
+## Grado de prueba reconciliado con la ROE (`proof_state`)
+El **estado de prueba** de un hallazgo es un eje aparte del ciclo de vida (`status`). El informe
+se filtra por él — y esto importa porque un hallazgo REAL que la ROE impidió explotar **no debe
+perderse**:
+
+| `proof_state` | En el informe | Cómo redactarlo |
+| :--- | :--- | :--- |
+| `proven-by-exploit` | ✅ Incluir | "Explotado" — PoC reproducible en la evidencia |
+| `evidenced` | ✅ Incluir | "Corroborado" — comportamiento observado (p.ej. respuesta diferencial de authz) |
+| `roe-capped` | ✅ **Incluir** | "**Limitado por ROE**" — vulnerable por versión/fuente (CVE/KEV/exploit público), NO explotado a petición del alcance; sustenta en la fuente y explica qué falta para demostrarlo en ventana autorizada |
+| `speculative` | ❌ Descartar | Hipótesis sin corroborar (no va al informe) |
+
+Reglas al redactar:
+- **Nunca omitas un `roe-capped`.** Es el caso "los 12 Citrix": vulnerables y respaldados, no
+  explotados por decisión de alcance. Omitirlo es un informe deshonesto por omisión. Repórtalo con
+  la salvedad de verificación clara y su fuente — la ausencia de PoC es una decisión de ROE, no una
+  duda sobre el hallazgo.
+- **No infles.** Un `roe-capped` no es un `proven-by-exploit`: no reivindiques una explotación que
+  no ocurrió. Refleja el grado real.
+- `confidence` (alta/media/baja) es la confianza en que es un verdadero positivo — ortogonal al
+  grado de prueba: un `roe-capped` con KEV+exploit público puede ser de confianza **alta**.
+- Los `roe-capped` casan con la sección **"Qué NO se pudo probar y por qué"** del alcance (ROE):
+  enlaza ambas para que dirección entienda el límite, no lo lea como un vacío.
 
 > Bandas CVSS 3.1: Crítico 9.0-10.0 · Alto 7.0-8.9 · Medio 4.0-6.9 · Bajo 0.1-3.9.
 > **Pero la severidad final no es solo CVSS:** un crítico en un sistema interno aislado

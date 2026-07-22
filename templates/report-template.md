@@ -61,7 +61,7 @@ Fases: reconocimiento → enumeración → explotación → post-explotación �
 | **CVSS 3.1** | {score} (`{vector}`) |
 | **Clasificación** | {CWE-xx} · {OWASP A0x} · {ATT&CK Txxxx} |
 | **Activos afectados** | {hosts/URLs} |
-| **Estado** | {Confirmado / Explotado} |
+| **Verificación** | {Explotado (PoC reproducible) / Corroborado (comportamiento observado) / **Limitado por ROE** (vulnerable por versión/fuente, no explotado a petición del alcance)} · Confianza: {alta/media/baja} |
 | **Referencias** | {CVE / KEV / advisory} |
 
 **Descripción.** {Qué es la debilidad, en claro.}
@@ -77,6 +77,11 @@ Fases: reconocimiento → enumeración → explotación → post-explotación �
 {request/response, salida de comando o PoC — secretos redactados}
 ```
 {captura: evidencia/{id}.png}
+
+> **Nota de verificación (hallazgos limitados por ROE).** {Si este hallazgo NO se explotó porque la
+> ROE lo impidió (p.ej. no tocar producción), dilo aquí: en qué fuente se sustenta (CVE/KEV/exploit
+> público), por qué es explotable, y qué falta para demostrarlo en una ventana autorizada. La
+> ausencia de PoC es una decisión de alcance, NO una duda sobre el hallazgo. Omitir si se explotó.}
 
 **Cadena de ataque.** {Si este hallazgo es eslabón de una cadena: el siguiente paso y su técnica (campo `next_step`), p.ej. "→ DCSync (T1003.006) vía netexec". Omitir si no encadena.}
 
