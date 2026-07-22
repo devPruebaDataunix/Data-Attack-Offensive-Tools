@@ -1,13 +1,13 @@
 # Auditoría de calidad de agentes y skills — v2.1.0
 
-> **Al día (v2.53.0):** hoy la suite tiene **28 agentes** y **16 skills** (v2.47.0 añadió `firmware-recon`/`firmware-exploit` + `iot-firmware-security`; v2.52.0 añadió `code-recon`, vertical white-box, reusando las skills web; v2.53.0 = mejora "C" —contenedor efímero por-engagement + guard `fs_guard` C20— no añade agentes ni skills);
+> **Al día (v2.54.0):** hoy la suite tiene **29 agentes** y **16 skills** (v2.47.0 añadió `firmware-recon`/`firmware-exploit` + `iot-firmware-security`; v2.52.0 añadió `code-recon`, vertical white-box, reusando las skills web; v2.53.0 = mejora "C" —contenedor efímero por-engagement + guard `fs_guard` C20— no añade agentes; v2.54.0 = mejora "D" añadió `auth-recon` —adquisición de sesión autenticada, login+TOTP— reusando la skill `web-api-security`);
 > la cobertura anti-inyección
-> **C11 está en 26 agentes** (los 28 menos `reporting`/`knowledge-postmortem`; los +3 del clúster AD la
-> sumaron en v2.11.0, los +2 del clúster móvil en v2.46.0, los +2 del firmware en v2.47.0, y `code-recon` en v2.52.0 —crítica en white-box: un codebase adversario es vector de inyección). Lo que sigue es el **informe original de la auditoría de calidad de v2.1.0**,
+> **C11 está en 27 agentes** (los 29 menos `reporting`/`knowledge-postmortem`; los +3 del clúster AD la
+> sumaron en v2.11.0, los +2 del clúster móvil en v2.46.0, los +2 del firmware en v2.47.0, `code-recon` en v2.52.0 y `auth-recon` en v2.54.0 —adquisición: la página de login es contenido no confiable). Lo que sigue es el **informe original de la auditoría de calidad de v2.1.0**,
 > conservado como registro; los cambios posteriores se leen en [CHANGELOG.md](../CHANGELOG.md).
 
 Revisión de **calidad** (no solo validez de config) de los **18 prompts de agente**
-(`.claude/agents/`) y las **9 skills** (`plugin/skills/`) que existían **en v2.1.0** (hoy **28 agentes**
+(`.claude/agents/`) y las **9 skills** (`plugin/skills/`) que existían **en v2.1.0** (hoy **29 agentes**
 y **16 skills**). Complementa la auditoría de configuración de v1.11.0 ([config-audit.md](config-audit.md))
 y el hardening de v2.0.0 (mínimo privilegio + `SubagentStop`).
 

@@ -132,13 +132,13 @@ def t_agent_cards():
     for a in ("web-exploit", "api-exploit", "api-recon", "vuln-triage"):
         check(f"agent-cards: {a} declara code-recon (bidireccional, sin drift C14)",
               "code-recon" in p.get(a, set()))
-    check("agent-cards: 28 agentes (excl. orchestrator)",
-          len([x for x in c["cards"] if x["name"] != "orchestrator"]) == 28)
+    check("agent-cards: 29 agentes (excl. orchestrator)",
+          len([x for x in c["cards"] if x["name"] != "orchestrator"]) == 29)
 
 
 def t_agents_md():
     md = _load("AGENTS.md")
-    check("AGENTS.md: roster 28 (18 de fase)", "28 agentes" in md and "18 de fase" in md)
+    check("AGENTS.md: roster 29 (19 de fase)", "29 agentes" in md and "19 de fase" in md)
     check("AGENTS.md: delegación white-box a code-recon",
           "code-recon" in md and "white-box" in md.lower() and "source_repos" in md)
     check("AGENTS.md: usa code_ref, confirmación DINÁMICA y menciona sin Bash",

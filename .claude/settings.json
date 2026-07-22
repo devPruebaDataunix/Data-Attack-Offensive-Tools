@@ -50,6 +50,10 @@
           {
             "type": "command",
             "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/approval_gate.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/hooks/blackboard_guard.py"
           }
         ]
       },

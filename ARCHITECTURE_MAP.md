@@ -3,14 +3,14 @@
 
 # 🗺️ Mapa de Arquitectura — Cyberseg Agents
 
-> **Generado:** 2026-07-21 18:55:27 UTC · **Refleja el estado real** del proyecto en ese momento.
+> **Generado:** 2026-07-22 06:20:24 UTC · **Refleja el estado real** del proyecto en ese momento.
 > Regenerar a mano: `python tools/gen_arch_diagram.py`
 
 ## Qué es esto (para reconstruir contexto si se pierde)
 
 Suite de agentes para **pentesting / bug bounty autorizado**. Un **Orquestador** (sesión principal, `AGENTS.md`) coordina a los agentes especialistas mediante **hub-and-spoke**: él delega, recoge resultados y hace de **router de un bus A2A mediado** (los agentes se dirigen mensajes entre sí dejándolos en el **blackboard**, `contracts/engagement.json`; no hay malla directa). Un **hook de alcance** (`scope_guard.py`) bloquea de forma determinista cualquier comando contra un target fuera de `contracts/scope.json`. Tres RAG locales (SQLite) por propósito: el de **vulnerabilidades** (`rag/`, KEV+EPSS+CVE recientes) que consulta `vuln-triage`; el de **conocimiento** (`rag/knowledge/`, técnicas — Capa 1 estructurada + Capa 2 semántica, con el canon OWASP API/Web/WSTG/MASVS/MASTG/FSTM/ISVS) que consultan los agentes de explotación; y el de **contexto** per-engagement (`rag/context/`, efímero y AISLADO por engagement, EN-ZONA — *qué se sabe YA de ESTE objetivo*).
 
-**Estado actual:** 28 agentes especialistas (E1=7, E2=19, E3=2) + Orquestador + hook de alcance.
+**Estado actual:** 29 agentes especialistas (E1=8, E2=19, E3=2) + Orquestador + hook de alcance.
 
 ## Diagrama
 
@@ -24,6 +24,7 @@ flowchart TB
     subgraph E1["🟦 Zona E1 · Recon (perfil de red abierto, sin datos de cliente)"]
         active_recon["active-recon<br/><i>claude-haiku-4-5</i>"]
         api_recon["api-recon<br/><i>claude-haiku-4-5</i>"]
+        auth_recon["auth-recon<br/><i>claude-haiku-4-5</i>"]
         code_recon["code-recon<br/><i>claude-haiku-4-5</i>"]
         firmware_recon["firmware-recon<br/><i>claude-haiku-4-5</i>"]
         mobile_recon["mobile-recon<br/><i>claude-haiku-4-5</i>"]
@@ -83,7 +84,8 @@ flowchart TB
 | :--- | :---: | :--- | :--- | :--- | :--- | :--- |
 | **active-recon** | E1 | claude-haiku-4-5 | default | — | Read, Write, Edit, Grep, Glob, Bash | Recon ACTIVO / enumeración. Úsalo tras osint-recon para escanear puer… |
 | **api-recon** | E1 | claude-haiku-4-5 | default | local | Read, Write, Edit, Grep, Glob, Bash | Inventario y descubrimiento de APIs (REST/GraphQL) — la spec ES el ma… |
-| **code-recon** | E1 | claude-haiku-4-5 | default | local | Read, Grep, Glob, Bash | Recon de CÓDIGO FUENTE (white-box) — el código ES el mapa de la super… |
+| **auth-recon** | E1 | claude-haiku-4-5 | default | local | Read, Write, Edit, Grep, Glob, Bash | Adquisición de SESIÓN autenticada para las identidades de prueba — lo… |
+| **code-recon** | E1 | claude-haiku-4-5 | default | local | Read, Grep, Glob, Write, Edit | Recon de CÓDIGO FUENTE (white-box) — el código ES el mapa de la super… |
 | **firmware-recon** | E1 | claude-haiku-4-5 | default | local | Read, Write, Edit, Grep, Glob, Bash | Análisis ESTÁTICO y EMULACIÓN de firmware IoT (imagen de firmware) si… |
 | **mobile-recon** | E1 | claude-haiku-4-5 | default | local | Read, Write, Edit, Grep, Glob, Bash | Inventario y análisis ESTÁTICO de apps móviles (Android APK / iOS IPA… |
 | **osint-recon** | E1 | claude-haiku-4-5 | default | — | Read, Write, Edit, Grep, Glob, WebSearc… | Recon PASIVO. Úsalo al inicio de un engagement para mapear la superfi… |
@@ -113,7 +115,7 @@ flowchart TB
 ## Componentes de soporte (estado real)
 
 - **Orquestador (hub):** `AGENTS.md` — sesión principal, no es un subagente.
-- **Hook de alcance:** a2a_guard.py, a2a_router_nudge.py, approval_gate.py, budget_guard.py, header_guard.py, loop_guard.py, memory_guard.py, noise_guard.py, scope_guard.py, secret_scan.py, subagent_stop.py, validate_blackboard.py (PreToolUse, bloquea fuera de scope).
+- **Hook de alcance:** a2a_guard.py, a2a_router_nudge.py, approval_gate.py, budget_guard.py, fs_guard.py, header_guard.py, loop_guard.py, memory_guard.py, noise_guard.py, scope_guard.py, secret_scan.py, subagent_stop.py, validate_blackboard.py (PreToolUse, bloquea fuera de scope).
 - **Blackboard / contratos:** a2a-message.schema.json, agent-card.schema.json, agent-cards.json, engagement.json, engagement.schema.json, examples, finding.schema.json, scope.example.json, scope.json, target.schema.json.
 - **RAG de vulnerabilidades:** db.py, enrich_cve5.py, enrich_epss.py, enrich_exploits.py, enrich_msf.py, enrich_nuclei.py, ingest_kev.py, ingest_recent.py, query_vulns.py, refresh.py (KEV+EPSS+CVE recientes, alimenta a vuln-triage).
 - **RAG de conocimiento (técnicas):** _venv.py, embed.py, ingest_atomics.py, ingest_attack.py, ingest_corpus.py, ingest_feeds.py, ingest_gtfobins.py, ingest_lolbas.py, kb.py, kb_vec.py, query_kb.py, refresh_kb.py (Capa 1 estructurada GTFOBins/LOLBAS/Atomic/ATT&CK + Capa 2 semántica HackTricks/PaTT/PEASS/817 cyber-skills/feeds; lo consultan los agentes de explotación vía la skill `rag-technique-lookup`).

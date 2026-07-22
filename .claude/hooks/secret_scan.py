@@ -56,19 +56,25 @@ def blocking_reason(text):
             "propio motor y para el material de auth VIVO de las identidades de prueba.)")
 
 
-LOOT_REF_RE = None  # compilado perezosamente
+def _scan_or_none(v):
+    """scan(operator_only=False) tolerante: True si hay secreto; ante fallo del detector, False (para
+    que un fallo de `scan` NO desactive la disciplina de refs, que es pura y no depende de él)."""
+    try:
+        from redactor import scan
+        return bool(scan(v, operator_only=False))
+    except Exception:
+        return False
 
 
 def source_hint_reason(text):
     """Motivo de bloqueo si una PISTA de código white-box (`targets[].source_hints[]`, escrita por
     code-recon) filtra un secreto de cliente EN CLARO o rompe la disciplina de referencia — o None.
     El código es zona E3: los campos `label`/`maps_to` son NO sensibles y el material de un
-    `kind:secret` va SIEMPRE en `secret_ref` (`^engagements/.+/loot/`), nunca pegado. Distinto del scan
+    `kind:secret` va SIEMPRE en `secret_ref` (referencia a loot/), nunca pegado. Distinto del scan
     de auth VIVO: aquí cazamos un DSN/API-key/clave hardcodeada del código volcada a un campo de texto.
     Fail-open ante cualquier error (no rompemos el flujo)."""
     try:
-        import re as _re
-        from redactor import scan  # detector genérico (operator_only=False)
+        from redactor import is_loot_ref
         data = json.loads(text)
         hints = []
         for t in (data.get("targets") or []):
@@ -78,23 +84,16 @@ def source_hint_reason(text):
                         hints.append(h)
     except Exception:
         return None
-    loot_ref = _re.compile(r"^engagements/.+/loot/")
     bad = []
     for h in hints:
         # (a) secreto genérico pegado en un campo NO sensible (label/maps_to/source_ref).
         for field in ("label", "maps_to", "source_ref"):
             v = h.get(field)
-            if isinstance(v, str) and v:
-                try:
-                    if scan(v, operator_only=False):
-                        bad.append(f"secreto en source_hints.{field}")
-                except Exception:
-                    pass
+            if isinstance(v, str) and v and _scan_or_none(v):
+                bad.append(f"secreto en source_hints.{field}")
         # (b) kind:secret cuyo secret_ref no es una referencia a loot/ (o falta) = secreto pegado.
-        if h.get("kind") == "secret":
-            sr = h.get("secret_ref")
-            if not (isinstance(sr, str) and loot_ref.match(sr)):
-                bad.append("source_hints[kind=secret] sin secret_ref -> engagements/<id>/loot/")
+        if h.get("kind") == "secret" and not is_loot_ref(h.get("secret_ref")):
+            bad.append("source_hints[kind=secret] sin secret_ref -> engagements/<id>/loot/")
     if not bad:
         return None
     return ("Una pista de código white-box (targets[].source_hints[]) filtra material de cliente en "
@@ -102,6 +101,49 @@ def source_hint_reason(text):
             "es zona E3: los `label`/`maps_to` son NO sensibles y todo secreto va REFERENCIADO en "
             "`secret_ref` -> engagements/<id>/loot/, nunca pegado. Mueve el valor a loot/ y deja solo la "
             "referencia file:line.")
+
+
+def identity_auth_reason(text):
+    """Motivo de bloqueo si el bloque `identities[].auth` (mejora D — adquisición de sesión) rompe la
+    disciplina de referencia — o None. `credentials_ref`/`totp_secret_ref`/`steps[].value_ref` DEBEN
+    apuntar a `engagements/<id>/loot/`; una contraseña/semilla/token pegado en `steps[].value` o en
+    esos campos es material de cliente EN CLARO. Fail-open ante cualquier error."""
+    try:
+        from redactor import is_loot_ref
+        data = json.loads(text)
+        identities = [i for i in (data.get("identities") or []) if isinstance(i, dict)]
+    except Exception:
+        return None
+    bad = []
+    for idt in identities:
+        auth = idt.get("auth")
+        if not isinstance(auth, dict):
+            continue
+        who = idt.get("identity_id", "?")
+        # (a) los *_ref del bloque auth deben ser referencias a loot/ (no un valor pegado).
+        for field in ("credentials_ref", "totp_secret_ref"):
+            v = auth.get(field)
+            if v is not None and not is_loot_ref(v):
+                bad.append(f"identities[{who}].auth.{field} no es una referencia a engagements/<id>/loot/")
+        # (b) valores del flujo de login: `value` es NO sensible; un secreto ahí (best-effort, requiere
+        #     una palabra clave/formato conocido) = material en claro. El secreto va por `value_ref` a loot/.
+        for step in (auth.get("steps") or []):
+            if not isinstance(step, dict):
+                continue
+            vr = step.get("value_ref")
+            if vr is not None and not is_loot_ref(vr):
+                bad.append(f"identities[{who}].auth.steps[].value_ref no apunta a loot/")
+            for field in ("value", "selector"):
+                sv = step.get(field)
+                if isinstance(sv, str) and sv and sv not in ("{{user}}", "{{pass}}") and _scan_or_none(sv):
+                    bad.append(f"identities[{who}].auth.steps[].{field} trae un secreto en claro")
+    if not bad:
+        return None
+    return ("El bloque de adquisición de sesión (identities[].auth, mejora D) filtra material de cliente "
+            "en claro o rompe la disciplina de referencia: " + "; ".join(sorted(set(bad))) + ". Usuario/"
+            "contraseña van en `credentials_ref`, la semilla TOTP en `totp_secret_ref`, y cada valor "
+            "sensible del flujo en `steps[].value_ref` — SIEMPRE a engagements/<id>/loot/, nunca pegado. "
+            "Mueve el valor a loot/ y deja solo la referencia.")
 
 
 def main():
@@ -132,7 +174,7 @@ def main():
     except Exception:
         sys.exit(0)
 
-    reason = blocking_reason(text) or source_hint_reason(text)
+    reason = blocking_reason(text) or source_hint_reason(text) or identity_auth_reason(text)
     if reason:
         print(json.dumps({"decision": "block", "reason": reason}))
     sys.exit(0)

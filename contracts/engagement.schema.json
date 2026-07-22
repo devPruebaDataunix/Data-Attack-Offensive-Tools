@@ -64,6 +64,35 @@
           "owns_objects": { "type": "array", "items": { "type": "string" }, "description": "IDs de objetos/recursos que ESTA identidad posee legítimamente (referencias no sensibles), para probar el acceso cruzado desde otra identidad" },
           "tenant": { "type": "string", "description": "Tenant/organización si la app es multi-tenant (aislamiento horizontal)" },
           "validated": { "type": "boolean", "description": "true cuando el material se ha comprobado que autentica (una identidad no verificada no sirve para corroborar authz)" },
+          "auth": {
+            "type": "object",
+            "description": "Cómo ADQUIRIR la sesión de esta identidad (login flow) — mejora D. Antes el operador tenía que obtener el token a mano; con este bloque `auth-recon` puede autenticarse (login web con Playwright + TOTP) y depositar la sesión adquirida en loot/, dejando `secret_ref`+`validated`. TODO el material sensible va por *_ref a `engagements/<id>/loot/` (NUNCA en claro: usuario/contraseña, semilla TOTP, tokens — lo imponen secret_scan/memory_guard). La adquisición corre en el ANILLO EFÍMERO (mejora C) y SOLO contra un `login_url` EN SCOPE (scope_guard). No relaja el scope.",
+            "required": ["login_url", "method"],
+            "properties": {
+              "login_url": { "type": "string", "description": "URL del login. DEBE estar en scope (scope_guard la valida). Un IdP de terceros (Google/Okta/Azure AD) NO está en scope salvo que el scope lo diga." },
+              "method": { "type": "string", "enum": ["form", "oauth-password", "oauth-authcode", "basic", "api-token", "saml", "custom"], "description": "Tipo de flujo de autenticación. Es metadato DECLARATIVO (documenta la intención); el comportamiento real del driver lo dictan los `steps[]` — `acquire_session.py` no ramifica por `method`." },
+              "credentials_ref": { "type": "string", "pattern": "^engagements/[^/]+/loot/", "description": "Referencia al fichero con usuario+contraseña de la identidad, bajo `engagements/<id>/loot/`. NUNCA las credenciales en claro aquí (el esquema impone el patrón; el hook y el driver lo re-validan)." },
+              "totp_secret_ref": { "type": "string", "pattern": "^engagements/[^/]+/loot/", "description": "Referencia a la semilla TOTP en base32 (RFC 6238) para 2FA, bajo `engagements/<id>/loot/`. NUNCA la semilla en claro. `tools/totp.py` la lee SOLO desde este fichero (no por argumento) y emite el código." },
+              "steps": {
+                "type": "array",
+                "description": "Flujo de login paso a paso (Playwright), opcional si el `method` es autoexplicativo. Cada paso referencia el valor sensible por `value_ref` a loot/, nunca lo pega.",
+                "items": {
+                  "type": "object",
+                  "required": ["action"],
+                  "properties": {
+                    "action": { "type": "string", "enum": ["goto", "fill", "click", "press", "wait", "totp", "submit"], "description": "Acción del paso." },
+                    "selector": { "type": "string", "description": "Selector CSS/rol del elemento (dato NO sensible)." },
+                    "value": { "type": "string", "description": "Valor LITERAL NO sensible (p.ej. un texto de espera). Para secretos usa `value_ref`, nunca este campo." },
+                    "value_ref": { "type": "string", "pattern": "^engagements/[^/]+/loot/", "description": "Referencia al valor sensible del paso (usuario/contraseña), bajo `engagements/<id>/loot/`; `tools/acquire_session.py` lo resuelve desde loot/ con confinamiento realpath." }
+                  }
+                }
+              },
+              "session_type": { "type": "string", "enum": ["cookie", "bearer", "storage-state", "header"], "description": "Forma en que se materializa la sesión adquirida (cookies, Bearer, storage-state de Playwright, o cabecera). El artefacto va a loot/ y se referencia por el `secret_ref` de la identidad." },
+              "acquired_at": { "type": "string", "description": "ISO-8601 de cuándo se adquirió la sesión (trazabilidad)." },
+              "expires_hint": { "type": "string", "description": "Pista de expiración de la sesión (para readquirir antes de que caduque)." },
+              "reacquire": { "type": "boolean", "description": "Si la sesión caduca durante la explotación, reautenticar automáticamente (repetir el flujo) en vez de fallar. La reautenticación NO relaja ninguna puerta." }
+            }
+          },
           "notes": { "type": "string" }
         }
       }

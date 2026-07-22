@@ -71,6 +71,18 @@ CLIENT_AUTH_LABELS = frozenset({"bearer", "cookie"})
 # pelada. Y SOBRE-bloquea (fail-safe, fricción aceptable) una `Cookie:` no-auth (p.ej. analítica `_ga=`).
 
 
+_LOOT_REF_RE = re.compile(r"(^|/)engagements/[^/]+/loot/")
+
+
+def is_loot_ref(ref):
+    """True si `ref` tiene la FORMA de una referencia a `engagements/<id>/loot/` (id = un solo
+    segmento). Dialecto ÚNICO del proyecto — lo usan `secret_scan`, `totp.py` y `acquire_session.py`
+    (antes había dos regex divergentes). Es solo un chequeo de FORMA: el confinamiento real contra
+    traversal (`..`) lo hacen por realpath los tools que ABREN el fichero. Tolera ruta absoluta o
+    relativa (el componente `engagements/<id>/loot/` puede ir al inicio o tras un `/`)."""
+    return isinstance(ref, str) and bool(_LOOT_REF_RE.search(ref.replace("\\", "/")))
+
+
 def scan(text, operator_only=False):
     """Devuelve las etiquetas (únicas, ordenadas) de secreto presentes en `text`.
     Con `operator_only=True` solo considera los patrones del operador/motor."""

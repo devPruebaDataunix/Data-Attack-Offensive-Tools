@@ -4,6 +4,72 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.54.0] - 2026-07-22
+### Added
+- **Adquisición de SESIÓN autenticada (mejora "D" del análisis de Shannon) — login flows + TOTP.**
+  Hasta ahora `identities[]` (testing de authz diferencial BOLA/BFLA) exigía que el operador obtuviera
+  el token a mano y lo dejara en `loot/`. D añade la **adquisición**: cuando el programa aporta
+  **credenciales** (usuario/contraseña, semilla TOTP) en vez de tokens ya hechos, el motor se
+  **autentica** y deposita la sesión en `loot/`, dejando la identidad lista (`secret_ref`+`validated`).
+- **Agente nuevo `auth-recon`** (`.claude/agents/recon/auth-recon.md`, haiku-4-5, fase recon). Consume el
+  bloque `identities[].auth`, ejecuta el login (Playwright + TOTP) contra un `login_url` **en scope**,
+  materializa la sesión en `engagements/<id>/loot/session-<identity>.json` y fija `secret_ref`+`validated`.
+  **No prueba authz** —solo adquiere; la prueba diferencial (repetir la request de A con el material de B)
+  sigue siendo de `api-exploit`/`web-exploit`. Roster **28 → 29** (19 de fase + 10 de herramienta).
+- **Esquema (retrocompatible):** `identities[].auth` = `{ login_url (en scope), method (form/oauth-*/
+  basic/api-token/saml/custom), credentials_ref, totp_secret_ref, steps[] (goto/fill/click/press/wait/
+  totp/submit con value_ref), session_type (cookie/bearer/storage-state/header), acquired_at, expires_hint,
+  reacquire }`. TODO el material sensible por *_ref a `engagements/<id>/loot/`, nunca en claro. `auth` no
+  está en `required`.
+- **Tooling:** `tools/totp.py` (TOTP RFC 6238 en stdlib; SHA-1/256/512) y `tools/acquire_session.py`
+  (driver de login con Playwright; si Playwright falta, imprime la guía operator-assisted — que recomienda
+  correrlo dentro del anillo efímero `deploy/engagement-run.sh <id> --net <red-lab>`).
+- **Bus A2A:** clúster de sesión bidireccional `auth-recon ↔ api-recon`/`api-exploit`/`web-exploit`
+  (readquisición de sesión caducada bajo demanda; los tres peers declaran `auth-recon`, topología C14).
+### Security
+- **Disciplina de secreto reforzada, determinista.** La semilla TOTP, las credenciales y la sesión
+  adquirida son material de CLIENTE (E3): `tools/totp.py` lee la semilla **SOLO desde un fichero en
+  `loot/`** y **NUNCA por argumento** (un secreto en `argv` se filtra a `ps`/history; `allow_abbrev=False`
+  evita que `--secret` cuele como prefijo de `--secret-ref`). `tools/acquire_session.py` **jamás** imprime
+  el material (por stdout solo va la RUTA `secret_ref`). Nuevo chequeo en `secret_scan.py`
+  (`identity_auth_reason`): bloquea el blackboard si `credentials_ref`/`totp_secret_ref`/`steps[].value_ref`
+  no son referencias a `loot/` o si un secreto queda pegado en claro en un paso del login (best-effort:
+  requiere una palabra clave/formato conocido). El esquema añade `"pattern": "^engagements/[^/]+/loot/"` a
+  esos tres campos (defensa en profundidad vía `validate_blackboard`). El dialecto "¿es ref a loot/?" se
+  unificó en un único helper `redactor.is_loot_ref` (antes había dos regex divergentes).
+- **Council de 3 lentes (GO-con-reservas; hallazgos cerrados antes del push):**
+  - **(H1, scope)** `_run_step`/`goto` y los **redirects** del servidor navegaban sin re-verificar scope —
+    el driver es el ÚNICO gate del tráfico del navegador (scope_guard solo ve el comando externo). Se añadió
+    `_assert_nav_in_scope` tras cada navegación y una comprobación antes de cada `goto`: un 302 a un IdP de
+    terceros ahora **aborta**.
+  - **(H2, traversal)** `read_seed`/`_loot_path` solo comprobaban la FORMA de la ref (`loot/` en la cadena);
+    un `..` podía leer fichero arbitrario o el loot de OTRO engagement. Ahora **confinan por `realpath`** a
+    `engagements/<eid>/loot/`.
+  - **(H3, integridad del blackboard)** nuevo guard **C21** `blackboard_guard.py` (PreToolUse·Bash): bloquea
+    escribir `contracts/engagement.json` por Bash (redirección/`tee`/`sed -i`/`cp`/`mv`/`open(...,'w')`),
+    forzando que la mutación pase por `Write`/`Edit` (gateadas por secret_scan/validate_blackboard). Cierra
+    el hueco que los councils de A y D señalaron: un agente con `Bash` (como `auth-recon`) esquivando los
+    guards de secreto.
+  - **(corrección)** `in_scope` ahora funde los hosts de `in_scope.urls[]` y deniega primero por
+    `out_of_scope` — paridad con `scope_guard` (antes rompía engagements declarados solo por `urls[]`).
+- **No relaja ninguna puerta:** login solo contra activos en scope (un IdP de terceros NO está en scope
+  salvo que scope.json lo diga); nada de fuerza bruta de credenciales (eso no es adquisición); el 2FA se
+  genera de una semilla que el programa **aportó** para la cuenta de prueba (no se evade ni se fuerza). Como
+  el driver maneja un navegador contra contenido de cliente, **por convención** se corre en el anillo
+  efímero (mejora C); el confinamiento DURO lo da ese contenedor, no el propio driver.
+### Changed
+- Roster **28 → 29** sincronizado en toda la doc (README badge/TOC/tabla E1/mermaid, AGENTS.md, DEPLOY,
+  ENTORNO-LISTO, SETUP-VSCODE, `plugin.json` ×2, config-audit, agent-skill-audit, STYLE_GUIDE);
+  `ARCHITECTURE_MAP.md` regenerado (E1=8); espejo opencode regenerado (29). **Reconciliado un drift previo
+  de v2.52.0:** el mermaid E1 del README y la lista/conteo de **C11** en GUARDRAILS no incluían `code-recon`
+  — ahora C11 = **27 agentes** (incorpora `code-recon` y `auth-recon`), coherente con los bloques reales.
+  Inventario de controles **C1–C20 → C1–C21** (nuevo `blackboard_guard`); rangos en cost-optimization/RUNBOOK.
+- Tests: nuevos `tests/test_totp.py` (**17/0**, vectores oficiales del RFC 6238 SHA-1/256/512 + disciplina
+  loot/ + confinamiento realpath), `tests/test_auth_session.py` (**30/0**, esquema auth + scope fail-closed
+  incl. `urls[]`/`out_of_scope` + confinamiento + topología A2A) y `tests/test_blackboard_guard.py`
+  (**21/0**); `test_secret_scan` ampliado a `identity_auth_reason` (**20/0**); `validate_suite` **692/0/0**;
+  resto de guards sin regresión.
+
 ## [2.53.0] - 2026-07-22
 ### Added
 - **Contenedor efímero por-engagement (mejora "C" del análisis de Shannon) — el anillo de aislamiento

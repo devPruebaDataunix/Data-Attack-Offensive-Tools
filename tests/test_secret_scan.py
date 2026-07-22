@@ -89,6 +89,46 @@ BARE_JWT = '{"session_token":"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyQSJ9.Zm9vYmFy
 ok(secret_scan.blocking_reason(BARE_JWT) is None,
    "contrato: un JWT PELADO (sin Bearer/Cookie) NO se bloquea — el arnés debe serializar auth como cabecera")
 
+# --- identity_auth_reason: disciplina de referencia del bloque auth (mejora D) --------------
+import json as _json  # noqa: E402
+
+# Bloque auth LIMPIO: todo por *_ref a loot/, steps con marcadores no sensibles => no bloquea.
+AUTH_OK = _json.dumps({"identities": [{"identity_id": "userA", "role": "user", "auth": {
+    "login_url": "https://app.lab.test/login", "method": "form",
+    "credentials_ref": "engagements/LAB-2026-009/loot/userA-creds.txt",
+    "totp_secret_ref": "engagements/LAB-2026-009/loot/userA-totp.txt",
+    "steps": [{"action": "fill", "selector": "#user", "value": "{{user}}"},
+              {"action": "fill", "selector": "#pass", "value": "{{pass}}"},
+              {"action": "totp", "selector": "#otp"}]}}]})
+ok(secret_scan.identity_auth_reason(AUTH_OK) is None,
+   "identity_auth: bloque auth con *_ref a loot/ y marcadores => no bloquea")
+
+# credentials_ref pegado en claro (no es ref a loot/) => bloquea.
+AUTH_BADREF = _json.dumps({"identities": [{"identity_id": "userA", "role": "user", "auth": {
+    "login_url": "https://app.lab.test/login", "method": "form",
+    "credentials_ref": "userA:Sup3rSecret!"}}]})
+r_badref = secret_scan.identity_auth_reason(AUTH_BADREF)
+ok(r_badref is not None and "credentials_ref" in r_badref,
+   "identity_auth: credentials_ref que no es ref a loot/ => bloquea")
+
+# semilla TOTP pegada como value en un step => bloquea (secreto en claro).
+AUTH_SEEDVAL = _json.dumps({"identities": [{"identity_id": "userA", "role": "user", "auth": {
+    "login_url": "https://app.lab.test/login", "method": "form",
+    "steps": [{"action": "fill", "selector": "#otp", "value": OP_KEY}]}}]})
+ok(secret_scan.identity_auth_reason(AUTH_SEEDVAL) is not None,
+   "identity_auth: secreto pegado en steps[].value => bloquea")
+
+# value_ref que no apunta a loot/ => bloquea.
+AUTH_BADVR = _json.dumps({"identities": [{"identity_id": "userA", "role": "user", "auth": {
+    "login_url": "https://app.lab.test/login", "method": "form",
+    "steps": [{"action": "fill", "selector": "#pass", "value_ref": "/tmp/pass.txt"}]}}]})
+ok(secret_scan.identity_auth_reason(AUTH_BADVR) is not None,
+   "identity_auth: steps[].value_ref fuera de loot/ => bloquea")
+
+# identidad SIN bloque auth (retrocompatible) => no bloquea.
+ok(secret_scan.identity_auth_reason(_json.dumps({"identities": [{"identity_id": "anon", "role": "anon"}]})) is None,
+   "identity_auth: identidad sin bloque auth => no bloquea (retrocompatible)")
+
 # --- FAIL-OPEN: ante un fallo del detector EN RUNTIME, jamás bloquea (devuelve None) --------
 def _boom(*_a, **_k):
     raise RuntimeError("detector runtime fail")
