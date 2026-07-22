@@ -62,6 +62,21 @@ Lee `contracts/scope.json`. Solo analizas targets en scope.
    interesante** que el servicio estándar muy expuesto (que ya suele estar parcheado) → **súbelo en la cola**
    aunque su CVE no sea el de mayor CVSS. No sustituye a KEV/exploit; es desempate y foco. Anótalo en el finding.
 
+## Consenso multi-persona (reduce falsos positivos y cebos — mejora v2.57)
+Operacionaliza la disciplina anti-sesgos "≥2 hipótesis + busca REFUTAR". Para cada candidato NO trivial
+(o antes de enrutarlo a explotación), evalúa **≥2 personas independientes** y escríbelas en
+`consensus.hypotheses[]` (`persona` + `verdict` real/false-positive/uncertain + `rationale`):
+- **ATACANTE** — por qué es explotable (encaje versión↔comportamiento, fuente, impacto).
+- **ESCÉPTICO/DEFENSOR** — por qué podría ser **falso positivo**, **honeypot/cebo** ("demasiado fácil"),
+  o **inalcanzable** (target caído — cf. circuit-breaker C22).
+Fija `consensus.outcome` = lo que **DERIVA** de las hipótesis (no lo afirmes a mano: `validate_blackboard`
+recomputa con `tools/consensus.py` y rechaza un outcome incoherente). Regla de priorización:
+- **converge** (ambas lo ven real) → mantén/sube prioridad.
+- **diverge** (desacuerdo o convicción insuficiente) → **despriorriza**, marca el disenso en
+  `consensus.note` y **busca más evidencia antes de gastar explotación** (no cantes un cebo). No lo borres.
+El consenso es de TRIAGE (reduce FP **antes** de explotar); **no** sustituye el gate de proof-state (F):
+la reportabilidad la sigue decidiendo la prueba dinámica.
+
 ## Outputs (blackboard)
 Escribe `findings[]` con esquema `finding.schema.json`: `status: "candidate"`, `severity`,
 `cvss`, `cwe`, `cve[]`, `attack_technique` (ID ATT&CK), `owasp` si aplica, y

@@ -53,6 +53,7 @@ flowchart TB
         G_MEMORY{{"🧠 memory_guard.py<br/>PreToolUse · determinista (LLM02)"}}
         G_FS{{"📁 fs_guard.py<br/>PreToolUse · C20 (LLM02/§1·§6)"}}
         G_BB{{"📝 blackboard_guard.py<br/>PreToolUse·Bash · C21 (LLM02)"}}
+        G_CB{{"🔌 circuit_breaker.py<br/>Pre+PostToolUse·Bash · C22 (LLM10/§9)"}}
     end
 
     G_SCOPE -->|en scope| TARGET
@@ -71,6 +72,7 @@ flowchart TB
     G_FS -->|dentro de recon/src| TARGET
     G_FS -.->|symlink/`..` fuera de la zona| BLOCK
     G_BB -.->|escritura del blackboard por Bash| BLOCK
+    G_CB -.->|target caído: N fallos de conexión| BLOCK
 ```
 
 ## Inventario de controles (estado real)
@@ -98,6 +100,7 @@ flowchart TB
 | C19 | **Anti-bucle (nivel de acción)** — detecta el mismo comando repetido (thrashing) y la oscilación A/B sin progreso, y **bloquea** tras `constraints.max_repeat` (def. 3) en la ventana reciente. Obliga a cambiar de hipótesis o escalar. Complementa C13 (kill-switch global de acciones) y C15 (techo de hops A2A) llevándolo al nivel de ACCIÓN | Determinista | `.claude/hooks/loop_guard.py` (PreToolUse) | **LLM10 Unbounded Consumption** |
 | C21 | **Anti-escritura del blackboard por Bash** — bloquea los patrones comunes de mutación de `contracts/engagement.json` vía Bash (redirección `>`/`>>`, `tee`, `sed -i`, `cp`/`mv`/`dd`/`install`/`truncate`, `open(...,'w')`/`​.write()` de Python), forzando que toda mutación pase por las tools `Write`/`Edit` — que SÍ están gateadas por `validate_blackboard`/`secret_scan`/`a2a_guard`. Cierra el hueco (councils A y D) de un agente con `Bash` (p.ej. `auth-recon`) volcando un secreto al blackboard esquivando los guards de secreto. Contrato consciente (no un sandbox: la ofuscación se contiene con el contenedor efímero de C); LEER el blackboard no se bloquea | Determinista | `.claude/hooks/blackboard_guard.py` (PreToolUse·Bash) | **LLM02 Sensitive Info Disclosure** (+ integridad del blackboard) |
 | C20 | **Confinamiento de lectura de código de cliente** — bloquea una lectura cuando (a) su destino real cae bajo `~/.claude` (credenciales del operador), (b) el **ancla** `recon/src` es un symlink que resuelve fuera del repo, (c) un **symlink** o un `..` escapa del árbol de código de cliente (`engagements/<id>/recon/src/`), o (d) un symlink interno del repo escapa del repo. Verifica el `file_path` de cada `Read` y la **ruta-consulta** (`path`) de `Grep`/`Glob`; el recorrido profundo de Grep/Glob no sigue symlinks por defecto (ripgrep) y su confinamiento DURO lo aporta el contenedor. Cierra el hueco de FS que dejó `code-recon` (mejora "A"); el **contenedor efímero por-engagement** (`deploy/engagement-run.sh`, monta solo ese engagement, sin egress) da el confinamiento por namespace de montaje (mejora "C") | Determinista | `.claude/hooks/fs_guard.py` (PreToolUse) + `deploy/engagement-run.sh` / `docker-compose.engagement.yml` | **LLM02 Sensitive Info Disclosure** (+ aislamiento §1/§6) |
+| C22 | **Circuit-breaker por target** — cuenta los fallos de CONEXIÓN consecutivos por host (rechazo/timeout/DNS/host-down; NO un 4xx/5xx, que significa que el host responde) y, al superar el umbral (`constraints.circuit_breaker_threshold`, def. 5), ABRE el breaker de ese host: los siguientes comandos contra él se bloquean hasta un cooldown (`circuit_breaker_cooldown_s`, def. 300) —medio-abierto— o hasta que vuelva a responder (se cierra). Corta el machaque de un target caído/IP baneada; complementa C13 (global), C18 (ruido) y C19 (comando idéntico) con el eje TARGET. PostToolUse observa la salida y cuenta; PreToolUse bloquea. Reusa la extracción de host de `scope_guard`. FAIL-OPEN | Determinista | `.claude/hooks/circuit_breaker.py` (Pre+PostToolUse·Bash) | **LLM10 Unbounded Consumption** (+ no-daño §5/§9) |
 
 > **Refuerzo del router A2A (no es un gate):** `a2a_router_nudge.py` (PostToolUse sobre `Task`)
 > recuerda al Orquestador, tras cada retorno de subagente, que entregue los mensajes A2A `pending`

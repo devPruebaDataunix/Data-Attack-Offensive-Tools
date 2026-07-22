@@ -47,6 +47,27 @@
       "description": "Fuentes que respaldan (CVE/KEV/advisory). Sin fuente no se explota.",
       "items": { "type": "string" }
     },
+    "consensus": {
+      "type": "object",
+      "description": "Consenso multi-persona del TRIAGE (mejora v2.57; idea de BugTraceAI). Reduce falsos positivos/cebos evaluando ≥2 PERSONAS independientes sobre el candidato (p.ej. ATACANTE 'por qué es explotable' vs ESCÉPTICO 'por qué podría ser falso positivo/honeypot/inalcanzable'). Si CONVERGEN sube la confianza; si DIVERGEN es disputado → se despriorriza y se busca más evidencia antes de explotar. `outcome` es DETERMINISTA (se DERIVA de las hipótesis vía tools/consensus.py; validate_blackboard rechaza un outcome incoherente). NO sustituye el proof-state (F): es de triage (reduce FP antes de explotar), no de reportabilidad. Opcional/retrocompatible.",
+      "properties": {
+        "hypotheses": {
+          "type": "array",
+          "description": "≥2 hipótesis independientes. Cada una: persona + verdict (real/false-positive/uncertain) + rationale.",
+          "items": {
+            "type": "object",
+            "required": ["persona", "verdict"],
+            "properties": {
+              "persona": { "type": "string", "description": "p.ej. 'attacker', 'skeptic', 'defender'" },
+              "verdict": { "type": "string", "enum": ["real", "false-positive", "uncertain"] },
+              "rationale": { "type": "string", "description": "Razón breve (por qué lo ve así)." }
+            }
+          }
+        },
+        "outcome": { "type": "string", "enum": ["single", "converge", "diverge"], "description": "DERIVADO de las hipótesis (no se afirma a mano): single (<2 voces), converge (≥2 decisivas y coinciden), diverge (desacuerdo o convicción insuficiente)." },
+        "note": { "type": "string", "description": "Nota del disenso / qué evidencia falta para resolver un diverge." }
+      }
+    },
     "next_step": {
       "type": "object",
       "description": "Encadenamiento sugerido (attack chaining ligero): el siguiente eslabón si este finding se confirma — p.ej. SQLi confirmada -> shell OOB; AD recon -> DCSync. El Orquestador lo usa para enrutar. El grafo de ataque es el propio engagement.json.",

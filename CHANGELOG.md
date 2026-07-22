@@ -4,6 +4,46 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.57.0] - 2026-07-22
+### Added
+- **Consenso multi-persona + circuit-breaker por target (track de integración; ideas de BugTraceAI,
+  AGPL → reimplementación limpia).** Segundo hito tras Shannon; endurece el triage y corta el machaque
+  de targets caídos.
+- **Circuit-breaker por target = control determinista nuevo C22** (`.claude/hooks/circuit_breaker.py`,
+  Pre+PostToolUse·Bash). PostToolUse cuenta los fallos de **conexión** consecutivos por host
+  (rechazo/timeout/DNS/host-down — **no** un 4xx/5xx, que significa que el host responde); al superar el
+  umbral (`constraints.circuit_breaker_threshold`, def. 5) **abre** el breaker de ese host y PreToolUse
+  bloquea los siguientes comandos contra él hasta un cooldown (`circuit_breaker_cooldown_s`, def. 300 —
+  medio-abierto) o hasta que vuelva a responder (se cierra). Corta el desperdicio contra un target
+  caído/IP baneada; complementa C13 (global), C18 (ruido), C19 (comando idéntico) con el eje TARGET, y
+  refuerza la postura BURNED→pasivo (§9). Reusa la extracción de host de `scope_guard` (refactor DRY:
+  helper `extract_targets`). Fail-open. Estado en `contracts/.circuit_state` (gitignored).
+- **Consenso multi-persona = endurece `vuln-triage`** (`tools/consensus.py` + campo `consensus` en
+  `finding.schema.json`). Operacionaliza la regla anti-sesgos "≥2 hipótesis + busca REFUTAR": por
+  candidato se evalúan ≥2 personas (ATACANTE vs ESCÉPTICO/DEFENSOR: ¿falso positivo/honeypot/
+  inalcanzable?) en `consensus.hypotheses[]`; **converge** → prioriza, **diverge** → despriorriza y pide
+  más evidencia antes de explotar (reduce FP/cebos). No sustituye el proof-state (F): es de triage.
+### Security
+- **`outcome` del consenso DETERMINISTA (anti-lavado).** `validate_blackboard` recomputa el `outcome`
+  con `tools/consensus.py:evaluate` y **bloquea** un `consensus.outcome` incoherente (una persona no
+  puede declarar 'converge' un candidato disputado). Invariante OPT-IN (solo si el finding trae
+  `consensus`). `analyze_engagement` avisa de un reportable marcado 'diverge' (disputado). El
+  circuit-breaker distingue fallo de CONEXIÓN de respuesta HTTP para no abrir por un 5xx (host vivo);
+  un `0 hosts up` de nmap cuenta como caído, un `N hosts up` (N≥1) como vivo.
+- **Anti auto-evasión del circuit-breaker (council 3 lentes = NO-GO de seguridad, cerrado antes del push).**
+  Un target hostil NO puede disparar su propio breaker para que el motor deje de testearlo, por DOS
+  defensas: (1) los fallos de CONEXIÓN se buscan SOLO en **stderr** (donde curl/ssh/nc los emiten), no en
+  el stdout/body que el target controla; (2) las frases de host-caído de tools de scan (`0 hosts up`,
+  `host seems down`, `100% packet loss`) solo cuentan **si el comando es un escáner** (nmap/ping/masscan…),
+  no un `curl`/`wget` cuyo stdout es un body atacante-controlado. Además el council corrigió un falso
+  `up` (`\bopen\b` casaba "could not open connection" → un fallo se leía como host-vivo y reseteaba el
+  contador; acotado a `\d+/tcp open`). Cubierto por tests unitarios y end-to-end (curl con frases de
+  error en el body no abre el breaker; nmap sí).
+### Tests
+- `tests/test_circuit_breaker.py` (clasificación fail/up/neutral, máquina abrir/cerrar/cooldown, contrato
+  del hook Pre/Post por stdin) y `tests/test_consensus.py` (evaluate, structural_violations, esquema,
+  invariante de recomputo, cableado). Sin agente nuevo → roster 29 intacto. Inventario C1→C22.
+
 ## [2.56.0] - 2026-07-22
 ### Added
 - **RAG de POLÍTICA DE PROGRAMA + adapters de informe (track de integración post-Shannon; idea de

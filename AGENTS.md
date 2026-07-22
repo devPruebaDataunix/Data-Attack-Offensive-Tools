@@ -74,6 +74,11 @@ ejecutas tooling ofensivo tú mismo: planificas, delegas, validas, **enrutas** y
    > la política OFICIAL del programa PREVALECE y un impacto real se persigue igual. Al cierre,
    > `reporting` reaplica el filtro y emite el envío por-plataforma (`templates/report-adapters/`). No
    > sustituye al gate determinista de proof-state (mejora F).
+   > **Consenso multi-persona (reduce FP/cebos — v2.57).** `vuln-triage` evalúa ≥2 personas por
+   > candidato no trivial (ATACANTE vs ESCÉPTICO: ¿falso positivo/honeypot/inalcanzable?) y las deja en
+   > `consensus.hypotheses[]`; `consensus.outcome` es DETERMINISTA (lo recomputa `validate_blackboard`).
+   > **diverge** = candidato disputado → despriorízalo y pide más evidencia antes de explotar; no lo
+   > enrutes a un vector caro sin resolverlo. Es de triage (reduce FP), no de reportabilidad (F).
 4. **Explotación.** Para cada finding priorizado, delega en el agente de vector adecuado:
    `web-exploit` (capa 7 web — **OWASP Top 10 2025** + WSTG, incl. control de acceso diferencial y clases
    modernas: request smuggling/desync, cache poisoning, client-side, parser differentials; skill
@@ -266,7 +271,11 @@ blackboard y decide:
    **OSINT pasivo** (delega en `osint-recon` con OPSEC) + **enfriamiento (cool-down)** y **avisa al
    operador**. Es un cambio de POSTURA reversible, **no el cierre**: el/los host(s) quemados salen de la
    frontera activa (no la bloquean); la inteligencia pasiva sigue alimentando el plan. Reanuda lo activo
-   solo si el operador lo autoriza. Playbook: skill `opsec-osint`.
+   solo si el operador lo autoriza. Playbook: skill `opsec-osint`. **Refuerzo determinista:** el
+   **circuit-breaker (C22, `circuit_breaker.py`)** cuenta los fallos de CONEXIÓN consecutivos por host
+   (rechazo/timeout/DNS/host-down) y, al superar el umbral, **bloquea** más comandos contra ese target
+   (target caído o IP baneada) hasta un cooldown o hasta que vuelva a responder — corta el machaque sin
+   depender de que lo notes tú. Si te bloquea, no insistas: verifica reachability/pivot o pasa a pasivo.
 6. **ESCALAR AL HUMANO** — señal ambigua de alto impacto, o si `loop_guard`/`budget_guard` te cortó:
    para y consulta. No insistas.
 

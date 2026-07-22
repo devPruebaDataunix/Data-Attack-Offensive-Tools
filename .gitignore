@@ -13,6 +13,7 @@ contracts/*.tmp
 contracts/*.bak
 contracts/.action_count
 contracts/.cmd_history
+contracts/.circuit_state
 
 # ─── Artefactos crudos por engagement (scans, loot, evidencia) ─
 engagements/

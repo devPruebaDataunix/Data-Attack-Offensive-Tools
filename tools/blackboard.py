@@ -197,6 +197,16 @@ def validate_engagement(data, contracts_dir=CONTRACTS):
                             f"(coherentes: {sorted(_PROOF_STATUS_OK[ps])}) — un demostrado no es "
                             f"'roe-capped', un 'roe-capped' no está 'exploited', y un explotado no es "
                             f"'speculative' (desaparecería del informe). Alinea status y proof_state.")
+
+            # Consenso multi-persona (v2.57). OPT-IN: solo si el finding trae `consensus`. Recomputa el
+            # `outcome` para que una persona no pueda declarar 'converge' un candidato disputado.
+            if isinstance(f.get("consensus"), (dict,)) or "consensus" in f:
+                try:
+                    import consensus as _cons
+                    for msg in _cons.structural_violations(f.get("consensus")):
+                        violations.append(f"finding {f.get('finding_id', f'#{i}')}: {msg}")
+                except Exception:
+                    pass  # fail-open: si el módulo no está, no bloqueamos
     return violations
 
 

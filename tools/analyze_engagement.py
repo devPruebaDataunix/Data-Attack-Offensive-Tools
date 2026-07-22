@@ -208,6 +208,12 @@ def main():
                  f"(coherentes: {sorted(_PROOF_STATUS_OK[raw_ps])}) — alinea ambos ejes (§3)"); bad += 1
         if ps == "roe-capped":
             roe_capped += 1
+        # Consenso multi-persona (v2.57): un finding reportable marcado 'diverge' está DISPUTADO por
+        # las personas de triage — avisa para revisarlo antes de reportar (no bloquea).
+        cons = f.get("consensus")
+        if reportable and isinstance(cons, dict) and (cons.get("outcome") or "").lower() == "diverge":
+            WARN(f"finding {fid}: reportable pero consenso 'diverge' (disputado en triage) — "
+                 f"revisa el disenso antes de darlo por bueno")
         sev = (f.get("severity") or "").lower()
         if sev and sev not in SEVERITIES:
             WARN(f"finding {fid}: severidad inválida '{sev}'")

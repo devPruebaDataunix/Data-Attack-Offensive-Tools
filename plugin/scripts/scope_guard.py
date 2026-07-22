@@ -72,6 +72,24 @@ def _is_target_domain(token):
     return token.rsplit(".", 1)[-1].lower() in KNOWN_TLDS
 
 
+def extract_targets(command, scoped_domains=()):
+    """Extrae los hosts/IPs candidatos a target de un comando Bash (mismos regexes + allowlist de
+    TLDs que el gate). `scoped_domains` = dominios del scope (in+out) para no perder un TLD exótico
+    declarado. Excluye hosts locales (LOCAL_OK). Reutilizable por otros guards deterministas (p.ej.
+    circuit_breaker) para no divergir en la lógica de extracción."""
+    hosts = set()
+    for m in URL_RE.finditer(command or ""):
+        hosts.add(m.group(1))
+    for m in DOMAIN_RE.finditer(command or ""):
+        tok = m.group(0)
+        if _is_target_domain(tok) or domain_in_list(tok, scoped_domains):
+            hosts.add(tok)
+    ips = set(IP_RE.findall(command or ""))
+    targets = {h for h in hosts if h.lower() not in LOCAL_OK}
+    targets |= {ip for ip in ips if ip not in LOCAL_OK}
+    return targets
+
+
 def deny(reason: str):
     """Emite decisión de bloqueo en el formato de Claude Code y termina."""
     out = {
@@ -144,18 +162,8 @@ def main():
         scoped = (scope.get("in_scope", {}).get("domains", []) +
                   scope.get("out_of_scope", {}).get("domains", []))
 
-    # Recolecta candidatos a target del comando.
-    hosts = set()
-    for m in URL_RE.finditer(command):
-        hosts.add(m.group(1))
-    for m in DOMAIN_RE.finditer(command):
-        tok = m.group(0)
-        if _is_target_domain(tok) or domain_in_list(tok, scoped):
-            hosts.add(tok)  # host de red real o dominio del scope; ficheros/código se ignoran
-    ips = set(IP_RE.findall(command))
-
-    targets = {h for h in hosts if h.lower() not in LOCAL_OK}
-    targets |= {ip for ip in ips if ip not in LOCAL_OK}
+    # Recolecta candidatos a target del comando (helper reutilizable, mismos regexes+allowlist).
+    targets = extract_targets(command, scoped)
 
     if not targets:
         sys.exit(0)  # comando sin target externo (ls, cat, etc.)

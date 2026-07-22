@@ -158,7 +158,8 @@ def validate_refs():
         "templates/report-adapters/intigriti.md", "templates/report-adapters/yeswehack.md",
         ".claude/hooks/scope_guard.py", ".claude/hooks/a2a_guard.py",
         ".claude/hooks/a2a_router_nudge.py", ".claude/hooks/memory_guard.py",
-        ".claude/hooks/fs_guard.py", ".claude/hooks/blackboard_guard.py", "CLAUDE.md",
+        ".claude/hooks/fs_guard.py", ".claude/hooks/blackboard_guard.py",
+        ".claude/hooks/circuit_breaker.py", "tools/consensus.py", "CLAUDE.md",
         "contracts/a2a-message.schema.json", "contracts/agent-card.schema.json",
         "contracts/agent-cards.json", "tools/build_agent_cards.py",
         # Despliegue en contenedores (v1.6.0)
