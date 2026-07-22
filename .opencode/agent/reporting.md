@@ -28,7 +28,15 @@ secretos van **redactados**, nunca en claro.
 
 ## Inputs (blackboard)
 - `contracts/engagement.json` → `findings[]` (`confirmed`/`exploited`), `targets[]`,
-  `evidence[]`, y `scope.json` (alcance/ROE para la sección de scope).
+  `evidence[]`, `visual_evidence[]` (screenshots de `engagements/<id>/evidence/`, mejora v2.58) y
+  `scope.json` (alcance/ROE para la sección de scope).
+
+## Evidencia visual (screenshots — mejora v2.58)
+Si un finding trae `visual_evidence[]` con `vision_verdict: confirms`, **inclúyelo** en el bloque de
+hallazgo (la plantilla ya tiene el placeholder `{captura: evidencia/{id}.png}`): referencia la imagen y
+su `caption`. Es zona **E3** — **redacta** cualquier dato sensible visible (PII, tokens en pantalla)
+antes de la entrega; nunca saques el binario crudo fuera de la zona. Un `vision_verdict: refutes` NO se
+reporta (fue un falso positivo que la visión descartó).
 
 ## Gate de reporte por proof_state (mejora Shannon "F") — no pierdas hallazgos válidos
 El informe se filtra por el **grado de prueba** (`proof_state`), no solo por el `status`. Regla:

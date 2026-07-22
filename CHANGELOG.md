@@ -4,6 +4,39 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.58.0] - 2026-07-22
+### Added
+- **Validación por VISIÓN (screenshot + IA) en `web-exploit` (track de integración; idea de BugTraceAI,
+  AGPL → reimplementación limpia).** Tercer hito; requiere el anillo efímero (mejora C, ya entregada).
+  Confirma el estado VISUAL de un finding en vez de fiarse del código de respuesta ("devolvió 200, pero
+  ¿el `alert()` renderiza de verdad?"), reduciendo falsos positivos y dando evidencia fuerte.
+- **`tools/screenshot.py`** (Playwright): captura un screenshot de una URL **EN SCOPE** y lo deja en
+  `engagements/<id>/evidence/`. Reusa los verificadores de `acquire_session`/`scope_guard` (scope
+  fail-closed + re-verificación en cada navegación/redirect, sin divergir), sanea el nombre del artefacto
+  (basename, sin traversal), soporta captura autenticada (`--identity` carga la sesión de la mejora D) y
+  de elemento (`--selector`). Corre en el anillo efímero (navegador = contenido de cliente). Sin
+  Playwright → guía operator-assisted. Por stdout solo la RUTA, nunca el binario.
+- **Flujo en `web-exploit`:** captura → **LEE el PNG con `Read` (visión nativa del subagente)** → fija
+  `vision_verdict` (`confirms`/`refutes`/`inconclusive`) en `finding.visual_evidence[]`. Un `confirms`
+  sostiene el `proof_state` (F: `evidenced`/`proven-by-exploit`); un `refutes` descarta un falso positivo.
+  `reporting` incluye los screenshots `confirms` (redactados, E3) y omite los `refutes`.
+- **Esquema:** `finding.visual_evidence[]` = `{ path (engagements/<id>/evidence|loot/), caption,
+  vision_verdict (enum), validates }`. Opcional/retrocompatible.
+### Security
+- **Screenshot en zona E3 + confinamiento.** El PNG puede capturar datos sensibles (PII en pantalla): es
+  E3, vive local (gitignored) y se **redacta** antes del informe; en el blackboard va SOLO la ruta.
+  `validate_blackboard` (determinista, opt-in) exige que cada `visual_evidence[].path` viva bajo
+  `engagements/<id>/evidence|loot/` y **rechaza el traversal en AMBOS separadores** (`..` con `/` **o**
+  `\` — en Windows un `..\` escaparía la zona aunque el prefijo case el regex de forward-slash) además de
+  una **forma inválida** (no-lista / elemento no-objeto no se ignoran en silencio) — evita que `reporting`
+  lea/embeba un fichero arbitrario. La ruta emitida por `screenshot.py` es canónica (forward-slash). La
+  captura re-verifica el scope en cada navegación **y justo antes de capturar** (un 302/redirect JS fuera
+  de scope aborta), y encapsula los fallos de Playwright en un retorno limpio.
+### Tests
+- `tests/test_vision.py` (saneo de nombre, reuso de scope, esquema, barrera anti-traversal opt-in, scope
+  fail-closed por subprocess, cableado en web-exploit/reporting). Sin agente nuevo → roster 29 intacto.
+  **Dashboard (screenshot-evidencia en Findings): PENDIENTE en el repo privado.**
+
 ## [2.57.0] - 2026-07-22
 ### Added
 - **Consenso multi-persona + circuit-breaker por target (track de integración; ideas de BugTraceAI,

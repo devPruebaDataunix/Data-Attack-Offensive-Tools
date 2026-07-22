@@ -14,9 +14,15 @@ Dos funciones, solo stdlib (mismo criterio que scope_guard.py — sin dependenci
 """
 import json
 import os
+import re
 import tempfile
 
 CONTRACTS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "contracts")
+
+# Evidencia visual (v2.58): las rutas de screenshot deben vivir en la zona del engagement.
+# (Espeja el `pattern` de contracts/finding.schema.json; aquí es donde se aplica en runtime —
+#  nadie corre jsonschema en el hook, así que este check es la barrera efectiva.)
+_VISUAL_EVIDENCE_RE = re.compile(r"^engagements/[^/]+/(?:evidence|loot)/")
 
 
 # ── Proof-state reconciliado con ROE (mejora Shannon "F") ───────────────────────
@@ -207,6 +213,33 @@ def validate_engagement(data, contracts_dir=CONTRACTS):
                         violations.append(f"finding {f.get('finding_id', f'#{i}')}: {msg}")
                 except Exception:
                     pass  # fail-open: si el módulo no está, no bloqueamos
+
+            # Evidencia visual (v2.58). OPT-IN: cada visual_evidence[].path debe vivir bajo
+            # engagements/<id>/evidence|loot/ y NO escapar por `..` (un traversal en la ruta haría que
+            # `reporting` leyera/embebiera un fichero arbitrario). Determinista.
+            ve = f.get("visual_evidence")
+            if ve is not None:
+                ident = f.get("finding_id", f"#{i}")
+                if not isinstance(ve, list):
+                    # Una forma inválida (dict/str) NO debe colarse en silencio: eludiría la barrera.
+                    violations.append(
+                        f"finding {ident}: visual_evidence debe ser una lista de objetos {{path,...}}.")
+                for j, shot in enumerate(ve if isinstance(ve, list) else []):
+                    if not isinstance(shot, dict):
+                        violations.append(
+                            f"finding {ident}: visual_evidence[{j}] debe ser un objeto con 'path'.")
+                        continue
+                    p = shot.get("path")
+                    # Traversal-safe en AMBOS separadores: en Windows (plataforma real) un '..\\' escaparía
+                    # la zona E3 aunque el prefijo case el regex de forward-slash. Rechazamos backslash y
+                    # partimos por [\\/] para cazar cualquier segmento '..'.
+                    if not (isinstance(p, str) and "\\" not in p and _VISUAL_EVIDENCE_RE.match(p)):
+                        violations.append(
+                            f"finding {ident}: visual_evidence[{j}].path debe ir bajo "
+                            f"engagements/<id>/evidence/ (o loot/), sin '\\'; '{p}' no cumple.")
+                    elif ".." in re.split(r"[\\/]", p):
+                        violations.append(
+                            f"finding {ident}: visual_evidence[{j}].path contiene '..' (traversal): '{p}'.")
     return violations
 
 

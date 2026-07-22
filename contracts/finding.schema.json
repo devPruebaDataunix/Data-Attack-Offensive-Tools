@@ -34,6 +34,20 @@
     "attack_technique": { "type": "string", "description": "ID MITRE ATT&CK, p.ej. T1190" },
     "owasp": { "type": "string", "description": "p.ej. A03:2021-Injection" },
     "evidence": { "type": "string", "description": "Salida/PoC que prueba el hallazgo" },
+    "visual_evidence": {
+      "type": "array",
+      "description": "EVIDENCIA VISUAL (mejora v2.58; idea de BugTraceAI). Screenshots que CONFIRMAN el estado visual de un finding (XSS que renderiza, defacement, dato sensible en pantalla, clickjacking) — los captura `tools/screenshot.py` en `engagements/<id>/evidence/` y `web-exploit` los LEE (visión) para verificar. Refuerza el `proof_state` (F): una confirmación por visión sostiene `evidenced`/`proven-by-exploit`. El artefacto es zona E3 (puede contener datos sensibles): vive local (gitignored) y se REDACTA antes del informe; aquí solo va la REFERENCIA por ruta.",
+      "items": {
+        "type": "object",
+        "required": ["path"],
+        "properties": {
+          "path": { "type": "string", "pattern": "^engagements/[^/]+/(evidence|loot)/", "description": "Ruta al PNG bajo engagements/<id>/evidence/ (o loot/). Nunca fuera de la zona del engagement." },
+          "caption": { "type": "string", "description": "Qué se ve (dato NO sensible; redacta lo sensible)." },
+          "vision_verdict": { "type": "string", "enum": ["confirms", "refutes", "inconclusive"], "description": "Resultado de LEER el screenshot (visión): ¿confirma el estado visual del finding, lo refuta (posible falso positivo) o es inconcluso?" },
+          "validates": { "type": "string", "description": "Qué aspecto del finding prueba (p.ej. 'el alert() se dispara', 'PII visible en el panel de otro tenant')." }
+        }
+      }
+    },
     "reproduction": { "type": "string", "description": "Pasos exactos de reproducción" },
     "impact": { "type": "string" },
     "remediation": { "type": "string" },
