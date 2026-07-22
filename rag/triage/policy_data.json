@@ -1,0 +1,117 @@
+{
+  "_meta": {
+    "version": "1.0.0",
+    "generated": "2026-07-22",
+    "disclaimer": "Resumen ORIENTATIVO de criterios comunes de programas de bug bounty (aceptacion y clases tipicamente NO reportables). NO sustituye la politica oficial del programa, que PREVALECE SIEMPRE: leela y verifica antes de reportar o descartar. Este dataset ORIENTA la priorizacion y el filtrado del informe; NUNCA es un gate que anule el criterio del analista ni la regla determinista de proof-state (mejora F). Un hallazgo de impacto REAL se reporta aunque una regla generica lo desaconseje.",
+    "sources": [
+      { "platform": "bugcrowd", "what": "Vulnerability Rating Taxonomy (VRT)", "url": "https://bugcrowd.com/vulnerability-rating-taxonomy", "retrieved": "2026-07-22" },
+      { "platform": "hackerone", "what": "HackerOne severity / CVSS y guias de programa", "url": "https://docs.hackerone.com/", "retrieved": "2026-07-22" },
+      { "platform": "intigriti", "what": "Intigriti contextual CVSS y triage standards", "url": "https://kb.intigriti.com/", "retrieved": "2026-07-22" },
+      { "platform": "yeswehack", "what": "YesWeHack severity y reglas de scope", "url": "https://docs.yeswehack.com/", "retrieved": "2026-07-22" }
+    ]
+  },
+  "platforms": {
+    "hackerone": { "name": "HackerOne", "severity_scale": "CVSS 3.1 (None/Low/Medium/High/Critical)", "note": "Cada programa define su propia politica y scope; la severidad la ajusta el equipo de triage con contexto." },
+    "bugcrowd": { "name": "Bugcrowd", "severity_scale": "VRT -> P1..P5 (P1 critico, P5 informativo/no-recompensado)", "vrt_ref": "https://bugcrowd.com/vulnerability-rating-taxonomy", "note": "La VRT es el mapa de referencia; el programa puede subir/bajar clases." },
+    "intigriti": { "name": "Intigriti", "severity_scale": "Contextual CVSS (Exceptional/Critical/High/Medium/Low)", "note": "Prioriza impacto de negocio en contexto sobre el CVSS base." },
+    "yeswehack": { "name": "YesWeHack", "severity_scale": "CVSS 3.1 + criticidad por scope", "note": "Reglas de scope estrictas; fuera de scope = no recompensado aunque sea valido." }
+  },
+  "do_not_report": [
+    {
+      "id": "self-xss",
+      "title": "Self-XSS (sin vector de entrega)",
+      "classes": ["self-xss", "self_xss"], "cwe": ["CWE-79"], "owasp": ["A03:2021", "A05:2025"],
+      "default": "not-reportable",
+      "rationale": "Requiere que la propia victima pegue el payload en su sesion; sin un vector que lo entregue a otro usuario no hay impacto demostrable.",
+      "exception": "Reportable si se ENCADENA con un vector de entrega (HTML injection, CSRF, self-XSS + login-CSRF a cuenta atacante). Ahi la clase efectiva es XSS reflejado/almacenado."
+    },
+    {
+      "id": "missing-security-headers",
+      "title": "Cabeceras de seguridad ausentes sin impacto demostrado",
+      "classes": ["missing-headers", "missing-security-headers"], "cwe": ["CWE-693"], "owasp": ["A05:2025"],
+      "default": "not-reportable",
+      "rationale": "CSP/HSTS/X-Frame-Options ausentes son best-practice; sin una explotacion concreta (XSS que la CSP habria frenado, clickjacking con accion sensible) es informativo.",
+      "exception": "Reportable si demuestras el impacto que la cabecera habria evitado (p.ej. clickjacking sobre una accion con estado, o degradacion a HTTP interceptable)."
+    },
+    {
+      "id": "csrf-logout-non-sensitive",
+      "title": "CSRF en acciones sin estado o no sensibles (logout, preferencias triviales)",
+      "classes": ["csrf-logout", "logout-csrf", "non-sensitive-csrf"], "cwe": ["CWE-352"], "owasp": ["A01:2025"],
+      "default": "not-reportable",
+      "rationale": "CSRF de logout o de acciones sin impacto de seguridad se considera de bajo/nulo valor en la mayoria de programas.",
+      "exception": "Reportable si la accion es SENSIBLE (cambio de email/password, transferencia, borrado, cambio de permisos) y falta proteccion CSRF."
+    },
+    {
+      "id": "rate-limiting-informational",
+      "title": "Falta de rate-limiting como hallazgo informativo",
+      "classes": ["rate-limit", "rate-limiting", "no-rate-limit"], "cwe": ["CWE-307", "CWE-799"], "owasp": ["A07:2025"],
+      "default": "not-reportable",
+      "rationale": "La ausencia de rate-limiting por si sola suele ser informativa; muchos programas la excluyen salvo impacto.",
+      "exception": "Reportable si habilita un ataque concreto: enumeracion de cuentas, OTP/2FA brute-force, credential stuffing viable, o coste/DoS demostrable dentro de ROE."
+    },
+    {
+      "id": "version-banner-disclosure",
+      "title": "Divulgacion de version/banner sin vulnerabilidad asociada",
+      "classes": ["banner-disclosure", "version-disclosure", "banner"], "cwe": ["CWE-200"], "owasp": ["A05:2025"],
+      "default": "not-reportable",
+      "rationale": "Exponer 'Server: nginx/1.x' o una version no es en si una vulnerabilidad.",
+      "exception": "Reportable si esa version mapea a un CVE explotable EN SCOPE (entonces el hallazgo es el CVE, respaldado por fuente; ver el RAG de vulnerabilidades)."
+    },
+    {
+      "id": "clickjacking-non-sensitive",
+      "title": "Clickjacking sobre paginas sin accion sensible",
+      "classes": ["clickjacking", "ui-redress"], "cwe": ["CWE-1021"], "owasp": ["A05:2025"],
+      "default": "not-reportable",
+      "rationale": "X-Frame-Options/CSP frame-ancestors ausentes en paginas sin acciones con estado es de bajo valor.",
+      "exception": "Reportable si se enmarca una accion SENSIBLE ejecutable con un clic (cambio de ajustes, compra, borrado)."
+    },
+    {
+      "id": "email-spoofing-spf-dmarc",
+      "title": "SPF/DKIM/DMARC laxos como hallazgo generico",
+      "classes": ["email-spoofing", "spf", "dmarc"], "cwe": ["CWE-290"], "owasp": ["A07:2025"],
+      "default": "not-reportable",
+      "rationale": "Registros de correo permisivos son comunes y a menudo fuera de scope o informativos.",
+      "exception": "Reportable si demuestras spoofing entregable que habilita phishing dirigido contra el dominio en scope y el programa lo acepta."
+    },
+    {
+      "id": "verbose-error-no-secret",
+      "title": "Mensajes de error verbosos sin fuga de secreto/PII",
+      "classes": ["verbose-error", "stack-trace", "error-disclosure"], "cwe": ["CWE-209"], "owasp": ["A10:2025"],
+      "default": "not-reportable",
+      "rationale": "Un stack trace sin datos sensibles ni ruta a otra vuln es informativo.",
+      "exception": "Reportable si filtra secretos/credenciales/PII, rutas internas utiles para otra explotacion, o habilita SSTI/SQLi basada-en-error."
+    },
+    {
+      "id": "open-redirect-standalone",
+      "title": "Open redirect aislado (sin robo de token)",
+      "classes": ["open-redirect"], "cwe": ["CWE-601"], "owasp": ["A01:2025"],
+      "default": "low-value",
+      "rationale": "Muchos programas lo tratan como P4/informativo salvo impacto.",
+      "exception": "Reportable con impacto: robo de token OAuth via redirect_uri, encadenado a SSRF, o bypass de filtros de confianza."
+    },
+    {
+      "id": "tls-best-practice",
+      "title": "Configuracion TLS subóptima sin explotacion",
+      "classes": ["weak-cipher", "weak-tls", "tls-misconfiguration", "ssl-misconfiguration"], "cwe": ["CWE-326"], "owasp": ["A02:2025"],
+      "default": "not-reportable",
+      "rationale": "Suites debiles o TLS 1.1 habilitado, sin un ataque demostrable, son best-practice/informativo.",
+      "exception": "Reportable con explotacion concreta (padding oracle, downgrade interceptable en ruta realista)."
+    },
+    {
+      "id": "autocomplete-enabled",
+      "title": "Autocomplete habilitado / falta de flags de cookie sin impacto",
+      "classes": ["autocomplete", "cookie-flags", "missing-cookie-flags"], "cwe": ["CWE-1004"], "owasp": ["A05:2025"],
+      "default": "not-reportable",
+      "rationale": "autocomplete='on' o cookie sin HttpOnly en una cookie no sensible es de valor minimo.",
+      "exception": "Reportable si una cookie de SESION carece de HttpOnly/Secure Y hay un XSS/interceptacion que lo explote."
+    }
+  ],
+  "acceptance": [
+    { "class": "idor-bola", "aka": ["idor", "bola", "broken-object-level-authorization"], "typical_severity": "high-critical", "requires_proof": "≥2 identidades + par request/response diferencial (acceso cruzado). Un IDOR sin el par no esta confirmado.", "note": "Control de acceso roto (OWASP A01/API1) es lo #1; alto valor en todas las plataformas." },
+    { "class": "bfla", "aka": ["broken-function-level-authorization", "api5"], "typical_severity": "high-critical", "requires_proof": "identidad de bajo privilegio ejecutando funcion privilegiada.", "note": "Alto valor; par diferencial obligatorio." },
+    { "class": "rce", "aka": ["remote-code-execution", "command-injection"], "typical_severity": "critical", "requires_proof": "ejecucion demostrada (comando benigno/canary), sin danar.", "note": "P1/critico universal." },
+    { "class": "sqli", "aka": ["sql-injection"], "typical_severity": "high-critical", "requires_proof": "extraccion controlada con marcador/canary, no dumps masivos.", "note": "Alto valor; via sqlmap con cuidado de no exfiltrar real." },
+    { "class": "ssrf", "aka": ["server-side-request-forgery"], "typical_severity": "medium-critical", "requires_proof": "pivote a metadata/servicio interno EN SCOPE con canary, sin exfil real.", "note": "Severidad segun a que alcanza (metadata cloud = critico)." },
+    { "class": "auth-takeover", "aka": ["account-takeover", "ato", "broken-auth"], "typical_severity": "high-critical", "requires_proof": "toma de control demostrada sobre cuenta de PRUEBA propia, nunca de un usuario real.", "note": "OAuth/SAML/reset roto; alto valor." }
+  ]
+}

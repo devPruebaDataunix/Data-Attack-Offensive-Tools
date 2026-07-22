@@ -4,6 +4,44 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.56.0] - 2026-07-22
+### Added
+- **RAG de POLÍTICA DE PROGRAMA + adapters de informe (track de integración post-Shannon; idea de
+  bug-reaper, MIT — reimplementación limpia).** Primer hito tras cerrar Shannon A–F; usa el
+  `proof_state` que habilitó F como base de los criterios de aceptación.
+- **Nuevo `rag/triage/`** (cuarto RAG del motor, junto a vulns/knowledge/context): dataset CURADO y
+  **versionado en git** `policy_data.json` (con `_meta`: versión, fecha, fuentes fechadas y
+  **disclaimer** de que la política OFICIAL del programa PREVALECE) con criterios de aceptación y
+  **clases do-not-report** (self-XSS, missing-headers, CSRF de logout, rate-limit informativo, banner/
+  version disclosure, clickjacking no sensible, TLS best-practice…) de HackerOne/Bugcrowd/Intigriti/
+  YesWeHack. `policy.py` (`classify_finding`, puro stdlib) + `query_triage.py` (CLI JSON, patrón de
+  `query_vulns.py`). **ADVISORY**: orienta la priorización de `vuln-triage` y el filtrado de `reporting`;
+  NUNCA es un gate — no sustituye el criterio del analista ni la barrera determinista de proof-state (F),
+  y un impacto real se reporta aunque una regla genérica lo desaconseje.
+- **Adapters de informe por-plataforma** `templates/report-adapters/{hackerone,bugcrowd,intigriti,
+  yeswehack}.md`: versión de envío por-hallazgo (título, escala de severidad/VRT, campos requeridos,
+  fila de Verificación con el proof-state de F). Extienden `reporting`, no lo reimplementan.
+- **Esquema:** `scope.json` gana `program: { platform, policy_url, notes }` (opcional/retrocompatible)
+  para saber qué política aplica. `vuln-triage`/`reporting`/`AGENTS.md` consultan el RAG cuando hay
+  `program.platform`.
+### Security
+- **Precisión sobre recall (falsos "no reportable" = peligro).** El match de `do_not_report` es SOLO
+  por CLASE ESPECÍFICA (string completo): un XSS reflejado/almacenado real, un CSRF sensible o una fuga
+  de PII **no** caen en las reglas de bajo valor (self-XSS/csrf-logout/banner) aunque compartan CWE —
+  se descartó el match por CWE/OWASP justamente por eso. Cada regla trae su `exception` (cuándo SÍ se
+  reporta). El RAG es fail-open (dataset ausente → sin recomendación, no rompe).
+### Tests
+- `tests/test_triage_rag.py` (nuevo): dataset (_meta/disclaimer/fuentes/plataformas/reglas con
+  exception), precisión de `classify_finding` (real vs bajo-valor), CLI por subprocess, adapters,
+  `scope.program` y cableado en reporting/vuln-triage. Sin agente nuevo → roster 29 intacto.
+- **Council de 3 lentes (GO tras cerrar un NO-GO):** el lente de corrección cazó un BLOQUEANTE real —
+  el `title` del finding alimentaba el match de reglas, y varias reglas `do_not_report` de una sola
+  palabra (`banner`/`spf`/`autocomplete`…) eclipsaban la clase de aceptación (un IDOR/RCE real cuyo
+  título mencionara esa palabra pasaba a `not-reportable` en triage, antes de la red de F). Corregido:
+  el `title` solo cuenta como pista si NO hay `class`/`vector`; +4 tests de colisión que prueban la
+  propiedad general. Seguridad y simplicidad: GO; aplicados sus NITs (docstrings de `cwe/owasp`
+  desactualizadas, `match_kind` invariante y constante `LOW_VALUE` sin usar → eliminados).
+
 ## [2.55.0] - 2026-07-22
 ### Added
 - **Proof-state reconciliado con la ROE (mejora "F" del análisis de Shannon) — CIERRA la serie A–F.**

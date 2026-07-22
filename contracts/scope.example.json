@@ -31,6 +31,11 @@
       "authorization": "Revisión white-box del código autorizada en SOW-2026-0042 §4. El operador provee el checkout LOCAL en local_path (bajo engagements/<id>/, gitignored); code-recon NO clona de red. Presencia aquí = autorización white-box; un repo no listado NO está en scope."
     }
   ],
+  "program": {
+    "platform": "hackerone",
+    "policy_url": "https://hackerone.com/acme/policy",
+    "notes": "Programa de bug bounty. La política OFICIAL del programa PREVALECE sobre el RAG de política (rag/triage/) y los adapters de informe (templates/report-adapters/), que son ORIENTATIVOS. Omitir este bloque en un pentest clásico (sin plataforma)."
+  },
   "constraints": {
     "no_dos": true,
     "no_social_engineering": true,

@@ -152,6 +152,10 @@ def validate_refs():
         "templates/report-template.md", "contracts/finding.schema.json",
         "contracts/target.schema.json", "contracts/engagement.schema.json",
         "contracts/scope.example.json", "rag/query_vulns.py", "rag/refresh.py",
+        # RAG de política de programa + adapters de informe (v2.56, track de integración)
+        "rag/triage/policy.py", "rag/triage/query_triage.py", "rag/triage/policy_data.json",
+        "templates/report-adapters/hackerone.md", "templates/report-adapters/bugcrowd.md",
+        "templates/report-adapters/intigriti.md", "templates/report-adapters/yeswehack.md",
         ".claude/hooks/scope_guard.py", ".claude/hooks/a2a_guard.py",
         ".claude/hooks/a2a_router_nudge.py", ".claude/hooks/memory_guard.py",
         ".claude/hooks/fs_guard.py", ".claude/hooks/blackboard_guard.py", "CLAUDE.md",

@@ -44,9 +44,24 @@ El informe se filtra por el **grado de prueba** (`proof_state`), no solo por el 
   respaldados, no explotados por ROE). Repórtalos en la sección de hallazgos con la salvedad de
   verificación explícita — perderlos sería un informe deshonesto por omisión.
 
+## Política de programa (bug bounty) — RAG advisory + adapters
+Si `scope.json` trae `program.platform` (HackerOne/Bugcrowd/Intigriti/YesWeHack), es un engagement de
+bug bounty:
+- Tras el gate de proof_state, consulta el **RAG de política de programa** para cada hallazgo que vaya
+  a reportarse: `python rag/triage/query_triage.py --class <clase> --platform <plataforma> --json`.
+  Es **ADVISORY** — si devuelve `not-reportable` (p.ej. self-XSS, missing-headers, CSRF de logout),
+  **revisa su `exception`**: si el hallazgo cae en la excepción (impacto real, encadenamiento), SÍ va;
+  si no, bájalo a un anexo "informativo" o exclúyelo. **Nunca** descartes por el RAG un hallazgo de
+  impacto real: la política OFICIAL del programa PREVALECE y el criterio es tuyo. El RAG NO sustituye
+  el gate de proof_state (los `roe-capped` siguen yendo con su salvedad).
+- Emite, además del informe estándar, la **versión de envío por-plataforma** con la plantilla de
+  `templates/report-adapters/<plataforma>.md` (reusa los mismos `findings[]`; misma redacción y
+  redacción de secretos).
+
 ## Proceso
 1. **Aplica el gate de proof_state (arriba).** Reporta {proven-by-exploit, evidenced, roe-capped};
-   descarta `speculative`, `false_positive` y `out_of_scope`.
+   descarta `speculative`, `false_positive` y `out_of_scope`. Si es bug bounty, aplica DESPUÉS el
+   filtro de política de programa (advisory, arriba).
 2. Para cada uno, rellena el bloque de hallazgo de la plantilla con: severidad (criterio
    del RAG: KEV → exploit público → EPSS → CVSS, no solo el número), **CVSS 3.1 score +
    vector**, CWE/OWASP/ATT&CK, activos, descripción, **impacto de negocio en lenguaje

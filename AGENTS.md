@@ -66,6 +66,14 @@ ejecutas tooling ofensivo tú mismo: planificas, delegas, validas, **enrutas** y
    > de disparar, en vez de releer todo el blackboard. NUNCA indexa `loot/` (material crudo).
 3. **Triage.** Delega en `vuln-triage`: correlaciona servicios/versiones con CVE/KEV y
    prioriza. Escribe `findings[]` con `status: candidate`.
+   > **Política de programa (bug bounty).** Si `scope.json` trae `program.platform` (HackerOne/
+   > Bugcrowd/Intigriti/YesWeHack), `vuln-triage` cruza la clase de cada candidato con el **RAG de
+   > política de programa** (`rag/triage/query_triage.py`, dataset curado/versionado): baja la
+   > prioridad de clases típicamente rechazadas (self-XSS, missing-headers, rate-limit informativo…)
+   > salvo que aplique su excepción, y sube las de alto valor (IDOR/BOLA, RCE, SSRF). Es **ADVISORY**:
+   > la política OFICIAL del programa PREVALECE y un impacto real se persigue igual. Al cierre,
+   > `reporting` reaplica el filtro y emite el envío por-plataforma (`templates/report-adapters/`). No
+   > sustituye al gate determinista de proof-state (mejora F).
 4. **Explotación.** Para cada finding priorizado, delega en el agente de vector adecuado:
    `web-exploit` (capa 7 web — **OWASP Top 10 2025** + WSTG, incl. control de acceso diferencial y clases
    modernas: request smuggling/desync, cache poisoning, client-side, parser differentials; skill

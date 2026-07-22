@@ -43,7 +43,18 @@ Lee `contracts/scope.json`. Solo analizas targets en scope.
    - si trae `msf_modules` → enrútalo al agente **metasploit** (ya sabe el módulo exacto).
    - si trae `nuclei_templates` → recurso listo para `nuclei -t <ruta>` (web/bug bounty).
    El CVSS viene de CVE 5.0 (CNA), no del NVD (degradado); el SSVC de CISA da contexto.
-5. **Contexto de puerto (señal de priorización):** un servicio en un **puerto alto no estándar** (SSH
+5. **Política de programa (si es bug bounty; señal de priorización, ADVISORY).** Si `scope.json` trae
+   `program.platform`, cruza la clase del candidato con el **RAG de política de programa**:
+   ```
+   python rag/triage/query_triage.py --class <clase> --platform <plataforma> --json
+   ```
+   Si devuelve `not-reportable` (self-XSS, missing-headers, CSRF de logout, rate-limit informativo,
+   banner/version disclosure…) **y NO aplica su `exception`**, **baja su prioridad** (no gastes
+   explotación en algo que el programa rechaza) — pero NO lo borres: anótalo como informativo. Si es
+   `acceptable` (IDOR/BOLA, RCE, SSRF…), **súbelo**. Es ADVISORY: la política OFICIAL del programa
+   PREVALECE y un impacto real se persigue aunque una regla genérica lo desaconseje. No sustituye a
+   KEV/exploit; es un desempate de negocio.
+6. **Contexto de puerto (señal de priorización):** un servicio en un **puerto alto no estándar** (SSH
    movido a 2222, panel en 8443/9000, app a medida en un puerto raro) suele ser **menos endurecido y más
    interesante** que el servicio estándar muy expuesto (que ya suele estar parcheado) → **súbelo en la cola**
    aunque su CVE no sea el de mayor CVSS. No sustituye a KEV/exploit; es desempate y foco. Anótalo en el finding.

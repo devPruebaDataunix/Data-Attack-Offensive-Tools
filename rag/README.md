@@ -3,6 +3,12 @@
 Pipeline que mantiene al agente `vuln-triage` **al día con las vulnerabilidades que de
 verdad se están explotando**. Sin dependencias externas (solo Python stdlib + SQLite).
 
+> **RAG hermanos** (esta carpeta): `knowledge/` (técnica accionable, Capa 1+2) · `context/`
+> (contexto per-engagement, aislado por zona) · **`triage/`** (POLÍTICA DE PROGRAMA — dataset curado
+> y VERSIONADO de criterios de aceptación y clases do-not-report de HackerOne/Bugcrowd/Intigriti/YWH;
+> ADVISORY, orienta a `vuln-triage`/`reporting`, la política oficial del programa PREVALECE;
+> `python rag/triage/query_triage.py --stats`).
+
 ## Por qué este diseño (criterio experto 2026)
 
 No es un "RAG ingenuo" de embeddings sobre descripciones de CVE (impreciso para matching
