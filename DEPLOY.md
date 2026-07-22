@@ -154,6 +154,36 @@ Notas:
   Docker/Compose si faltan (`ensure_docker`). Es una **alternativa** al deploy de host, no un
   requisito: el modelo nativo sigue siendo Kali + Claude Code.
 
+## Contenedor efímero por-engagement (anillo de aislamiento — mejora "C")
+Para procesar **contenido potencialmente hostil** (el **código de cliente white-box** que ingiere
+`code-recon`, y en releases posteriores el navegador headless / proxy de interceptación / validación
+por visión) hay un **contenedor DESECHABLE que monta SOLO un engagement**, endurecido y sin egress:
+
+```bash
+./deploy/docker.sh build                          # una vez: construye data-attack:latest
+./deploy/engagement-run.sh <engagement_id>        # shell en el anillo (sin red)
+./deploy/engagement-run.sh <engagement_id> -- python rag/context/ingest_context.py -e <engagement_id>
+./deploy/engagement-run.sh <engagement_id> --net da-eng     # con una red docker acotada
+# variante declarativa (para un id YA validado; el .sh es el entrypoint sancionado que SANEA el id):
+ENGAGEMENT_ID=<engagement_id> docker compose -f docker-compose.engagement.yml run --rm engagement
+```
+
+Propiedades de aislamiento (**CONSTITUTION §1** aislamiento de cliente, **§6** datos E3):
+- Monta **solo `engagements/<id>/`** (rw) — nunca todos los engagements ni el código del repo
+  (horneado en la imagen, rootfs **read-only**). Un cliente no puede ver a otro.
+- **`scope.json` READ-ONLY** dentro del anillo: el `run_scope` queda **congelado** durante la corrida
+  (las puertas no se relajan; encaja con "run_scope inmutable salvo reapertura del operador").
+- **Sin red por defecto** (`--network none` / `network_mode: none`): procesar contenido hostil no
+  necesita egress. Se puede acotar a una red docker con `--net <red>` para el tooling que sí la use.
+- **Efímero** (`--rm`), `cap-drop ALL`, `no-new-privileges`, `pids/mem/cpu` acotados, `/tmp` en tmpfs.
+- **`~/.claude` NO se monta**: las credenciales del operador quedan **fuera** del anillo. Solo con
+  `--claude-auth` (opt-in) se monta **read-only**, y únicamente si el anillo debe pilotar Claude.
+
+Este anillo **complementa** —no sustituye— el guard en-proceso `.claude/hooks/fs_guard.py`, que bloquea
+de forma determinista que una lectura (`Read`/`Grep`/`Glob`) siga un **symlink** o un `..` que escape del
+árbol de código de cliente (`engagements/<id>/recon/src/`) o del propio repo. El guard protege aunque se
+corra sobre el host sin contenedor; el contenedor da el **confinamiento duro** por namespace de montaje.
+
 ## Bot como servicio (opcional, systemd)
 ```ini
 # /etc/systemd/system/databot.service

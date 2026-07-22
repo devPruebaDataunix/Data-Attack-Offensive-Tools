@@ -4,6 +4,63 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.53.0] - 2026-07-22
+### Added
+- **Contenedor efímero por-engagement (mejora "C" del análisis de Shannon) — el anillo de aislamiento
+  por-cliente.** `deploy/engagement-run.sh <id>` + `docker-compose.engagement.yml` levantan un contenedor
+  **DESECHABLE que monta SOLO `engagements/<id>/`** (rw) — nunca todos los engagements ni el código del
+  repo (horneado, rootfs **read-only**) — endurecido y **sin egress por defecto** (`--network none`).
+  Es el hogar designado para procesar **contenido HOSTIL**: hoy el código de cliente white-box de
+  `code-recon`; en releases posteriores el navegador headless / proxy de interceptación / validación por
+  visión (por eso C va PRIMERO, es su prerrequisito). Aislamiento (CONSTITUTION §1/§6): `scope.json`
+  montado **READ-ONLY** (run_scope congelado durante la corrida), `cap-drop ALL`, `no-new-privileges`,
+  `pids/mem/cpu` acotados, `/tmp` en tmpfs; **`~/.claude` NO se monta** (las credenciales del operador
+  quedan fuera del anillo) salvo `--claude-auth` opt-in en read-only.
+- **`fs_guard.py` (nuevo hook PreToolUse sobre `Read`/`Grep`/`Glob`, control C20) — CIERRA el hueco de FS
+  que la mejora "A" (`code-recon`) dejó diferido.** Barrera **determinista** que bloquea una lectura cuando
+  (a) su destino real cae bajo `~/.claude` (credenciales del operador, sea por symlink o ruta absoluta
+  directa), (b) el **ancla** `recon/src` es un symlink que resuelve fuera del repo, (c) un **symlink** o un
+  `..` escapa del árbol de código de cliente (`engagements/<id>/recon/src/`), o (d) un symlink interno del
+  repo escapa del repo — los vectores de un checkout white-box **envenenado** que enlace a `~/.claude`
+  (exfil de credenciales), a `../loot/` de otro engagement (contaminación cruzada) o a `/etc/shadow`.
+  Funciona **aunque se corra sobre el host** (Kali) sin contenedor. Registrado en `.claude/settings.json`
+  (matcher `Read|Grep|Glob`, hasta ahora sin guard).
+### Security
+- **Dos capas complementarias, con cobertura EXACTA (council de 3 lentes; NO-GO de seguridad cazado y
+  cerrado).** El council de v2.53.0 destapó un **bypass crítico** (el `realpath` del propio ancla `recon/src`
+  resolvía symlinks → un ancla symlinkeada a `~/.claude` pasaba y nunca caía a la rama de repo); se cerró
+  exigiendo que el ancla resuelva DENTRO del repo + una denylist explícita de `~/.claude` (backstop del modo
+  host, cubre también la lectura absoluta directa) + colapso de `//` y `/./` antes de detectar el ancla
+  (evasión que caía a la rama laxa) + comparación consistente `lex`-vs-`lex` / `real`-vs-`real` con
+  `normcase` (Windows). **Cobertura por herramienta, sin sobre-promesa:** `fs_guard` verifica el `file_path`
+  de cada `Read` y la **ruta-consulta** (`path`) de `Grep`/`Glob` — el recorrido profundo de Grep/Glob no
+  sigue symlinks por defecto (ripgrep) y su confinamiento DURO lo aporta el **contenedor** (montaje mínimo),
+  no el guard. Deliberadamente **NO** confina toda lectura absoluta del host salvo `~/.claude` (el scratchpad
+  o un wordlist no son datos de cliente): ese confinamiento total del FS es del contenedor. Así la promesa de
+  cada capa es exacta (cero falsos positivos en el flujo normal — verificado: los 28 agentes leyendo el repo
+  y `engagements/<id>/` fuera de `recon/src` pasan todos).
+- **Aislamiento del anillo endurecido tras el council:** `engagement-run.sh` rechaza además `.`/`..` exactos
+  (un solo `.` habría montado `engagements/` entero) y exige que el id sea un hijo directo; el compose
+  documenta que NO puede sanear `ENGAGEMENT_ID` (usar el `.sh` para input no confiable — es el entrypoint
+  sancionado; el compose es la variante declarativa para un id ya validado).
+- **Cumple la deuda honesta declarada en v2.52.0:** aquel CHANGELOG marcó como *diferido a "C"* el
+  confinamiento de `Read`/`Grep`/`Glob` a `recon/src/` y el rechazo de symlinks de escape. Esta versión lo
+  **entrega** (guard C20 + anillo efímero). El proof-state completo del finding sigue siendo la mejora "F".
+- **Las puertas no se relajan:** el anillo hereda todos los guards deterministas (scope/budget/… corren
+  dentro), monta `scope.json` **inmutable** y no abre red por defecto. El aislamiento **no** es una vía para
+  ejecutar código de cliente: `code-recon` sigue sin `Bash` (el código es inerte, no se ejecuta).
+### Changed
+- `GUARDRAILS.md`: inventario de controles **C1–C19 → C1–C20** (nuevo C20 + nodo en el diagrama de
+  guardarraíles); rangos "C1–C19"/"C11–C19" actualizados a C20 en `docs/cost-optimization.md` y
+  `docs/RUNBOOK-operador.md`. `DEPLOY.md`: nueva sección "Contenedor efímero por-engagement". `AGENTS.md`:
+  el bloque white-box de `code-recon` ahora referencia `fs_guard` + el anillo efímero.
+- Tests: nuevo `tests/test_fs_guard.py` (**22/0** en Windows, +2 escenarios de symlink REAL que corren en
+  POSIX/Kali; las ramas críticas —ancla symlinkeada, denylist `~/.claude`, evasión `/./`, escape (B)— se
+  cubren cross-plataforma con `realpath` parcheado, además de traversal `..`, `under()` sin bug de prefijo,
+  lecturas legítimas y el contrato del hook por stdin); `validate_suite` **662/0/0** (referencias nuevas:
+  `fs_guard.py`, `deploy/engagement-run.sh`, `docker-compose.engagement.yml`);
+  `test_memory_guard`/`test_secret_scan`/`test_code_recon` sin regresión.
+
 ## [2.52.0] - 2026-07-21
 ### Added
 - **Vertical white-box `code-recon` (mejora "A" del análisis de Shannon) — el único hueco de capacidad

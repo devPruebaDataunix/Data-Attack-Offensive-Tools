@@ -153,13 +153,16 @@ def validate_refs():
         "contracts/target.schema.json", "contracts/engagement.schema.json",
         "contracts/scope.example.json", "rag/query_vulns.py", "rag/refresh.py",
         ".claude/hooks/scope_guard.py", ".claude/hooks/a2a_guard.py",
-        ".claude/hooks/a2a_router_nudge.py", ".claude/hooks/memory_guard.py", "CLAUDE.md",
+        ".claude/hooks/a2a_router_nudge.py", ".claude/hooks/memory_guard.py",
+        ".claude/hooks/fs_guard.py", "CLAUDE.md",
         "contracts/a2a-message.schema.json", "contracts/agent-card.schema.json",
         "contracts/agent-cards.json", "tools/build_agent_cards.py",
         # Despliegue en contenedores (v1.6.0)
         "Dockerfile", "docker-compose.yml", ".dockerignore", "deploy/docker.sh",
         "deploy/auto-deploy.sh", "deploy/lib.sh", "deploy/verify.sh", "deploy/setup.sh",
         "deploy/agentsview.sh",
+        # Contenedor efímero por-engagement (mejora C, v2.53.0)
+        "docker-compose.engagement.yml", "deploy/engagement-run.sh",
         # Gobierno / flujo engagement-driven (adaptado de spec-driven)
         "CONSTITUTION.md", "templates/engagement-spec.md", "tools/analyze_engagement.py",
         "docs/engagement-driven.md",

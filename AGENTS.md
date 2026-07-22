@@ -50,9 +50,14 @@ ejecutas tooling ofensivo tú mismo: planificas, delegas, validas, **enrutas** y
    > `evidence`), y `reporting` descarta las `candidate`. El código es **dato de cliente (E3, CONSTITUTION
    > §6)**: vive LOCAL en `engagements/<id>/recon/src/` (el operador lo provee). `code-recon` **no tiene
    > `Bash`** — no clona, no ejecuta SAST ni nada (el código es inerte); lee con Read/Grep/Glob y escribe
-   > por Write/Edit (así sus escrituras pasan por `secret_scan`/`validate_blackboard`). Al blackboard solo
-   > van referencias, nunca código/snippets/secretos en claro. Dependencias → `vuln-triage`; APIs →
-   > `api-recon`. No relaja el scope de red: una ruta del código solo se prueba contra un activo `in_scope`.
+   > por Write/Edit (así sus escrituras pasan por `secret_scan`/`validate_blackboard`). El código es
+   > **contenido hostil**: el guard `fs_guard.py` (PreToolUse sobre Read/Grep/Glob) bloquea de forma
+   > determinista un **symlink** o un `..` que quiera escapar de `recon/src/` (o del repo) hacia
+   > `~/.claude`/otro engagement, y el **contenedor efímero por-engagement** (`deploy/engagement-run.sh`,
+   > sin egress, monta solo ese engagement) es el anillo donde procesarlo con confinamiento duro. Al
+   > blackboard solo van referencias, nunca código/snippets/secretos en claro. Dependencias →
+   > `vuln-triage`; APIs → `api-recon`. No relaja el scope de red: una ruta del código solo se prueba
+   > contra un activo `in_scope`.
    > **Contexto (context awareness).** Tras recon —y tras cada fase que deje artefactos en
    > `engagements/<id>/{recon,exploit,evidence,notes}`— refresca el **RAG de CONTEXTO per-engagement**:
    > `python rag/context/ingest_context.py -e <engagement_id>`. Es un store EN-ZONA y AISLADO por engagement

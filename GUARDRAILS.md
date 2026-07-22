@@ -51,6 +51,7 @@ flowchart TB
         G_REDACT{{"✂️ secret_scan.py<br/>PostToolUse · determinista (LLM02)"}}
         G_A2A{{"✉️ a2a_guard.py<br/>PostToolUse · C14/C15 (LLM01/LLM10)"}}
         G_MEMORY{{"🧠 memory_guard.py<br/>PreToolUse · determinista (LLM02)"}}
+        G_FS{{"📁 fs_guard.py<br/>PreToolUse · C20 (LLM02/§1·§6)"}}
     end
 
     G_SCOPE -->|en scope| TARGET
@@ -66,6 +67,8 @@ flowchart TB
     G_A2A -.->|spoofing / techo de hops| FIX
     G_MEMORY -->|técnica limpia| MEM["🧠 memoria de agente<br/>.claude/agent-memory*/"]
     G_MEMORY -.->|datos de cliente| FIX
+    G_FS -->|dentro de recon/src| TARGET
+    G_FS -.->|symlink/`..` fuera de la zona| BLOCK
 ```
 
 ## Inventario de controles (estado real)
@@ -91,6 +94,7 @@ flowchart TB
 | C17 | **Guard de sanitización de la memoria de aprendizaje** — antes de escribir en la memoria persistente de un agente (`.claude/agent-memory*/`: `local` per-operador **y** `project` compartida por git) **bloquea** si el contenido trae secretos, identificadores del scope (IPs/dominios in/out), IPs públicas enrutables o loot (hashes). Convierte "sin datos de cliente en memoria" en garantía de código (aislamiento de cliente, CONSTITUTION §1) | Determinista | `.claude/hooks/memory_guard.py` (PreToolUse) + `tools/redactor.py` + helpers de `scope_guard` | **LLM02 Sensitive Info Disclosure** |
 | C18 | **Anti-alboroto** — bloquea el escaneo ruidoso/DoS-adjacent (`nmap -T5`, `masscan`/`zmap` sin `--rate` o sobre el cap, `rustscan` con `--batch-size`/`--ulimit` excesivos, fuerza bruta con demasiados hilos, fuzzing web con cientos de hilos); en modo `stealth` endurece (`-T4`/`-A`/`-p-` rápido, rustscan sin acotar). Configurable: `constraints.allow_noisy` lo desactiva si la ROE autoriza ruido; `stealth`/`max_scan_rate` ajustan umbrales. Aplica CONSTITUTION §9 (bajo ruido) | Determinista | `.claude/hooks/noise_guard.py` (PreToolUse) | **LLM10 Unbounded Consumption** (+ no-daño §5/§9) |
 | C19 | **Anti-bucle (nivel de acción)** — detecta el mismo comando repetido (thrashing) y la oscilación A/B sin progreso, y **bloquea** tras `constraints.max_repeat` (def. 3) en la ventana reciente. Obliga a cambiar de hipótesis o escalar. Complementa C13 (kill-switch global de acciones) y C15 (techo de hops A2A) llevándolo al nivel de ACCIÓN | Determinista | `.claude/hooks/loop_guard.py` (PreToolUse) | **LLM10 Unbounded Consumption** |
+| C20 | **Confinamiento de lectura de código de cliente** — bloquea una lectura cuando (a) su destino real cae bajo `~/.claude` (credenciales del operador), (b) el **ancla** `recon/src` es un symlink que resuelve fuera del repo, (c) un **symlink** o un `..` escapa del árbol de código de cliente (`engagements/<id>/recon/src/`), o (d) un symlink interno del repo escapa del repo. Verifica el `file_path` de cada `Read` y la **ruta-consulta** (`path`) de `Grep`/`Glob`; el recorrido profundo de Grep/Glob no sigue symlinks por defecto (ripgrep) y su confinamiento DURO lo aporta el contenedor. Cierra el hueco de FS que dejó `code-recon` (mejora "A"); el **contenedor efímero por-engagement** (`deploy/engagement-run.sh`, monta solo ese engagement, sin egress) da el confinamiento por namespace de montaje (mejora "C") | Determinista | `.claude/hooks/fs_guard.py` (PreToolUse) + `deploy/engagement-run.sh` / `docker-compose.engagement.yml` | **LLM02 Sensitive Info Disclosure** (+ aislamiento §1/§6) |
 
 > **Refuerzo del router A2A (no es un gate):** `a2a_router_nudge.py` (PostToolUse sobre `Task`)
 > recuerda al Orquestador, tras cada retorno de subagente, que entregue los mensajes A2A `pending`

@@ -1,6 +1,6 @@
 # Auditoría de calidad de agentes y skills — v2.1.0
 
-> **Al día (v2.52.0):** hoy la suite tiene **28 agentes** y **16 skills** (v2.47.0 añadió `firmware-recon`/`firmware-exploit` + `iot-firmware-security`; v2.52.0 añadió `code-recon`, vertical white-box, reusando las skills web);
+> **Al día (v2.53.0):** hoy la suite tiene **28 agentes** y **16 skills** (v2.47.0 añadió `firmware-recon`/`firmware-exploit` + `iot-firmware-security`; v2.52.0 añadió `code-recon`, vertical white-box, reusando las skills web; v2.53.0 = mejora "C" —contenedor efímero por-engagement + guard `fs_guard` C20— no añade agentes ni skills);
 > la cobertura anti-inyección
 > **C11 está en 26 agentes** (los 28 menos `reporting`/`knowledge-postmortem`; los +3 del clúster AD la
 > sumaron en v2.11.0, los +2 del clúster móvil en v2.46.0, los +2 del firmware en v2.47.0, y `code-recon` en v2.52.0 —crítica en white-box: un codebase adversario es vector de inyección). Lo que sigue es el **informe original de la auditoría de calidad de v2.1.0**,

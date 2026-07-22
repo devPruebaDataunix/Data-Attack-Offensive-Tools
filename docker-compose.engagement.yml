@@ -1,0 +1,51 @@
+# =============================================================================
+#  Data Attack — CONTENEDOR EFÍMERO POR-ENGAGEMENT (mejora "C" Shannon).
+#  Equivalente declarativo de deploy/engagement-run.sh: el anillo de aislamiento
+#  DESECHABLE que monta SOLO un engagement y procesa contenido HOSTIL (código de
+#  cliente white-box; y en releases futuros navegador headless / proxy / visión).
+#
+#  Uso (el id del engagement se pasa por variable de entorno):
+#    ENGAGEMENT_ID=acme-2026 docker compose -f docker-compose.engagement.yml run --rm engagement
+#
+#  ⚠️ AISLAMIENTO: este compose NO puede sanear `ENGAGEMENT_ID`. Debe ser un ÚNICO segmento que
+#  case `[A-Za-z0-9._-]` (sin `.`/`..`/`/`): p.ej. `ENGAGEMENT_ID=..` montaría la raíz del repo.
+#  Para input NO confiable usa `deploy/engagement-run.sh <id>`, que SÍ valida el id (es el entrypoint
+#  sancionado); este fichero es la variante declarativa para operadores con un id ya validado. Ambos
+#  ficheros duplican el endurecimiento a propósito: si cambias caps/límites/tmpfs en uno, cámbialo en
+#  el otro. `scope.json`/`engagement.json` deben EXISTIR (Docker crearía directorios vacíos si faltan).
+#
+#  Aislamiento (CONSTITUTION §1 aislamiento de cliente, §6 datos E3):
+#   - Monta SOLO engagements/${ENGAGEMENT_ID}/ (rw) — nunca todos ni el código del repo (horneado, ro).
+#   - scope.json READ-ONLY (run_scope congelado; las puertas no se relajan).
+#   - Sin red (network_mode: none): procesar contenido hostil no necesita egress.
+#   - Efímero (--rm al usar `run`), rootfs read-only, cap_drop ALL, no-new-privileges, límites.
+#   - ~/.claude NO se monta (las credenciales del operador quedan fuera del anillo). Si el anillo
+#     debe pilotar Claude, usa deploy/engagement-run.sh --claude-auth (opt-in, montaje ro).
+#  Lab-only / zona E3. Ver DEPLOY.md -> "Contenedor efímero por-engagement".
+# =============================================================================
+services:
+  engagement:
+    image: data-attack:latest          # constrúyela antes: ./deploy/docker.sh build
+    container_name: data-attack-eng-${ENGAGEMENT_ID:?define ENGAGEMENT_ID}
+    hostname: engagement-${ENGAGEMENT_ID}
+    working_dir: /opt/data-attack
+    entrypoint: ["/bin/bash", "-l"]
+    network_mode: "none"               # sin egress por defecto (contenido hostil)
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=256m
+    cap_drop: ["ALL"]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 512
+    mem_limit: 4g
+    cpus: 2
+    stdin_open: true
+    tty: true
+    volumes:
+      # SOLO este engagement (rw). El código del repo va horneado en la imagen (rootfs ro).
+      - ./engagements/${ENGAGEMENT_ID}:/opt/data-attack/engagements/${ENGAGEMENT_ID}:rw
+      - ./rag:/opt/data-attack/rag:ro
+      - ./contracts/scope.json:/opt/data-attack/contracts/scope.json:ro      # scope congelado
+      - ./contracts/engagement.json:/opt/data-attack/contracts/engagement.json:rw
+    profiles: ["engagement"]
