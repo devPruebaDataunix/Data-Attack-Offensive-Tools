@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Steering directive (pilotaje interactivo)",
+  "description": "Una DIRECTIVA del OPERADOR para pilotar el engagement en marcha (mejora v2.61). Vive en engagements/<id>/control/steering.json (canal del operador, FUERA del blackboard que escriben los agentes). El Orquestador la recoge en los seams (entre delegaciones) y la aplica. Una directiva es INTENCIÓN del operador, NUNCA una orden que relaje una puerta: no puede ampliar scope, permitir daño ni BAJAR la supervisión (tools/steering.py rechaza los tipos que relajarían; y las guardas deterministas —scope_guard/approval_gate— corren fuera del prompt igualmente).",
+  "type": "object",
+  "required": ["id", "type", "status"],
+  "properties": {
+    "id": { "type": "string", "description": "Estable, p.ej. S-001" },
+    "type": {
+      "type": "string",
+      "enum": ["focus", "deprioritize", "skip", "pause", "resume", "abort-vector", "hint", "raise-approval", "escalate"],
+      "description": "focus=prioriza un host/vector; deprioritize/skip=baja/omite; pause/resume=postura del engagement; abort-vector=deja de perseguir un vector/finding; hint=pista/guía en texto; raise-approval=SUBE la supervisión (solo a un nivel MÁS estricto); escalate=pide atención del operador. NO existe ningún tipo que relaje scope/no-daño/aprobación."
+    },
+    "status": { "type": "string", "enum": ["pending", "applied", "rejected", "skipped"], "description": "pending=sin aplicar; applied=el Orquestador la aplicó; rejected=no aplicable/contraria a ROE; skipped=omitida (ya cubierta)." },
+    "target": { "type": "string", "description": "target_id o nombre de vector al que aplica (si procede). Un target sigue validándose contra scope: la directiva no lo mete en scope." },
+    "to": { "type": "string", "enum": ["critical", "full"], "description": "Solo para raise-approval: nivel de supervisión más ESTRICTO al que subir (nunca 'auto': bajar no se permite)." },
+    "note": { "type": "string", "description": "Texto/pista del operador para el Orquestador (dato NO sensible)." },
+    "ack_note": { "type": "string", "description": "Nota del Orquestador al marcar la directiva (por qué applied/rejected/skipped)." },
+    "created_at": { "type": "string", "format": "date-time" },
+    "applied_at": { "type": "string", "format": "date-time" }
+  }
+}

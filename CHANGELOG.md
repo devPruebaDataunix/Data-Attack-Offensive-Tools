@@ -4,6 +4,49 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.61.0] - 2026-07-23
+### Added
+- **Pilotaje interactivo del engagement en marcha (steering) (track de integración; idea de strix,
+  Apache-2.0 → reimplementación limpia, solo stdlib).** SEXTO y último hito del track. El operador (o el
+  dashboard) inyecta DIRECTIVAS que el Orquestador recoge en los *seams* (entre delegaciones — el Task tool
+  es síncrono) y aplica sin reiniciar el engagement.
+- **`tools/steering.py`** — canal de directivas en `engagements/<id>/control/steering.json` (canal del
+  OPERADOR, fuera del blackboard): `add`/`list`/`ack`. Tipos: `focus`, `deprioritize`, `skip`, `pause`,
+  `resume`, `abort-vector`, `hint`, `raise-approval`, `escalate`.
+- **`.claude/hooks/steering_nudge.py`** — refuerzo PostToolUse·Task (análogo a `a2a_router_nudge`, NO es un
+  gate): recuerda al Orquestador las directivas `pending` tras cada retorno de agente.
+- **`contracts/steering-directive.schema.json`** + sección "Pilotaje interactivo" en AGENTS.md + entrada en
+  GUARDRAILS.md.
+### Security
+- **El pilotaje NUNCA relaja una puerta.** Una directiva es INTENCIÓN del operador, no una orden que salte
+  las guardas: no puede ampliar scope, permitir daño ni BAJAR el `approval_mode`. `steering.py` RECHAZA en
+  origen cualquier tipo que relajaría (no existe `add-scope`/`disable-guard`/`lower-approval`);
+  `raise-approval` solo ENDURECE (a un nivel más estricto que el vigente). Y aunque una directiva maliciosa
+  se colara, `scope_guard`/`approval_gate` corren FUERA del prompt y siguen bloqueando (CONSTITUTION §1/§2).
+  El `engagement_id` se sanea (sin traversal); el fichero se confina a `engagements/<id>/control/` y se
+  escribe atómicamente. Un `target` de una directiva se valida contra scope como cualquier otro.
+- **Endurecimiento del council (3 lentes: seguridad NO-GO→GO, corrección, simplicidad).**
+  - **BLOQUEANTE cerrado — traversal por `..` en `_safe_eid`.** El saneado permitía el punto, así que un
+    `engagement_id` `..`/`foo/..`/`..\..` colapsaba (vía `basename`) a `..` y escribía en `ROOT/control/`,
+    FUERA de `engagements/` (misma clase de traversal que se trató como NO-GO en v2.58). Ahora un componente
+    que sea SOLO puntos se neutraliza a `engagement`. Test de regresión con los 7 vectores.
+  - **Read-path endurecido** — `pending()` filtra por `ALLOWED_TYPES`: una directiva de tipo relajante
+    (`lower-approval`/`disable-guard`/`add-scope`) plantada DIRECTAMENTE en el fichero (saltándose `enqueue`)
+    nunca llega al prompt del Orquestador vía el nudge (defensa en profundidad).
+  - **Anti-inyección en el nudge** — `note`/`target` se colapsan (todo whitespace → espacio) y truncan antes
+    de renderizarse en `additionalContext`: un `note` multilínea no puede inyectar líneas/instrucciones
+    falsas en el contexto del Orquestador.
+  - **Corrección** — id `S-NNN` derivado del MÁXIMO existente (no de `len`: robusto ante poda/edición externa,
+    evita colisión); **lock por-engagement** (`O_EXCL`) alrededor del read-modify-write para evitar el
+    lost-update operador↔dashboard; JSON corrupto se APARTA a `.corrupt` (no reset/sobrescritura silenciosa);
+    `raise-approval` se documenta como `max(actual, indicado)` (nunca baja aunque se apliquen dos fuera de orden).
+### Tests
+- `tests/test_steering.py` (enqueue/pending/ack, RECHAZO de tipos que relajarían una puerta, `raise-approval`
+  solo endurece, confinamiento del engagement_id con 7 vectores de traversal, id-max tras poda, filtro del
+  read-path, JSON corrupto apartado, ack outcome inválido, **ejecución real del hook** + sanitización
+  anti-inyección del `note`, CLI, coherencia esquema↔ALLOWED_TYPES). Sin agente nuevo → roster 29 intacto.
+  **Dashboard (Actions/A2A steering): PENDIENTE en el repo privado.**
+
 ## [2.60.0] - 2026-07-23
 ### Added
 - **Proxy HTTP con enforcement de scope + diff-scope PR-aware (track de integración; ideas de strix,

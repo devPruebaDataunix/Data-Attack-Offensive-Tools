@@ -107,6 +107,14 @@ flowchart TB
 > del blackboard (inyecta la lista por `additionalContext`). No bloquea nada: convierte el ciclo
 > del router de "instrucción de prompt" en un recordatorio determinista para que no se pierda
 > ningún relevo (trazabilidad C10).
+>
+> **Refuerzo del pilotaje interactivo (no es un gate, mejora v2.61):** `steering_nudge.py` (PostToolUse
+> sobre `Task`) recuerda al Orquestador las DIRECTIVAS del operador `pending` en
+> `engagements/<id>/control/steering.json` para que las aplique en el seam y las marque (`tools/steering.py
+> ack`). No bloquea ni relaja nada: las directivas son INTENCIÓN del operador (repriorizar/pausar/abortar/
+> pista/subir-supervisión); `steering.py` rechaza en origen cualquier tipo que relajaría una puerta
+> (no hay `add-scope`/`disable-guard`/`lower-approval`; `raise-approval` solo endurece), y los gates
+> deterministas (scope/aprobación) siguen mandando fuera del prompt.
 
 ## Dónde corren los controles (repo vs plugin)
 

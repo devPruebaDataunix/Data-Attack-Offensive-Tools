@@ -160,7 +160,9 @@ def validate_refs():
         ".claude/hooks/a2a_router_nudge.py", ".claude/hooks/memory_guard.py",
         ".claude/hooks/fs_guard.py", ".claude/hooks/blackboard_guard.py",
         ".claude/hooks/circuit_breaker.py", "tools/consensus.py", "tools/screenshot.py",
-        "tools/attack_path.py", "tools/diff_scope.py", "tools/http_proxy.py", "CLAUDE.md",
+        "tools/attack_path.py", "tools/diff_scope.py", "tools/http_proxy.py",
+        "tools/steering.py", ".claude/hooks/steering_nudge.py", "contracts/steering-directive.schema.json",
+        "CLAUDE.md",
         "contracts/a2a-message.schema.json", "contracts/agent-card.schema.json",
         "contracts/agent-cards.json", "tools/build_agent_cards.py",
         # Despliegue en contenedores (v1.6.0)
