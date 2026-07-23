@@ -225,7 +225,12 @@ y no bloquea el cierre.
    credenciales) → `lateral-discovery` (mapea la red interna, **levanta el pivot**, descubre hosts).
 2. Los hosts internos nuevos entran en la frontera con su `reachable_via`. Vuelve a 1 para cada uno.
 3. El grafo de la cadena es el propio `engagement.json` (los `next_step` de los findings y el
-   `via_target` de cada pivot trazan la ruta de ataque multi-host).
+   `via_target` de cada pivot trazan la ruta de ataque multi-host). Para VOLCARLO a un formato
+   estándar (informe, dashboard, revisión), `python tools/attack_path.py [--format graphml] [--out
+   engagements/<id>/report/attack-path.graphml]` exporta el grafo (nodos target/finding/pivot +
+   aristas direct-access/reaches/pivots-through/has-finding/cred-reuse) de forma DETERMINISTA y
+   solo-lectura, con el mismo gate de reportabilidad (mejora F) y sin sacar datos E3 (whitelist de
+   campos estructurales; nunca evidence/`*_ref`/secretos). Es una VISTA del blackboard, no una fuente.
 
 **Inyección de contexto de pivot.** Cuando delegues explotación de un host cuyo `reachable_via` es
 un `pivot_id`, **incluye el pivot activo como contexto**: el `proxy`/ruta del túnel (de `pivots[]`)

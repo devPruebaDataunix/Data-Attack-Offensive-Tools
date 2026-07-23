@@ -4,6 +4,39 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.59.0] - 2026-07-23
+### Added
+- **Exportador de ATTACK-PATH (`tools/attack_path.py`) (track de integración; idea de VulneraMCP, MIT →
+  reimplementación limpia, solo stdlib).** Cuarto hito. El blackboard YA ES el grafo de ataque; este
+  exportador lo VUELCA a **JSON** (node/edge) o **GraphML** para que el dashboard lo renderice
+  (`NetworkGraph`, modo cadena) o para adjuntarlo al informe — sin re-derivar la topología.
+- **Modelo del grafo:** nodos `operator` (raíz) / `target` (con `access_level`, `reachable_via`,
+  servicios y tipos de defensa) / `finding` / `pivot`; aristas `direct-access` (operator→target directo),
+  `reaches` (pivot→host interno), `pivots-through` (host comprometido→pivot), `has-finding`
+  (target→finding) y `cred-reuse` (propagación de credenciales `source_target`→`validated_on`). Traza la
+  cadena multi-host completa.
+- **Reusa el gate F:** cada finding se etiqueta con su `proof_state` EFECTIVO y `reportable`
+  (`blackboard.effective_proof_state`/`is_reportable`) — la misma verdad que el informe, sin divergir.
+### Security
+- **Sin fugas E3.** El grafo se construye por WHITELIST de campos ESTRUCTURALES (ids, asset, título,
+  severidad, estado, proof_state, puertos/servicios, tipos de defensa). NUNCA `evidence`, `reproduction`,
+  `impact`, `remediation`, `notes` ni ninguna `*_ref`/`secret_ref`/valor de credencial — es una vista de
+  topología, no un volcado de material sensible. Como cinturón, `_redact_label` colapsa el userinfo de una
+  URL de identidad (`scheme://user:pass@host` → `scheme://host`) por si un secreto se coló en `asset`.
+- **Integridad + robustez del grafo (endurecido por council).** Se descartan las aristas COLGANTES (a nodos
+  no declarados — el blackboard puede traer FKs rotas) y se DEDUPLICAN los ids de nodo (GraphML exige id
+  único), evitando nodos fantasma en el dashboard. El consumidor DEBE pintar `label` como TEXTO, nunca
+  `innerHTML`.
+- **Escritura confinada + solo-lectura.** No muta el blackboard ni toca la red. Por defecto emite a
+  stdout; con `--out` escribe SOLO bajo `engagements/` del repo (realpath-confinado, rechaza
+  traversal/symlink). **GraphML con escape XML**: un `asset`/título hostil (`<script>`, `]]>`, `&`) no
+  rompe el documento ni inyecta marcado.
+### Tests
+- `tests/test_attack_path.py` (construcción del grafo, cadena multi-host con pivot+cred-reuse, reuso del
+  gate F, no-fuga E3 por whitelist, GraphML bien formado + escape, confinamiento de `--out` por
+  subprocess). Sin agente nuevo → roster 29 intacto. **Dashboard (NetworkGraph modo cadena): PENDIENTE en
+  el repo privado.**
+
 ## [2.58.0] - 2026-07-22
 ### Added
 - **Validación por VISIÓN (screenshot + IA) en `web-exploit` (track de integración; idea de BugTraceAI,
