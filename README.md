@@ -113,6 +113,9 @@ hops anti-bucle).
 | 🧠 | **Aprendizaje por agente** | Cada especialista de explotación/triage acumula su propia memoria local de **técnica** (`memory: local`, per-operador), saneada de forma **determinista** por `memory_guard.py` (sin datos de cliente); `knowledge-postmortem` la consolida al cierre y guarda lecciones en el blackboard. |
 | 🌐 | **Multi-host y pivoting** | Cadenas a través de hosts comprometidos: pivot (ligolo-ng), estado multi-host en el blackboard y propagación de credenciales (reuse/pass-the-hash/spray) para cerrar máquinas encadenadas. |
 | 🥷 | **Operación sigilosa y defensa-consciente** | Recon de bajo ruido (rustscan→nmap dirigido, full-range con priorización de puertos altos), **detección heurística** (best-effort del agente) de WAF/IDS/IPS y **honeypots**, **anti-alboroto y anti-bucle deterministas** (C18/C19) y postura *BURNED* (repliegue a OSINT si te detectan). |
+| 👁️ | **Validación por visión** | `web-exploit` captura la evidencia con Playwright y **lee el PNG con visión** para confirmar/refutar el hallazgo (`visual_evidence[].vision_verdict`): sostiene el grado de prueba de los confirmados y descarta falsos positivos, con las capturas redactadas en zona E3. |
+| 🎮 | **Pilotaje interactivo (steering)** | El operador **redirige el engagement en marcha** (foco/pausa/abortar-vector/pista/subir-aprobación) por un canal propio que el orquestador aplica en los *seams*; una directiva **NUNCA relaja una puerta** (no amplía scope ni baja la supervisión). |
+| 🕸️ | **Attack-path exportable** | El grafo de la cadena multi-host (el propio blackboard) se exporta de forma determinista a **JSON/GraphML** (`tools/attack_path.py`) para informe/dashboard, con el mismo gate de reportabilidad y sin sacar datos E3. |
 | 🧩 | **Multiplataforma** | Claude Code (CLI + extensión de VS Code) y espejo para opencode. |
 
 ## Arquitectura
@@ -508,6 +511,11 @@ especificar antes de ejecutar, y auditar la coherencia antes de reportar.
 - **Regla de evidencia:** sin fuente, no se explota; sin evidencia, no es un hallazgo.
 - **Gobierno por [CONSTITUTION.md](CONSTITUTION.md)** y auditoría de coherencia previa al informe.
 - **Capa de guardarraíles deterministas** (gate de alcance, validación del blackboard, **aislamiento del sistema de archivos** —confina Read/Grep/Glob y rechaza symlinks/traversal—, anti-inyección en 27 agentes, detector de secretos, kill-switch de consumo, **validador del bus A2A** —emisor/destino conocidos + topología de pares + techo de hops—, **auditoría de subagentes**, **sanitización de la memoria de aprendizaje**, **anti-alboroto**, **anti-bucle** y **circuit-breaker por host** —corta el machaque de un target caído/baneado—) mapeada a OWASP LLM Top 10 — ver [GUARDRAILS.md](GUARDRAILS.md).
+- **El pilotaje del operador no relaja ninguna puerta:** las directivas de *steering* son intención del
+  operador, no órdenes que salten las guardas — `steering.py` rechaza en origen cualquier tipo que ampliaría
+  el scope, permitiría daño o **bajaría** la supervisión (`raise-approval` solo endurece), y los gates
+  deterministas corren **fuera del prompt**. El proxy HTTP de captura (opcional) es además un **choke-point de
+  alcance** (rechaza fuera de scope, como cinturón sobre `scope_guard`) con transcript redactado (E3).
 - **Historial de versiones** en [CHANGELOG.md](CHANGELOG.md) (SemVer) y en las [releases](https://github.com/devPruebaDataunix/Data-Attack-Offensive-Tools/releases).
 
 ## Referencia de comandos
@@ -597,7 +605,8 @@ cyberseg-agents/
 ├── docs/           → referencias, protocolo de handoff, guía de informe, humanizer
 │   └── assets/     → banner y guía de estilo visual
 ├── templates/      → plantilla de informe + brief del engagement
-├── tools/          → análisis de coherencia + generador del mapa de arquitectura
+├── tools/          → kit del engagement: attack-path (grafo), proxy HTTP + diff-scope, steering,
+│                     screenshot (visión), consenso, sesión/TOTP, análisis de coherencia y mapa de arquitectura
 ├── rag/            → RAG de vulnerabilidades KEV+EPSS+recientes (SQLite)
 │   ├── knowledge/  → RAG de conocimiento: técnicas (Capa 1 estructurada + Capa 2 semántica) + canon OWASP
 │   ├── context/    → RAG de contexto per-engagement (efímero, aislado por engagement, EN-ZONA)

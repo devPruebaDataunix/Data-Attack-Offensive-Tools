@@ -4,6 +4,21 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.62.1] - 2026-07-23
+### Fixed
+- **Auditoría de incongruencias del README (doc-only, sin cambio de comportamiento).** Detectadas y corregidas
+  omisiones/descripciones desactualizadas frente a la capacidad real tras v2.57–v2.62:
+  - **Estructura del repositorio:** la descripción de `tools/` decía solo "análisis de coherencia + generador
+    del mapa de arquitectura"; ahora refleja el kit del engagement (attack-path, proxy HTTP + diff-scope,
+    steering, screenshot/visión, consenso, sesión/TOTP).
+  - **Características clave:** añadidas tres capacidades marquesina que faltaban — **validación por visión**
+    (v2.58), **pilotaje interactivo/steering** (v2.61) y **exportador de attack-path** (v2.59).
+  - **Seguridad:** documentado que el *steering* del operador **nunca relaja una puerta** (`steering.py`
+    rechaza tipos relajantes; `raise-approval` solo endurece) y que el proxy HTTP es un **choke-point de
+    alcance** con transcript redactado (E3).
+- Verificado coherente: 29 agentes, 4 RAG (sección + estructura + diagrama), circuit-breaker/`fs_guard` y
+  `benchmark/`+`run_gate` ya presentes. Revisión inline (doc-only, sin council de subagentes).
+
 ## [2.62.0] - 2026-07-23
 ### Added
 - **Endurecimiento del eval-harness (prerrequisito de SkillOpt).** Prepara `benchmark/` para un futuro
