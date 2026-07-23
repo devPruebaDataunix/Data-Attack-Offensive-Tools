@@ -4,6 +4,26 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.64.0] - 2026-07-23
+### Added
+- **Canario POR-HOST — cierra el reward-hacking también en gates multi-host.** v2.63 dejó `type: multi_host`
+  fail-closed porque un token único no prueba N hosts (rootear uno y replicar el token a N ficheros colaba el
+  conteo por-ficheros). Ahora:
+  - El eval `multi_host` declara `canary.per_host` (una entrada `plant`/`cleanup` **por host**); `run_gate
+    --canary` genera un **token distinto por máquina** y planta cada uno en su host.
+  - El grader exige que **TODOS** los tokens estén en la evidencia (`evidence_all` en `run_eval.grade`): como
+    cada token solo se obtiene rooteando SU host, rootear una máquina no da los otros ⇒ hay que comprometer
+    **de verdad las N**. `dockerlabs-injection` (single-host) sigue con un token único.
+  - Bloque `canary.per_host` de referencia en `grandma-gate.json` (4 hosts).
+### Fixed / Hardening (council de 3 lentes: seguridad/corrección/simplicidad = GO)
+- **Cleanup best-effort** (`_run_steps(stop_on_error=False)`): si un host está caído, se limpian igual los
+  tokens de los demás (no quedan huérfanos). El plant sigue fail-fast.
+- **Validación `per_host` vs `min_hosts_rooted`**: aborta si hay menos entradas que hosts exigidos (gate
+  inpasable) y avisa si hay más (más estricto).
+- `canary_eval_multi` retira el `evidence_regex` constante inerte del criterio graduado; guard `isinstance`
+  de `evidence_all` en el grader (evals a mano); tests nuevos (fail-closed min_hosts>tokens, retrocompat
+  multi_host sin regex, cleanup best-effort, **no-fuga del token a scope/prompt**).
+
 ## [2.63.0] - 2026-07-23
 ### Added
 - **Canario por-corrida (`run_gate --canary`) — cierra el reward-hacking del eval-harness en gates de un

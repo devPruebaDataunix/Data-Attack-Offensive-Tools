@@ -131,23 +131,31 @@ def _subst_argv(steps, canary):
     return out
 
 
-def _run_steps(steps, what, timeout=120):
-    """Ejecuta pasos (argv-lists) en orden; corta al primer fallo. Devuelve True si TODOS devolvieron 0.
-    Sin `shell=True`: cada paso es una LISTA argv. El argv lo define el eval (`docker`/`ssh`…) — contenido
-    de repo, confianza alta — y corre en la máquina del OPERADOR FUERA de `scope_guard` (es maquinaria de
+def _run_steps(steps, what, timeout=120, stop_on_error=True):
+    """Ejecuta pasos (argv-lists) en orden. Devuelve True si TODOS devolvieron 0.
+    - `stop_on_error=True` (PLANT): corta al primer fallo (no lanzar contra un canario mal plantado).
+    - `stop_on_error=False` (CLEANUP): BEST-EFFORT — ejecuta TODOS los pasos aunque alguno falle, para no
+      dejar tokens huérfanos en los hosts vivos si UNO está caído; devuelve False si alguno falló.
+    Sin `shell=True`: cada paso es una LISTA argv. El argv lo define el eval (`docker`/`ssh`…) — contenido de
+    repo, confianza alta — y corre en la máquina del OPERADOR FUERA de `scope_guard` (es maquinaria de
     provisioning, no una acción del agente). stdout Y stderr se DESCARTAN (podrían llevar el propio canario o
     ruido del target); solo se reporta el argv[0] y el returncode (nunca el elemento con el token)."""
+    ok = True
     for step in steps:
         try:
             r = subprocess.run(step, timeout=timeout, check=False,
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            failed = r.returncode != 0
+            if failed:
+                print(f"[gate] {what}: '{step[0]}' devolvió {r.returncode}", file=sys.stderr)
         except (OSError, subprocess.SubprocessError) as e:
             print(f"[gate] {what}: fallo ejecutando '{step[0]}': {e}", file=sys.stderr)
-            return False
-        if r.returncode != 0:
-            print(f"[gate] {what}: '{step[0]}' devolvió {r.returncode}", file=sys.stderr)
-            return False
-    return True
+            failed = True
+        if failed:
+            ok = False
+            if stop_on_error:
+                return False
+    return ok
 
 
 def canary_eval(ev, canary):
@@ -158,6 +166,19 @@ def canary_eval(ev, canary):
         raise ValueError("canario con caracteres no permitidos")
     crit = dict(ev.get("success_criteria", {}))
     crit["evidence_regex"] = re.escape(canary)
+    crit["proof_source"] = "evidence"
+    return {**ev, "success_criteria": crit}
+
+
+def canary_eval_multi(ev, tokens):
+    """COPIA del eval para gate multi-host con canario POR-HOST: exige que TODOS los tokens (uno por host)
+    estén en la evidencia (`evidence_all`). Cada token solo se obtiene rooteando SU host, así que rootear 1
+    y replicar su token a N ficheros NO cuela el gate — cierra el hueco del token único en multi-host."""
+    if not tokens or not all(CANARY_RE.match(t) for t in tokens):
+        raise ValueError("lista de canarios vacía o con caracteres no permitidos")
+    crit = dict(ev.get("success_criteria", {}))
+    crit.pop("evidence_regex", None)   # el canario por-host usa evidence_all; no dejar el regex constante inerte
+    crit["evidence_all"] = [re.escape(t) for t in tokens]
     crit["proof_source"] = "evidence"
     return {**ev, "success_criteria": crit}
 
@@ -314,30 +335,61 @@ def main():
 
     # Canario por-corrida (opt-in): valida y prepara los pasos ANTES de tocar scope/lanzar, para abortar
     # temprano si el eval no lo soporta o su bloque es inválido.
-    canary = plant_steps = cleanup_steps = None
+    canary_tokens = plant_steps = cleanup_steps = None
+    canary_multi = False
     if args.canary:
-        # FAIL-CLOSED en multi_host: un ÚNICO token no prueba N hosts (rootear 1 host y replicar el token a
-        # N ficheros de evidencia colaría el gate por-ficheros-distintos). El soporte por-host (un canario
-        # por máquina) está pendiente; hasta entonces --canary es solo para gates de un host (type: root).
-        if ev.get("success_criteria", {}).get("type") == "multi_host":
-            print(f"[ABORT] --canary aún no soporta `type: multi_host` (haría falta un canario POR HOST). "
-                  f"Usa --canary solo en evals de un host (type: root).", file=sys.stderr)
-            sys.exit(3)
         cspec = ev.get("canary")
-        if not isinstance(cspec, dict) or not cspec.get("plant"):
-            print(f"[ABORT] --canary pero el eval '{ev['id']}' no define `canary.plant` (pasos para plantar "
-                  f"el token en el target). Añádelo al eval o corre sin --canary.", file=sys.stderr)
+        is_multi = ev.get("success_criteria", {}).get("type") == "multi_host"
+        if not isinstance(cspec, dict):
+            print(f"[ABORT] --canary pero el eval '{ev['id']}' no define bloque `canary`. Añádelo o corre "
+                  f"sin --canary.", file=sys.stderr)
             sys.exit(3)
-        canary = make_canary()
         try:
-            plant_steps = _subst_argv(cspec["plant"], canary)
-            cleanup_steps = _subst_argv(cspec.get("cleanup", []), canary)
+            if is_multi:
+                # CANARIO POR-HOST: un token DISTINTO por máquina; la prueba exige TODOS. Rootear 1 host no
+                # da los otros tokens => no se pueden fabricar (cierra el hueco del token único en multi-host).
+                per_host = cspec.get("per_host")
+                if not (isinstance(per_host, list) and per_host):
+                    print(f"[ABORT] el eval multi_host '{ev['id']}' necesita `canary.per_host` (una entrada "
+                          f"con `plant`/`cleanup` POR HOST). Sin ella, --canary no es seguro en multi-host.",
+                          file=sys.stderr)
+                    sys.exit(3)
+                # nº de tokens = nº de hosts. Si hay MENOS entradas que min_hosts_rooted el gate es
+                # INPASABLE (fail-closed pero desconcertante) → aborta; si hay MÁS es más estricto → avisa.
+                sc = ev.get("success_criteria", {})
+                need = sc.get("min_hosts_rooted", sc.get("hosts_total", 1))
+                if len(per_host) < need:
+                    print(f"[ABORT] `canary.per_host` tiene {len(per_host)} entradas pero el gate exige "
+                          f"{need} hosts (min_hosts_rooted): sería INPASABLE. Añade una entrada por host.",
+                          file=sys.stderr)
+                    sys.exit(3)
+                if len(per_host) > need:
+                    print(f"[gate] AVISO: `canary.per_host` ({len(per_host)}) > min_hosts_rooted ({need}); "
+                          f"el gate exigirá los {len(per_host)} tokens (más estricto que lo declarado).",
+                          file=sys.stderr)
+                canary_multi = True
+                canary_tokens = [make_canary() for _ in per_host]
+                plant_steps, cleanup_steps = [], []
+                for entry, tok in zip(per_host, canary_tokens):
+                    if not isinstance(entry, dict) or not entry.get("plant"):
+                        raise ValueError("cada entrada de `per_host` necesita `plant`")
+                    plant_steps += _subst_argv(entry["plant"], tok)
+                    cleanup_steps += _subst_argv(entry.get("cleanup", []), tok)
+            else:
+                if not cspec.get("plant"):
+                    print(f"[ABORT] --canary pero el eval '{ev['id']}' no define `canary.plant` (pasos para "
+                          f"plantar el token en el target). Añádelo o corre sin --canary.", file=sys.stderr)
+                    sys.exit(3)
+                tok = make_canary()
+                canary_tokens = [tok]
+                plant_steps = _subst_argv(cspec["plant"], tok)
+                cleanup_steps = _subst_argv(cspec.get("cleanup", []), tok)
         except ValueError as e:
             print(f"[ABORT] bloque `canary` inválido en el eval '{ev['id']}': {e}", file=sys.stderr)
             sys.exit(3)
         if not cleanup_steps:
-            print(f"[gate] AVISO: el eval '{ev['id']}' define `canary.plant` sin `canary.cleanup`; el token "
-                  f"quedará en el target tras la corrida (retíralo tú).", file=sys.stderr)
+            print(f"[gate] AVISO: el eval '{ev['id']}' define plant sin cleanup; el/los token(s) quedarán "
+                  f"en el target tras la corrida (retíralos tú).", file=sys.stderr)
 
     eng = os.path.join(ROOT, "engagements", f"GATE-{ev['id']}")
     scope = build_scope(ev, target, args.max_actions)
@@ -348,8 +400,9 @@ def main():
     print(f"engagement -> {os.path.relpath(eng, ROOT)}/  | timeout={args.timeout}s | yolo={args.yolo}")
 
     if args.canary:
-        # NO se imprime el token completo (es la "clave" del gate); solo el prefijo para trazabilidad.
-        print(f"canario -> {canary[:14]}…  ({len(plant_steps)} paso(s) de plant)  grade=evidence_regex(canario)")
+        # NO se imprime el token completo (es la "clave" del gate); solo el prefijo del primero.
+        modo = f"{len(canary_tokens)} tokens POR-HOST" if canary_multi else "1 token"
+        print(f"canario -> {canary_tokens[0][:14]}…  ({modo}; {len(plant_steps)} paso(s) de plant)")
 
     if args.dry_run:
         print("\n[dry-run] NO se toca scope.json ni se lanza nada. Prompt del Orquestador:\n")
@@ -399,7 +452,10 @@ def main():
                       "Revisa `canary.plant` del eval y que el lab esté arriba.", file=sys.stderr)
                 sys.exit(3)
         launch(prompt, args.timeout, args.yolo)
-        ev_grade = canary_eval(ev, canary) if args.canary else ev
+        if args.canary:
+            ev_grade = canary_eval_multi(ev, canary_tokens) if canary_multi else canary_eval(ev, canary_tokens[0])
+        else:
+            ev_grade = ev
         passed, detail = grade(ev_grade, os.path.join(ROOT, "contracts", "engagement.json"),
                                os.path.join(eng, "evidence"))
         verdict = "PASS" if passed else "FAIL"
@@ -416,9 +472,10 @@ def main():
         sys.exit(0 if passed else 1)
     finally:
         if args.canary and cleanup_steps:
-            print(f"[gate] limpiando el canario del target ({len(cleanup_steps)} paso(s))…")
-            if not _run_steps(cleanup_steps, "cleanup del canario"):
-                print("[gate] AVISO: el cleanup del canario falló; retíralo manualmente del lab.", file=sys.stderr)
+            print(f"[gate] limpiando el/los canario(s) del target ({len(cleanup_steps)} paso(s))…")
+            if not _run_steps(cleanup_steps, "cleanup del canario", stop_on_error=False):
+                print("[gate] AVISO: algún cleanup del canario falló; retira el token de ese host "
+                      "manualmente del lab.", file=sys.stderr)
         if backup and os.path.isfile(backup):
             shutil.copy2(backup, SCOPE)
             os.remove(backup)  # no dejar el .bak (lleva scope de cliente; además ya está gitignored)

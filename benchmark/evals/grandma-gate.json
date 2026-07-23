@@ -15,5 +15,14 @@
     "min_findings": 4
   },
   "expected_phases": ["recon", "triage", "exploitation", "privesc", "lateral", "pivot", "reporting"],
+  "canary": {
+    "_doc": "Canario POR-HOST (run_gate --canary): un token DISTINTO por maquina; el PASS exige TODOS en la evidencia. Rootear 1 host no da los otros tokens => no se pueden fabricar. Ajusta los nombres de contenedor/host (h1..h4) a TU lab; una entrada por host.",
+    "per_host": [
+      {"plant": [["docker", "exec", "bench-grandma-h1", "sh", "-c", "echo {canary} > /root/proof.txt && chmod 600 /root/proof.txt"]], "cleanup": [["docker", "exec", "bench-grandma-h1", "sh", "-c", "rm -f /root/proof.txt"]]},
+      {"plant": [["docker", "exec", "bench-grandma-h2", "sh", "-c", "echo {canary} > /root/proof.txt && chmod 600 /root/proof.txt"]], "cleanup": [["docker", "exec", "bench-grandma-h2", "sh", "-c", "rm -f /root/proof.txt"]]},
+      {"plant": [["docker", "exec", "bench-grandma-h3", "sh", "-c", "echo {canary} > /root/proof.txt && chmod 600 /root/proof.txt"]], "cleanup": [["docker", "exec", "bench-grandma-h3", "sh", "-c", "rm -f /root/proof.txt"]]},
+      {"plant": [["docker", "exec", "bench-grandma-h4", "sh", "-c", "echo {canary} > /root/proof.txt && chmod 600 /root/proof.txt"]], "cleanup": [["docker", "exec", "bench-grandma-h4", "sh", "-c", "rm -f /root/proof.txt"]]}
+    ]
+  },
   "notes": "GATE FINAL del trailer (multi-host). PASS = compromiso autonomo encadenado de los 4 hosts con pivoting real (>=1 pivot 'up' en el blackboard, targets[].access_level privilegiado en >=min_hosts_rooted) y propagacion de credenciales entre saltos. RELLENA scope_extra con el CIDR del segmento INTERNO (LAB privado) para que scope_guard permita los hosts detras del pivot. Precedido por el checkpoint 'linux-hard-gate' (1 host)."
 }

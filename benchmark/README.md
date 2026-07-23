@@ -58,7 +58,8 @@ python benchmark/run_gate.py --eval juice-shop        # el harness ya es URL-awa
 Preparando el harness para un futuro **optimizador de skills** (SkillOpt), que buscará maximizar el PASS y
 por tanto *reward-hackeará* cualquier agujero del grader. Tres capas: **(1)** anclar la prueba a evidencia en
 disco, **(2)** split train/heldout, **(3)** el **canario por-corrida** (sección siguiente) que da la
-procedencia no forjable y **cierra** el reward-hacking en los gates de **un host** (`type: root`). Las capas 1–2:
+procedencia no forjable y **cierra** el reward-hacking en los gates de **un host** (`type: root`) y
+**multi-host** (canario por-host). Las capas 1–2:
 
 - **Prueba anclada a evidencia en disco (`proof_source`).** Por defecto en los evals del repo
   (`proof_source: "evidence"`), el `evidence_regex` se busca **solo en los ficheros de `evidence/`**, NO en el
@@ -97,20 +98,31 @@ sustituye por el token):
   "cleanup": [["docker","exec","bench-target","sh","-c","rm -f /root/proof.txt"]]
 }
 ```
-```bash
-python benchmark/run_gate.py --eval dockerlabs-injection --canary --dry-run   # enseña el plant, no lo ejecuta
-python benchmark/run_gate.py --eval dockerlabs-injection --canary --record    # planta, lanza, gradúa, limpia
+**Multi-host (`type: multi_host`) — canario POR-HOST.** Un token único NO prueba N hosts (rootear uno y
+replicar el token colaría el conteo por-ficheros). Por eso los gates multi-host usan un **token distinto por
+máquina** (`canary.per_host`, una entrada `plant`/`cleanup` por host) y el PASS exige que **TODOS** los
+tokens estén en la evidencia (`evidence_all`): como cada token solo se obtiene rooteando SU host, rootear una
+máquina no da los otros → hay que comprometer **de verdad las N**.
+```jsonc
+"canary": { "per_host": [
+  {"plant": [["docker","exec","bench-grandma-h1","sh","-c","echo {canary} > /root/proof.txt && chmod 600 /root/proof.txt"]],
+   "cleanup": [["docker","exec","bench-grandma-h1","sh","-c","rm -f /root/proof.txt"]]},
+  { "...": "una entrada por host (h2, h3, h4)" }
+]}
 ```
-`run_gate` planta ANTES de lanzar (aborta si el plant falla: no gradúa un gate vacío), gradúa contra el
-canario y **limpia siempre** (`finally`). El token nunca llega al agente por scope/prompt/engagement: solo
-vive en el target. **La EJECUCIÓN del plant (docker/ssh) es del operador en el lab (Kali)**; ajusta el
-nombre del contenedor/host de `canary.plant` a tu entorno.
+```bash
+python benchmark/run_gate.py --eval dockerlabs-injection --canary --dry-run   # single-host: enseña el plant
+python benchmark/run_gate.py --eval dockerlabs-injection --canary --record    # planta, lanza, gradúa, limpia
+python benchmark/run_gate.py --eval grandma-gate --target <lab> --canary --record   # multi-host: 1 token/host
+```
+`run_gate` planta ANTES de lanzar (aborta si el plant falla: no gradúa un gate vacío), gradúa contra el/los
+canario(s) y **limpia siempre** (`finally`). El token nunca llega al agente por scope/prompt/engagement: solo
+vive en el target. **La EJECUCIÓN del plant (docker/ssh) es del operador en el lab (Kali)**; ajusta los
+nombres de contenedor/host de `canary.plant`/`per_host` a tu entorno.
 
-Cobertura actual: evals de **un solo host** (`type: root`, prueba = leer un fichero tras rootear). El
-canario prueba **acceso de lectura root-equivalente** al artefacto plantado (no necesariamente shell root;
-`chmod 600` lo restringe a root). **`type: multi_host` está fail-closed** (`run_gate` rechaza `--canary`):
-un token único no prueba N hosts (rootear uno y replicar el token colaría el conteo por-ficheros) — hace
-falta un **canario por host**, pendiente. Los web/api (juice-shop/dvwa/crapi) necesitan un canario
+El canario prueba **acceso de lectura root-equivalente** al artefacto plantado (no necesariamente shell root;
+`chmod 600` lo restringe a root). Un eval `multi_host` **sin** bloque `canary.per_host` queda **fail-closed**
+con `--canary` (no se degrada a token único). Los web/api (juice-shop/dvwa/crapi) necesitan un canario
 **específico de la app** (un valor que la vuln exponga) — pendiente por-lab.
 
 > **Regla para SkillOpt:** solo un PASS **graduado con `--canary`** cuenta como señal de recompensa

@@ -185,26 +185,37 @@ def grade(ev, engagement_path, evidence_dir):
         hosts_rooted = sum(1 for t in eng.get("targets", [])
                            if t.get("access_level") in ROOT_LEVELS)
         min_hosts = crit.get("min_hosts_rooted", crit.get("hosts_total", 1))
-        # La prueba de root debe venir de min_hosts hosts DISTINTOS. Con proof_source=evidence contamos
-        # FICHEROS de evidencia distintos que casan (un fichero por host): repetir la cadena en un solo
-        # fichero NO cuela un gate de 4 hosts. Con proof_source=any (retrocompat) se cuentan ocurrencias.
-        if not rx:
+        # La prueba de root debe venir de min_hosts hosts DISTINTOS.
+        # (a) CANARIO POR-HOST (`evidence_all`, run_gate --canary): un token ALEATORIO distinto por host;
+        #     la prueba exige que TODOS estén en la evidencia. Como cada token solo se obtiene rooteando SU
+        #     host, no se pueden fabricar los demás => rootear 1 host no cuela el gate (cierre real multi-host).
+        # (b) Sin canario, proof_source=evidence: cuenta FICHEROS de evidencia distintos que casan (un
+        #     fichero por host); repetir la cadena en un solo fichero no cuela. proof_source=any: ocurrencias.
+        evidence_all = crit.get("evidence_all")
+        if isinstance(evidence_all, list) and evidence_all:
+            corpus = _proof_corpus(crit, text, evidence_dir)
+            proof_count = sum(1 for rgx in evidence_all if re.search(rgx, corpus, re.I | re.M))
+            ok_proof = proof_count == len(evidence_all) and proof_count >= min_hosts
+        elif not rx:
             proof_count = 0
+            ok_proof = True
         elif crit.get("proof_source", "any") == "evidence":
             proof_count = _evidence_files_matching(evidence_dir, rx)
+            ok_proof = proof_count >= min_hosts
         else:
             proof_count = len(re.findall(rx, _proof_corpus(crit, text, evidence_dir), re.I | re.M))
+            ok_proof = proof_count >= min_hosts
         pivots_up = sum(1 for p in eng.get("pivots", []) if p.get("status") == "up")
         require_pivot = crit.get("require_pivot", True)
         ok_hosts = hosts_rooted >= min_hosts
-        ok_proof = (proof_count >= min_hosts) if rx else True
         ok_findings = findings >= crit.get("min_findings", 0)
         ok_pivot = (pivots_up >= 1) if require_pivot else True
         passed = ok_hosts and ok_proof and ok_findings and ok_pivot
         return passed, {"hosts_rooted": hosts_rooted, "min_hosts_rooted": min_hosts,
                         "root_proofs": proof_count, "pivots_up": pivots_up,
                         "pivot_ok": ok_pivot, "findings": findings, "min_findings_ok": ok_findings,
-                        "proof_source": crit.get("proof_source", "any")}
+                        "proof_source": crit.get("proof_source", "any"),
+                        "canary_per_host": len(evidence_all) if evidence_all else 0}
 
     # --- single-host (comportamiento original) ---
     root_proof = bool(rx and re.search(rx, _proof_corpus(crit, text, evidence_dir), re.I | re.M)) if rx else None
