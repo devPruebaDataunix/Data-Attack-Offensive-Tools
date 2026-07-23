@@ -111,6 +111,7 @@ hops anti-bucle).
 | 🖥️ | **Panel TUI de control total** | Terminal (Textual) por pestañas: estado, **bus A2A**, roster de agentes, **presupuesto/coste**, RAG, evidencia y **acciones** (kill-switch, delegación dirigida, override de fase) — con las mismas puertas que el bot; el **registro persiste y sobrevive a reinicios**. |
 | 📊 | **Analítica de coste local** | [agentsview](https://github.com/kenn-io/agentsview) (local-first) lee `~/.claude/projects/` → coste y actividad por agente en `127.0.0.1:8080`. Re-medir el gasto sin sacar datos. |
 | 🧠 | **Aprendizaje por agente** | Cada especialista de explotación/triage acumula su propia memoria local de **técnica** (`memory: local`, per-operador), saneada de forma **determinista** por `memory_guard.py` (sin datos de cliente); `knowledge-postmortem` la consolida al cierre y guarda lecciones en el blackboard. |
+| 🎯 | **Auto-medición + mejora de skills** | Un **eval-harness** (`benchmark/`, EDD + pass@k) mide el cierre autónomo contra labs, con **canario por-corrida** que ancla la prueba a un token inforjable (anti-reward-hack). Sobre él, un **optimizador de skills** (`skilltrain/`, LAB-only, build-time) mejora la metodología sin reentrenar el modelo; el reward solo cuenta un PASS con canario y ningún despliegue es automático (humano + revisión). |
 | 🌐 | **Multi-host y pivoting** | Cadenas a través de hosts comprometidos: pivot (ligolo-ng), estado multi-host en el blackboard y propagación de credenciales (reuse/pass-the-hash/spray) para cerrar máquinas encadenadas. |
 | 🥷 | **Operación sigilosa y defensa-consciente** | Recon de bajo ruido (rustscan→nmap dirigido, full-range con priorización de puertos altos), **detección heurística** (best-effort del agente) de WAF/IDS/IPS y **honeypots**, **anti-alboroto y anti-bucle deterministas** (C18/C19) y postura *BURNED* (repliegue a OSINT si te detectan). |
 | 👁️ | **Validación por visión** | `web-exploit` captura la evidencia con Playwright y **lee el PNG con visión** para confirmar/refutar el hallazgo (`visual_evidence[].vision_verdict`): sostiene el grado de prueba de los confirmados y descarta falsos positivos, con las capturas redactadas en zona E3. |
@@ -571,6 +572,8 @@ Chuleta de todo lo ejecutable, por categoría. Salvo que se indique otra cosa, l
 | `python rag/knowledge/query_kb.py --semantic "<pregunta>" --k 6` | Recuperación por significado (Capa 2). |
 | `python rag/knowledge/query_kb.py --stats` | Cobertura de ambas capas del RAG de conocimiento (verificar población). |
 | `python benchmark/run_gate.py --eval <id> --target <lab>` | Lanza + gradúa el GATE contra un lab (LAB-only). |
+| `python benchmark/run_gate.py --eval <id> --canary --record` | + canario por-corrida: la prueba es un token inforjable plantado en el target (anti-reward-hack). |
+| `python skilltrain/optimize.py --config skilltrain/config.json --dry-run` | Plan del optimizador de skills (SkillOpt, LAB-only, build-time). |
 | `python tools/tune_maxturns.py` | Recomienda `maxTurns` por agente según los turnos reales usados. |
 
 ### 🐳 Docker (alternativa al despliegue de host)
@@ -611,7 +614,10 @@ cyberseg-agents/
 │   ├── knowledge/  → RAG de conocimiento: técnicas (Capa 1 estructurada + Capa 2 semántica) + canon OWASP
 │   ├── context/    → RAG de contexto per-engagement (efímero, aislado por engagement, EN-ZONA)
 │   └── triage/     → RAG de política de programa (bug bounty: do-not-report + aceptación H1/Bugcrowd/Intigriti/YWH; advisory)
-├── benchmark/      → eval-harness (EDD + pass@k): mide la capacidad de cierre autónomo
+├── benchmark/      → eval-harness (EDD + pass@k): mide el cierre autónomo, con canario por-corrida
+│                     (run_gate --canary) que ancla la prueba a un token inforjable plantado en el target
+├── skilltrain/     → optimizador de skills (SkillOpt, LAB-only, build-time): mejora el texto de una skill
+│                     contra el eval-harness; reward SOLO por PASS canario; no forma parte del runtime
 ├── bot/            → bot de Telegram (Claude Agent SDK) + clasificador de riesgo
 ├── deploy/         → auto-deploy y verificación del toolchain en Kali (+ Docker: Dockerfile/compose)
 ├── dryrun/         → prueba end-to-end segura (sin atacar)

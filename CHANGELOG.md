@@ -4,6 +4,18 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.65.1] - 2026-07-23
+### Fixed
+- **README principal actualizado con el eval-harness/canario y `skilltrain` (doc-only).** Verificada la
+  coherencia frente a v2.63–v2.65:
+  - **Estructura del repositorio:** añadido `skilltrain/` (optimizador de skills, LAB-only, build-time) y
+    ampliada la línea de `benchmark/` con el **canario por-corrida** (`run_gate --canary`).
+  - **Características clave:** nueva fila "Auto-medición + mejora de skills" (eval-harness + pass@k + canario
+    anti-reward-hack + SkillOpt LAB-only, sin despliegue automático).
+  - **Referencia de comandos:** `run_gate --canary --record` y `skilltrain/optimize.py --dry-run`.
+- Verificado: ficheros referenciados existen; 29 agentes / 4 RAG / 16 skills / C1–C22 sin cambios; sin
+  incongruencias nuevas. Revisión inline (doc-only, sin council de subagentes).
+
 ## [2.65.0] - 2026-07-23
 ### Added
 - **Andamiaje de SkillOpt (`skilltrain/`) — LAB-ONLY, build-time.** Optimiza el TEXTO de metodología de una
