@@ -52,3 +52,8 @@ deploy/*.log
 
 # Cache local del council de revisión (no versionar: notas de revisión efímeras)
 .claude/council-cache/
+
+# SkillOpt (skilltrain): salida y config locales (build-time, LAB-only) — no versionar
+skilltrain/out/
+skilltrain/config.json
+skilltrain/**/__pycache__/

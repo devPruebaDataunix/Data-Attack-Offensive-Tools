@@ -1,0 +1,17 @@
+{
+  "_doc": "Config de SkillOpt (skilltrain). LAB-ONLY, build-time. Copia a config.json y ajusta. Ver README.",
+  "skill": "web-app-security",
+  "train_split": "train",
+  "heldout_split": "heldout",
+  "k": 3,
+  "max_iters": 5,
+  "candidates_per_iter": 3,
+  "provider": "opencode",
+  "accept_on": "heldout_improves",
+  "_notes": {
+    "skill": "nombre bajo plugin/skills/<skill>/SKILL.md que se optimiza (empezar por web-app-security: tiene evals).",
+    "k": "pass@k por eval (run_gate --record). Reward = fracción de PASS canario.",
+    "provider": "opencode (NVIDIA free, rollouts LAB baratos) o claude (CLI). Cloud NUNCA para E2/cliente.",
+    "accept_on": "heldout_improves = solo se adopta un candidato si sube el score en heldout (anti-overfit)."
+  }
+}

@@ -4,6 +4,35 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.65.0] - 2026-07-23
+### Added
+- **Andamiaje de SkillOpt (`skilltrain/`) — LAB-ONLY, build-time.** Optimiza el TEXTO de metodología de una
+  skill (`plugin/skills/<name>/SKILL.md`) para subir el close-rate autónomo del motor en el eval-harness, sin
+  reentrenar el modelo (idea: `microsoft/SkillOpt`). NO forma parte del runtime del producto.
+  - `scorer.py` — reward = pass@k de `run_gate --canary`, con **HARD-GATE anti-reward-hack**: se niega a
+    puntuar un eval que no sea *canary-capable* (`canary.plant` / `canary.per_host`); solo el canario
+    inforjable (v2.63/v2.64) cuenta como recompensa.
+  - `guard.py` — lint de gobernanza determinista: rechaza un candidato que toque los guards NOMBRADOS del
+    motor, use `--yolo`/`--dangerously-skip-permissions`, ponga `approval_mode=auto`, o traiga datos de
+    cliente (IP/JWT/clave). Preciso a propósito (una skill discute scope/bypass legítimamente).
+  - `apply_skill.py` — swap ATÓMICO de la SKILL.md candidata + restauración en `__exit__` (con
+    crash-recovery de backup huérfano); confinamiento de la ruta (anti-traversal).
+  - `optimize.py` — bucle rollout→reflect→score→**GATE heldout** (anti-overfit); escribe solo en
+    `skilltrain/out/best_skill.md` (NO auto-aplicado; despliegue exige humano+council). Los pasos que lanzan
+    modelo/agente (`rollout`/`reflect`) son *seams inyectables* (se verifican en Kali); `--dry-run` enseña el
+    plan (marca los evals no canary-capable como EXCLUIDOS).
+  - `README.md` (diseño + evaluación de integración: puntos muertos cerrados), `config.example.json`,
+    `test_skilltrain.py` (26 checks de las partes deterministas: guard, swap/restore/crash-recovery,
+    HARD-GATE canario, bucle con seams falsos).
+### Notes
+- **Gobernanza cableada:** reward SOLO por PASS canario · suelo de seguridad = hooks deterministas fuera del
+  prompt (una skill no puede desactivarlos) · confinamiento de escritura a `out/` · humano+council antes de
+  desplegar cualquier `best_skill.md`. `build_plugin.py` NO empaqueta `skilltrain/` (aislamiento de runtime);
+  `out/` y `config.json` gitignored.
+- **Council:** los 3 subagentes cayeron por límite de sesión de la cuenta → **review inline riguroso de los 3
+  lentes** (fallback sancionado). Hallazgo MEDIO cerrado: crash-recovery de backup huérfano en `SkillSwap`;
+  NITs (var muerta, umbral del print, validación de `accept_on`).
+
 ## [2.64.0] - 2026-07-23
 ### Added
 - **Canario POR-HOST — cierra el reward-hacking también en gates multi-host.** v2.63 dejó `type: multi_host`
