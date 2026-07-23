@@ -34,6 +34,7 @@ ENGAGEMENT = os.path.join(ROOT, "contracts", "engagement.json")
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 sys.path.insert(0, os.path.join(ROOT, ".claude", "hooks"))
 from redactor import is_loot_ref  # dialecto único de refs a loot/ (compartido)
+from urllib.parse import urlsplit
 try:
     from scope_guard import load_scope, domain_in_list, ip_in_scope, URL_RE, IP_RE
 except Exception:  # noqa: BLE001
@@ -45,8 +46,15 @@ def _err(msg):
 
 
 def _host_of(url):
-    m = URL_RE.match(url) if URL_RE else None
-    return (m.group(1) if m else re.sub(r"^\w+://", "", url).split("/")[0].split("@")[-1]).split(":")[0]
+    """Host RFC-correcto de una URL (o host suelto): DESCARTA el userinfo (`user:pass@`), baja a
+    minúsculas y soporta IPv6/puerto. Debe COINCIDIR con el host al que realmente conectan
+    http.client/Playwright — un parseo ingenuo que pare en el primer `:` deja pasar
+    `http://scope.example:x@evil.com/` como en-scope y luego conecta a evil.com (bypass de scope)."""
+    try:
+        h = urlsplit(url if "://" in str(url) else "http://" + str(url)).hostname
+    except ValueError:
+        return ""
+    return (h or "").strip("[]").lower()
 
 
 def in_scope(login_url, scope):

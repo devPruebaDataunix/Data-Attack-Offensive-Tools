@@ -4,6 +4,49 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.60.0] - 2026-07-23
+### Added
+- **Proxy HTTP con enforcement de scope + diff-scope PR-aware (track de integración; ideas de strix,
+  Apache-2.0 → reimplementación limpia, solo stdlib).** Quinto hito. Dos herramientas del anillo efímero
+  (mejora C).
+- **`tools/http_proxy.py`** — proxy de reenvío (stdlib `http.server`) por el que `web-exploit`/`api-exploit`/
+  navegador encaminan su tráfico: (1) deja un **transcript replayable** redactado en
+  `engagements/<id>/exploit/proxy-*.jsonl` (evidencia + diff de la misma request entre identidades del
+  arnés diferencial), y (2) es un **CHOKE POINT DE SCOPE** — rechaza (403) cada request/CONNECT a un host
+  FUERA de scope (cinturón sobre `scope_guard`, que solo ve el comando externo, no cada request). HTTPS por
+  túnel CONNECT (sin MITM ni CA: solo metadatos de conexión). Escucha en loopback.
+- **`tools/diff_scope.py`** — diff-scope PR-aware: calcula los ficheros cambiados entre `source_repos[].diff_base`
+  (nuevo campo opcional en `scope.json`) y HEAD del checkout, para que `code-recon` PRIORICE la superficie
+  que toca el PR. Lo corre el Orquestador (recon-prep) en el anillo; `code-recon` (sin Bash) LEE el resultado.
+- **Cableado:** notas en `code-recon` (consume el diff), `web-exploit`/`api-exploit` (encaminan por el
+  proxy) y AGENTS.md; `diff_base` documentado en `scope.example.json`.
+### Security
+- **El proxy NO relaja el scope: lo REFUERZA.** Fail-closed sin `scope.json` (no arranca). Cada request y
+  cada `CONNECT` se validan con `acquire_session.in_scope` (misma semántica que el gate). No es un proxy
+  abierto: solo alcanza hosts EN SCOPE, escucha en 127.0.0.1 y corre en el anillo sin egress. Transcript E3:
+  confinado a `engagements/<id>/exploit/`, cabeceras sensibles (Authorization/Cookie/…) redactadas enteras,
+  resto de valores y cuerpos (truncados) por `redactor.redact`; el material vivo del tester no queda en claro.
+- **`diff_scope` anti-inyección + confinado.** El `diff_base` se valida como ref de git plausible (nunca
+  empieza por `-`, sin `..`/metacaracteres) y se pasa por lista tras `--` (sin shell) → no puede colar una
+  opción (`--upload-pack=…`) ni un comando. El checkout se confina por realpath a `<id>/recon/src/` (rechaza
+  traversal/symlink); `git diff --name-only` es solo-lectura y no sale a la red. Como el código de cliente
+  es contenido HOSTIL, git corre con `GIT_CONFIG_NOSYSTEM=1` + `core.fsmonitor=`/`core.hooksPath=/dev/null`
+  (defensa en profundidad sobre el anillo).
+- **Endurecido por council (3 lentes).** Se CERRÓ un **bypass de scope reproducido**: `_host_of` (compartido
+  con `scope_guard`/`acquire_session`) usaba un parseo que paraba en el primer `:`, así que
+  `http://scope.example:x@evil.com/` validaba como en-scope pero el proxy conectaba a `evil.com` (SSRF a
+  127.0.0.1:22 / metadata cloud / dominio externo). Ahora `_host_of` parsea con `urlsplit` (RFC — descarta
+  userinfo, minúsculas, IPv6/puerto) y `_forward` valida y conecta con EL MISMO host — el proxy ya no es más
+  débil que el gate. Además: `Content-Length` inválido/negativo/gigante → 400/413 (anti-DoS/anti-cuelgue);
+  upstream con HTTP malformado → 502 limpio (antes tiraba el handler y perdía la evidencia); respuesta sin
+  cabeceras DUPLICADAS (`Content-Length`/`Server`/`Date`, corrige el conflicto en HEAD); `proxy-authorization`
+  no se propaga al upstream; `--host` no-loopback exige `--allow-nonloopback` con aviso.
+### Tests
+- `tests/test_http_proxy.py` (redacción de cabeceras/cuerpo, fail-closed sin scope, e **integración
+  LOOPBACK real**: target + proxy + cliente → reenvío EN SCOPE, 403 fuera de scope, transcript redactado).
+- `tests/test_diff_scope.py` (validación de ref anti-inyección, confinamiento del checkout, y cálculo real
+  de ficheros cambiados con git). Sin agente nuevo → roster 29 intacto.
+
 ## [2.59.0] - 2026-07-23
 ### Added
 - **Exportador de ATTACK-PATH (`tools/attack_path.py`) (track de integración; idea de VulneraMCP, MIT →

@@ -26,9 +26,10 @@
       "local_path": "engagements/ACME-2026-001/recon/src/app-backend",
       "vcs_url": "git@internal.acme.example:acme/app-backend.git",
       "ref": "main@a1b2c3d",
+      "diff_base": "main",
       "languages": ["typescript", "go"],
       "maps_to_targets": ["https://app.acme.example"],
-      "authorization": "Revisión white-box del código autorizada en SOW-2026-0042 §4. El operador provee el checkout LOCAL en local_path (bajo engagements/<id>/, gitignored); code-recon NO clona de red. Presencia aquí = autorización white-box; un repo no listado NO está en scope."
+      "authorization": "Revisión white-box del código autorizada en SOW-2026-0042 §4. El operador provee el checkout LOCAL en local_path (bajo engagements/<id>/, gitignored); code-recon NO clona de red. Presencia aquí = autorización white-box; un repo no listado NO está en scope. OPCIONAL 'diff_base' (rama/commit de referencia): si el engagement revisa un PR/rama, `tools/diff_scope.py` calcula los ficheros cambiados entre diff_base y HEAD para que code-recon PRIORICE la superficie tocada por el PR (mejora v2.60)."
     }
   ],
   "program": {

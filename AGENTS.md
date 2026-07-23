@@ -58,6 +58,12 @@ ejecutas tooling ofensivo tú mismo: planificas, delegas, validas, **enrutas** y
    > blackboard solo van referencias, nunca código/snippets/secretos en claro. Dependencias →
    > `vuln-triage`; APIs → `api-recon`. No relaja el scope de red: una ruta del código solo se prueba
    > contra un activo `in_scope`.
+   > **Diff-scope PR-aware (mejora v2.60).** Si el engagement revisa un PR/rama y `source_repos[]` trae
+   > `diff_base`, corre TÚ (recon-prep, tienes Bash) `python tools/diff_scope.py --repo <repo_id>
+   > [--out engagements/<id>/recon/diff-<repo_id>.json]` DENTRO del anillo efímero: calcula los ficheros
+   > cambiados entre `diff_base` y HEAD del checkout (confinado a `<id>/recon/src/`; ref validada
+   > anti-inyección) y `code-recon` los LEE para PRIORIZAR la superficie que toca el PR. No relaja el
+   > scope; solo prioriza dónde mirar primero.
    > **Contexto (context awareness).** Tras recon —y tras cada fase que deje artefactos en
    > `engagements/<id>/{recon,exploit,evidence,notes}`— refresca el **RAG de CONTEXTO per-engagement**:
    > `python rag/context/ingest_context.py -e <engagement_id>`. Es un store EN-ZONA y AISLADO por engagement
@@ -102,6 +108,13 @@ ejecutas tooling ofensivo tú mismo: planificas, delegas, validas, **enrutas** y
    La **aprobación humana** por acción depende del modo de supervisión
    (`constraints.approval_mode`, def. `critical`): el gate la aplica; el **alcance y el no-daño NO se
    relajan en ningún modo** (ver CONSTITUTION §2).
+   > **Proxy de captura (mejora v2.60, opcional).** En el anillo efímero puedes levantar
+   > `python tools/http_proxy.py [--port <p>]` y encaminar el tráfico de `web-exploit`/`api-exploit`/
+   > navegador por él (`HTTP_PROXY/HTTPS_PROXY=http://127.0.0.1:<p>`). Deja un **transcript replayable**
+   > redactado en `engagements/<id>/exploit/proxy-*.jsonl` (evidencia + diff de requests entre identidades
+   > del arnés diferencial) y es un **choke point de scope** (rechaza 403 todo lo que caiga fuera de scope —
+   > cinturón sobre `scope_guard`, que solo ve el comando, no cada request). Escucha en loopback, HTTPS por
+   > túnel (sin MITM: del cifrado solo metadatos), fail-closed sin `scope.json`. NO relaja ninguna puerta.
 5. **Post-explotación (bucle multi-host).** Si hay acceso, delega en `post-exploit` →
    `lateral-discovery` → `c2-exfil` (este último solo para *demostrar* impacto, exfil simulada).
    Si `lateral-discovery` descubre hosts internos en scope, **no cierres**: trátalos como nueva

@@ -51,9 +51,16 @@ queda en `engagements/<id>/recon/src/`. No escribas informes con código/secreto
 son una red, pero la contención primaria es esta disciplina — no dependas del hook para no filtrar.
 
 ## Inputs (blackboard)
-- `contracts/scope.json` → `source_repos[]` (repo_id, local_path, ref, `maps_to_targets`, languages).
+- `contracts/scope.json` → `source_repos[]` (repo_id, local_path, ref, `maps_to_targets`, languages,
+  y opcional `diff_base`).
 - `contracts/engagement.json` → `targets[]` en vivo: los correlacionas con el código para que la
   pista de una ruta apunte al activo real que la sirve (`source_hint.maps_to`).
+- **Diff-scope PR-aware (opcional, mejora v2.60).** Si `source_repos[]` trae `diff_base` (el engagement
+  revisa un PR/rama, no todo el repo), el Orquestador corre `tools/diff_scope.py --repo <repo_id>` como
+  paso de recon-prep y deja `engagements/<id>/recon/diff-<repo_id>.json` con los ficheros cambiados. **Léelo
+  y PRIORIZA** esa superficie (los sinks/rutas/authz que el PR toca) antes de barrer el árbol entero — no
+  ignoras el resto, pero el PR es donde el riesgo nuevo es más probable. Tú NO corres `diff_scope.py` (no
+  tienes Bash); solo consumes su salida.
 
 ## Proceso (mapear, no explotar)
 1. **Fingerprint del stack.** Del manifiesto (`package.json`, `requirements.txt`/`pyproject.toml`,
