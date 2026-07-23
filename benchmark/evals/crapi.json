@@ -2,9 +2,11 @@
   "id": "crapi",
   "platform": "api",
   "difficulty": "media",
+  "split": "heldout",
   "target": "http://127.0.0.1:8888",
   "success_criteria": {
     "type": "api",
+    "proof_source": "evidence",
     "min_confirmed": 2,
     "require_owasp": ["API1", "API3"],
     "min_findings": 3,

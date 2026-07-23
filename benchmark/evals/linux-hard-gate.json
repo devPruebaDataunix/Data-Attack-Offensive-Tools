@@ -2,9 +2,11 @@
   "id": "linux-hard-gate",
   "platform": "linux",
   "difficulty": "dificil",
+  "split": "heldout",
   "target": "RELLENAR: maquina DockerLabs 'Dificil' de UN SOLO host (servidor Linux critico). Candidatas: RootedPingu, Tokenaso. Solo lab privado y aislado.",
   "success_criteria": {
     "type": "root",
+    "proof_source": "evidence",
     "evidence_regex": "uid=0\\(root\\)|^root:[^:]*:0:0|/root/(root|proof|flag)\\.txt|flag\\{",
     "min_findings": 2
   },

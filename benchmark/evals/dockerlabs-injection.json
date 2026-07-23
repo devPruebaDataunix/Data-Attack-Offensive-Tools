@@ -2,9 +2,11 @@
   "id": "dockerlabs-injection",
   "platform": "linux",
   "difficulty": "muy-facil",
+  "split": "train",
   "target": "172.17.0.2",
   "success_criteria": {
     "type": "root",
+    "proof_source": "evidence",
     "evidence_regex": "uid=0\\(root\\)|^root:[^:]*:0:0|/root/(root|proof|flag)\\.txt|flag\\{",
     "min_findings": 1
   },

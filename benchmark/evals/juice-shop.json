@@ -2,9 +2,11 @@
   "id": "juice-shop",
   "platform": "web",
   "difficulty": "media",
+  "split": "train",
   "target": "http://127.0.0.1:3000",
   "success_criteria": {
     "type": "web",
+    "proof_source": "evidence",
     "min_confirmed": 2,
     "require_owasp": ["A01", "A03"],
     "min_findings": 3,

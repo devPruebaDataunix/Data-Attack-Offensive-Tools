@@ -2,9 +2,11 @@
   "id": "dvwa",
   "platform": "web",
   "difficulty": "facil",
+  "split": "train",
   "target": "http://127.0.0.1:4280",
   "success_criteria": {
     "type": "web",
+    "proof_source": "evidence",
     "min_confirmed": 2,
     "require_owasp": ["A03"],
     "min_findings": 2,

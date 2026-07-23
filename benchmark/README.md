@@ -53,7 +53,45 @@ docker compose -f benchmark/labs/docker-compose.yml up -d
 python benchmark/run_gate.py --eval juice-shop        # el harness ya es URL-aware (targets http://host:port)
 ```
 
+## Endurecimiento del grader (prerrequisito de SkillOpt) — PARCIAL
+
+Preparando el harness para un futuro **optimizador de skills** (SkillOpt), que buscará maximizar el PASS y
+por tanto *reward-hackeará* cualquier agujero del grader. Lo hecho hasta aquí sube el listón pero **NO cierra
+el reward-hacking por sí solo** (ver ⚠️ abajo):
+
+- **Prueba anclada a evidencia en disco (`proof_source`).** Por defecto en los evals del repo
+  (`proof_source: "evidence"`), el `evidence_regex` se busca **solo en los ficheros de `evidence/`**, NO en el
+  blackboard: un campo `finding.evidence` lo escribe el Orquestador a voluntad, así que exigir la prueba en un
+  artefacto en disco cierra el atajo trivial de "declararla en un campo del blackboard". `proof_source: "any"`
+  (blackboard + evidencia) es el modo retrocompatible. El gate **multi-host** cuenta **ficheros de evidencia
+  distintos** que casan (uno por host), no ocurrencias — repetir la cadena en un fichero no cuela un gate de N hosts.
+- **Split `train` / `heldout`.** Cada eval declara `split`. SkillOpt **entrena** sobre `train` y **GATEA**
+  sobre `heldout` (nunca visto en el bucle) para no sobreajustar. `train` = juice-shop, dvwa,
+  dockerlabs-injection; `heldout` = crapi, linux-hard-gate, grandma-gate. Amplíalo con más labs.
+- **Lectura de evidencia confinada.** El grader (que corre fuera de `fs_guard`) descarta symlinks y ficheros
+  cuya ruta real escape de `evidence/`, y trunca por tamaño (anti-traversal / anti-DoS).
+
+```bash
+python benchmark/run_eval.py --list --split heldout    # solo los evals de validación
+python benchmark/run_eval.py --list --split train      # solo los de entrenamiento
+```
+
+> ⚠️ **LÍMITE (no cerrado): `evidence/` es un directorio de SALIDA del agente** (tiene `Write`). Anclar la
+> prueba a un fichero de evidencia sube el listón pero un optimizador aún podría **fabricar** el artefacto con la
+> cadena esperada sin explotar nada. El cierre real exige **procedencia no forjable**: un **canario aleatorio
+> por-corrida** que `run_gate` plante en el target (obtenible SOLO explotando de verdad) y contra el que el
+> grader gradúe, inyectado en runtime — no una constante en el JSON (hoy `uid=0(root)`, `flag{…}` son strings
+> que el modelo ya conoce). **Eso es lab-provisioning: pendiente en Kali.** Hasta implementarlo, estos evals
+> **NO son un gate anti-reward-hack válido** y **SkillOpt NO debe consumir su PASS como recompensa**.
+> (Antecedente ya cerrado: matching OWASP por token delimitado — `API1` ≠ `API10`.)
+
 ## Pendiente de cableado
+- **Canario por-corrida (BLOQUEANTE de SkillOpt).** `run_gate` genera un token aleatorio por corrida, lo
+  planta en el lab (seed de compose / fichero en el target) y lo usa como `evidence_regex` en runtime;
+  anclajes/canarios DISTINTOS entre `train` y `heldout`. Sin esto el reward-hacking sigue abierto.
+- **SkillOpt** (optimizador de skills sobre este harness, LAB-only, council-gated): usa `load_evals("train")`
+  para rollouts y `load_evals("heldout")` para el gate. El scorer envuelve `run_gate` (pass@k + `grade`).
+  **No arrancar hasta el canario.**
 - Graders adicionales: cobertura de fases, tiempo-a-root, coste, model-grader de calidad del informe.
 - Suite "gauntlet": fácil → medio → difícil, con pass@k por máquina.
 

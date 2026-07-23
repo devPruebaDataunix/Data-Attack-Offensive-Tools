@@ -4,6 +4,33 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.62.0] - 2026-07-23
+### Added
+- **Endurecimiento del eval-harness (prerrequisito de SkillOpt).** Prepara `benchmark/` para un futuro
+  optimizador de skills (SkillOpt), que maximizará el PASS y por tanto *reward-hackeará* cualquier hueco
+  del grader:
+  - **Split `train` / `heldout`** por eval (campo `split`): SkillOpt entrenará sobre `train`
+    (juice-shop, dvwa, dockerlabs-injection) y GATEARÁ sobre `heldout` (crapi, linux-hard-gate,
+    grandma-gate) — nunca visto en el bucle — para no sobreajustar. `run_eval.py --list --split {train,heldout}`.
+  - **`proof_source` de la prueba** (`evidence_regex`): por defecto en los evals del repo la prueba se
+    busca **solo en `evidence/`** (ficheros en disco), no en el blackboard (`finding.evidence`, que el
+    agente escribe a voluntad). `any` = modo retrocompatible (blackboard+evidencia).
+  - El gate **multi-host** cuenta **ficheros de evidencia distintos** que casan (uno por host), no
+    ocurrencias — repetir la cadena en un solo fichero ya no cuela un gate de N hosts (council: MEDIA).
+  - **Lectura de evidencia confinada**: el grader (corre fuera de `fs_guard`) descarta symlinks y ficheros
+    cuya ruta real escape de `evidence/`, y trunca por tamaño (anti-traversal / anti-DoS; council: MENOR).
+  - `load_evals` avisa de un `split` desconocido (typo → invisible para ambas particiones).
+  - Tests nuevos: reward-hacking ofensivo (multi_host 4-en-1-fichero → FAIL, 4-ficheros → PASS;
+    single-host) y confinamiento de la evidencia.
+### Notes
+- ⚠️ **Mitigación PARCIAL, NO cierre del reward-hacking.** `evidence/` es un directorio de SALIDA del
+  agente (tiene `Write`): anclar la prueba a un fichero sube el listón pero un optimizador aún podría
+  **fabricar** el artefacto. El cierre real exige **procedencia no forjable** — un **canario aleatorio
+  por-corrida** que `run_gate` plante en el target (lab-provisioning, **pendiente en Kali**). Hasta
+  entonces estos evals **NO son un gate anti-reward-hack válido** y **SkillOpt no debe consumir su PASS
+  como recompensa** (council de 3 lentes: seguridad NO-GO contra la afirmación de cierre → landeado como
+  GO-con-observaciones tras reencuadre honesto + aplicar todos los hallazgos de corrección/simplicidad).
+
 ## [2.61.1] - 2026-07-23
 ### Fixed
 - **Sincronización de documentación (auditoría de incongruencias, doc-only, sin cambio de comportamiento).**
