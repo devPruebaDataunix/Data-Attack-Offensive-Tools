@@ -31,6 +31,7 @@ import ipaddress
 import json
 import os
 import re
+import secrets
 import shutil
 import subprocess
 import sys
@@ -98,6 +99,67 @@ def is_lab_target(t):
         pass   # no es IP literal: trátalo como dominio
     host = host.lower().rstrip(".")
     return host.rsplit(".", 1)[-1] in LAB_SUFFIXES if "." in host else host in {"localhost"}
+
+
+# ───────────────────────────── Canario por-corrida (cierra el reward-hacking) ─────────────────────────
+# El endurecimiento de v2.62 ancló la prueba a ficheros de evidence/, pero ese directorio lo escribe el
+# agente: solo REUBICABA el reward-hack. El CIERRE real es un token ALEATORIO por-corrida que run_gate
+# PLANTA en el target (p.ej. /root/proof.txt vía `docker exec`) y usa como evidence_regex EN RUNTIME. Así
+# la prueba deja de ser una constante que el modelo ya conoce (uid=0(root)/flag{}) y solo se obtiene
+# recuperándola DEL target (explotando de verdad). Distinto en cada corrida => train y heldout nunca
+# comparten canario. La EJECUCIÓN del plant (docker/ssh) es del OPERADOR (Kali); aquí va la maquinaria.
+CANARY_RE = re.compile(r"^[A-Za-z0-9-]+$")   # charset seguro: sin metacaracteres de shell/regex
+
+
+def make_canary():
+    """Genera el token del canario: prefijo distintivo + 128 bits hex. Charset [A-Za-z0-9-] a propósito
+    (inofensivo aunque un paso de plant lo pase por `sh -c` dentro del contenedor)."""
+    return "DA-CANARY-" + secrets.token_hex(16)
+
+
+def _subst_argv(steps, canary):
+    """Sustituye `{canary}` en cada elemento de cada paso. `steps` = lista de argv-lists (un paso por host
+    en multi-host). NO usa shell: cada paso es un argv para subprocess.run (lista), sin interpolación de
+    shell en run_gate. Rechaza formas inválidas (no-lista) de forma determinista."""
+    if not isinstance(steps, list):
+        raise ValueError("canary.plant/cleanup debe ser una lista de pasos (cada paso una lista de argv)")
+    out = []
+    for step in steps:
+        if not (isinstance(step, list) and step and all(isinstance(e, str) for e in step)):
+            raise ValueError(f"paso de canary inválido (esperaba lista de strings no vacía): {step!r}")
+        out.append([e.replace("{canary}", canary) for e in step])
+    return out
+
+
+def _run_steps(steps, what, timeout=120):
+    """Ejecuta pasos (argv-lists) en orden; corta al primer fallo. Devuelve True si TODOS devolvieron 0.
+    Sin `shell=True`: cada paso es una LISTA argv. El argv lo define el eval (`docker`/`ssh`…) — contenido
+    de repo, confianza alta — y corre en la máquina del OPERADOR FUERA de `scope_guard` (es maquinaria de
+    provisioning, no una acción del agente). stdout Y stderr se DESCARTAN (podrían llevar el propio canario o
+    ruido del target); solo se reporta el argv[0] y el returncode (nunca el elemento con el token)."""
+    for step in steps:
+        try:
+            r = subprocess.run(step, timeout=timeout, check=False,
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except (OSError, subprocess.SubprocessError) as e:
+            print(f"[gate] {what}: fallo ejecutando '{step[0]}': {e}", file=sys.stderr)
+            return False
+        if r.returncode != 0:
+            print(f"[gate] {what}: '{step[0]}' devolvió {r.returncode}", file=sys.stderr)
+            return False
+    return True
+
+
+def canary_eval(ev, canary):
+    """COPIA del eval cuyo evidence_regex es el canario EXACTO (escapado) y proof_source=evidence. No muta
+    el original ni toca scope/prompt: el canario NUNCA llega al agente por esos canales (solo vive en el
+    target, plantado). El grader lo buscará en la evidencia capturada por el agente."""
+    if not CANARY_RE.match(canary):
+        raise ValueError("canario con caracteres no permitidos")
+    crit = dict(ev.get("success_criteria", {}))
+    crit["evidence_regex"] = re.escape(canary)
+    crit["proof_source"] = "evidence"
+    return {**ev, "success_criteria": crit}
 
 
 def build_scope(ev, target, max_actions=1500):
@@ -227,6 +289,10 @@ def main():
                     help="añade --dangerously-skip-permissions: APAGA scope_guard.py (única contención de "
                          "alcance en runtime). Solo lab privado/aislado")
     ap.add_argument("--record", action="store_true", help="anota el veredicto en results.jsonl (pass@k)")
+    ap.add_argument("--canary", action="store_true",
+                    help="planta un canario aleatorio por-corrida en el target (eval con bloque `canary`) y "
+                         "gradúa contra él: cierra el reward-hack (la prueba deja de ser una constante). "
+                         "El plant (docker/ssh) lo define el eval; ejecútalo en el lab (Kali).")
     args = ap.parse_args()
 
     ev = load_evals().get(args.eval)
@@ -246,6 +312,33 @@ def main():
                   f"LAB-ONLY: corrige el eval.", file=sys.stderr)
             sys.exit(3)
 
+    # Canario por-corrida (opt-in): valida y prepara los pasos ANTES de tocar scope/lanzar, para abortar
+    # temprano si el eval no lo soporta o su bloque es inválido.
+    canary = plant_steps = cleanup_steps = None
+    if args.canary:
+        # FAIL-CLOSED en multi_host: un ÚNICO token no prueba N hosts (rootear 1 host y replicar el token a
+        # N ficheros de evidencia colaría el gate por-ficheros-distintos). El soporte por-host (un canario
+        # por máquina) está pendiente; hasta entonces --canary es solo para gates de un host (type: root).
+        if ev.get("success_criteria", {}).get("type") == "multi_host":
+            print(f"[ABORT] --canary aún no soporta `type: multi_host` (haría falta un canario POR HOST). "
+                  f"Usa --canary solo en evals de un host (type: root).", file=sys.stderr)
+            sys.exit(3)
+        cspec = ev.get("canary")
+        if not isinstance(cspec, dict) or not cspec.get("plant"):
+            print(f"[ABORT] --canary pero el eval '{ev['id']}' no define `canary.plant` (pasos para plantar "
+                  f"el token en el target). Añádelo al eval o corre sin --canary.", file=sys.stderr)
+            sys.exit(3)
+        canary = make_canary()
+        try:
+            plant_steps = _subst_argv(cspec["plant"], canary)
+            cleanup_steps = _subst_argv(cspec.get("cleanup", []), canary)
+        except ValueError as e:
+            print(f"[ABORT] bloque `canary` inválido en el eval '{ev['id']}': {e}", file=sys.stderr)
+            sys.exit(3)
+        if not cleanup_steps:
+            print(f"[gate] AVISO: el eval '{ev['id']}' define `canary.plant` sin `canary.cleanup`; el token "
+                  f"quedará en el target tras la corrida (retíralo tú).", file=sys.stderr)
+
     eng = os.path.join(ROOT, "engagements", f"GATE-{ev['id']}")
     scope = build_scope(ev, target, args.max_actions)
     prompt = task_prompt(ev, target, eng)
@@ -254,9 +347,22 @@ def main():
     print(f"scope.json -> in_scope={scope['in_scope']}  approval_mode=auto  max_actions={args.max_actions}")
     print(f"engagement -> {os.path.relpath(eng, ROOT)}/  | timeout={args.timeout}s | yolo={args.yolo}")
 
+    if args.canary:
+        # NO se imprime el token completo (es la "clave" del gate); solo el prefijo para trazabilidad.
+        print(f"canario -> {canary[:14]}…  ({len(plant_steps)} paso(s) de plant)  grade=evidence_regex(canario)")
+
     if args.dry_run:
         print("\n[dry-run] NO se toca scope.json ni se lanza nada. Prompt del Orquestador:\n")
         print(prompt)
+        if args.canary:
+            # En dry-run el token es un throwaway de make_canary() que NO se planta ni se gradúa; se
+            # imprime entero a propósito para que el operador copie el comando al lab (no es una fuga: no
+            # hay agente en marcha). En una corrida real los pasos NO se imprimen (solo el prefijo).
+            print("\n[dry-run] pasos de plant (NO se ejecutan aquí; córrelos en el lab):")
+            for st in plant_steps:
+                print("  plant:  ", " ".join(st))
+            for st in (cleanup_steps or []):
+                print("  cleanup:", " ".join(st))
         return
 
     engagement_dir(ev)  # crea engagements/GATE-<id>/{...} solo al lanzar de verdad
@@ -286,8 +392,15 @@ def main():
     _reset_blackboard_for(f"GATE-{ev['id']}")
 
     try:
+        if args.canary:
+            print(f"[gate] plantando el canario en el target ({len(plant_steps)} paso(s))…")
+            if not _run_steps(plant_steps, "plant del canario"):
+                print("[ABORT] no se pudo plantar el canario; no lanzo (el gate no mediría nada real). "
+                      "Revisa `canary.plant` del eval y que el lab esté arriba.", file=sys.stderr)
+                sys.exit(3)
         launch(prompt, args.timeout, args.yolo)
-        passed, detail = grade(ev, os.path.join(ROOT, "contracts", "engagement.json"),
+        ev_grade = canary_eval(ev, canary) if args.canary else ev
+        passed, detail = grade(ev_grade, os.path.join(ROOT, "contracts", "engagement.json"),
                                os.path.join(eng, "evidence"))
         verdict = "PASS" if passed else "FAIL"
         print(f"\n[{verdict}] {ev['id']}  detalle={json.dumps(detail)}")
@@ -302,6 +415,10 @@ def main():
             print(f"  pass@{len(same)}: {sum(1 for r in same if r['verdict']=='PASS')}/{len(same)}")
         sys.exit(0 if passed else 1)
     finally:
+        if args.canary and cleanup_steps:
+            print(f"[gate] limpiando el canario del target ({len(cleanup_steps)} paso(s))…")
+            if not _run_steps(cleanup_steps, "cleanup del canario"):
+                print("[gate] AVISO: el cleanup del canario falló; retíralo manualmente del lab.", file=sys.stderr)
         if backup and os.path.isfile(backup):
             shutil.copy2(backup, SCOPE)
             os.remove(backup)  # no dejar el .bak (lleva scope de cliente; además ya está gitignored)

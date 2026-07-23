@@ -77,10 +77,10 @@ def gather_evidence_text(evidence_dir):
     """Texto de los ficheros de EVIDENCIA CAPTURADA (artefactos del engagement), SIN el blackboard.
     Corpus para anclar la prueba a un artefacto en disco en vez de a un campo del blackboard
     (`finding.evidence`) que el Orquestador escribe a voluntad.
-    ⚠️ MITIGACIÓN PARCIAL: `evidence/` es un directorio de SALIDA del agente (tiene `Write`), así que un
-    optimizador aún podría FABRICAR un fichero con la cadena esperada. El cierre real exige PROCEDENCIA
-    no forjable — un canario aleatorio por-corrida que `run_gate` planta en el target (obtenible solo
-    explotando de verdad) — pendiente (lab-provisioning, atado a Kali). Ver benchmark/README.md."""
+    ⚠️ POR SÍ SOLO NO CIERRA EL REWARD-HACK: `evidence/` es un directorio de SALIDA del agente (tiene
+    `Write`), así que un optimizador podría FABRICAR un fichero con la cadena esperada (una CONSTANTE que ya
+    conoce). La PROCEDENCIA no forjable la aporta el canario por-corrida (`run_gate --canary`): planta un
+    token aleatorio en el target y lo usa como `evidence_regex` en runtime. Ver benchmark/README.md."""
     blobs = []
     for f in _evidence_files(evidence_dir):
         try:
@@ -125,7 +125,8 @@ def _proof_corpus(crit, full_text, evidence_dir):
     - `evidence` (los evals del repo; endurece el GATE): SOLO ficheros de evidencia capturada.
     - `any` (def., retrocompat): blackboard + evidencia (la prueba puede estar en el blackboard).
     NOTA: `evidence` sube el listón pero NO es a prueba de reward-hacking por sí solo (el agente escribe
-    en `evidence/`); la garantía fuerte es el canario por-corrida pendiente (ver `gather_evidence_text`)."""
+    en `evidence/`); la garantía fuerte la aporta el canario por-corrida (`run_gate --canary`), que planta
+    un token no forjable como `evidence_regex` en runtime (ver `gather_evidence_text`)."""
     if crit.get("proof_source", "any") == "evidence":
         return gather_evidence_text(evidence_dir)
     return full_text

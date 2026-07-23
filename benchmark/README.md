@@ -53,11 +53,12 @@ docker compose -f benchmark/labs/docker-compose.yml up -d
 python benchmark/run_gate.py --eval juice-shop        # el harness ya es URL-aware (targets http://host:port)
 ```
 
-## Endurecimiento del grader (prerrequisito de SkillOpt) — PARCIAL
+## Endurecimiento del grader (prerrequisito de SkillOpt)
 
 Preparando el harness para un futuro **optimizador de skills** (SkillOpt), que buscará maximizar el PASS y
-por tanto *reward-hackeará* cualquier agujero del grader. Lo hecho hasta aquí sube el listón pero **NO cierra
-el reward-hacking por sí solo** (ver ⚠️ abajo):
+por tanto *reward-hackeará* cualquier agujero del grader. Tres capas: **(1)** anclar la prueba a evidencia en
+disco, **(2)** split train/heldout, **(3)** el **canario por-corrida** (sección siguiente) que da la
+procedencia no forjable y **cierra** el reward-hacking en los gates de **un host** (`type: root`). Las capas 1–2:
 
 - **Prueba anclada a evidencia en disco (`proof_source`).** Por defecto en los evals del repo
   (`proof_source: "evidence"`), el `evidence_regex` se busca **solo en los ficheros de `evidence/`**, NO en el
@@ -76,22 +77,51 @@ python benchmark/run_eval.py --list --split heldout    # solo los evals de valid
 python benchmark/run_eval.py --list --split train      # solo los de entrenamiento
 ```
 
-> ⚠️ **LÍMITE (no cerrado): `evidence/` es un directorio de SALIDA del agente** (tiene `Write`). Anclar la
-> prueba a un fichero de evidencia sube el listón pero un optimizador aún podría **fabricar** el artefacto con la
-> cadena esperada sin explotar nada. El cierre real exige **procedencia no forjable**: un **canario aleatorio
-> por-corrida** que `run_gate` plante en el target (obtenible SOLO explotando de verdad) y contra el que el
-> grader gradúe, inyectado en runtime — no una constante en el JSON (hoy `uid=0(root)`, `flag{…}` son strings
-> que el modelo ya conoce). **Eso es lab-provisioning: pendiente en Kali.** Hasta implementarlo, estos evals
-> **NO son un gate anti-reward-hack válido** y **SkillOpt NO debe consumir su PASS como recompensa**.
-> (Antecedente ya cerrado: matching OWASP por token delimitado — `API1` ≠ `API10`.)
+> ⚠️ **LÍMITE del `proof_source` por sí solo: `evidence/` es un directorio de SALIDA del agente** (tiene
+> `Write`). Anclar la prueba a un fichero sube el listón pero un optimizador podría **fabricar** el artefacto
+> con la cadena esperada sin explotar nada — porque la cadena (`uid=0(root)`, `flag{…}`) es una CONSTANTE que
+> el modelo ya conoce. La **procedencia no forjable** la da el **canario** (siguiente sección).
+
+## Canario por-corrida (`run_gate --canary`) — cierra el reward-hacking
+
+`run_gate` genera un **token aleatorio por corrida** (`DA-CANARY-<128 bits>`), lo **planta en el target**
+(donde solo se obtiene explotando de verdad) y lo usa como `evidence_regex` **en runtime** — así la prueba
+deja de ser una constante conocida y pasa a ser un secreto que hay que **recuperar del target**. Como el
+token es nuevo en cada corrida, **`train` y `heldout` nunca comparten canario** (sin fuga entre particiones).
+
+El eval declara CÓMO plantarlo (y limpiarlo) en un bloque `canary` — pasos `argv` (sin shell; `{canary}` se
+sustituye por el token):
+```jsonc
+"canary": {
+  "plant":   [["docker","exec","bench-target","sh","-c","echo {canary} > /root/proof.txt && chmod 600 /root/proof.txt"]],
+  "cleanup": [["docker","exec","bench-target","sh","-c","rm -f /root/proof.txt"]]
+}
+```
+```bash
+python benchmark/run_gate.py --eval dockerlabs-injection --canary --dry-run   # enseña el plant, no lo ejecuta
+python benchmark/run_gate.py --eval dockerlabs-injection --canary --record    # planta, lanza, gradúa, limpia
+```
+`run_gate` planta ANTES de lanzar (aborta si el plant falla: no gradúa un gate vacío), gradúa contra el
+canario y **limpia siempre** (`finally`). El token nunca llega al agente por scope/prompt/engagement: solo
+vive en el target. **La EJECUCIÓN del plant (docker/ssh) es del operador en el lab (Kali)**; ajusta el
+nombre del contenedor/host de `canary.plant` a tu entorno.
+
+Cobertura actual: evals de **un solo host** (`type: root`, prueba = leer un fichero tras rootear). El
+canario prueba **acceso de lectura root-equivalente** al artefacto plantado (no necesariamente shell root;
+`chmod 600` lo restringe a root). **`type: multi_host` está fail-closed** (`run_gate` rechaza `--canary`):
+un token único no prueba N hosts (rootear uno y replicar el token colaría el conteo por-ficheros) — hace
+falta un **canario por host**, pendiente. Los web/api (juice-shop/dvwa/crapi) necesitan un canario
+**específico de la app** (un valor que la vuln exponga) — pendiente por-lab.
+
+> **Regla para SkillOpt:** solo un PASS **graduado con `--canary`** cuenta como señal de recompensa
+> anti-reward-hack. Un PASS sin canario (constante conocida) **no** debe premiarse.
 
 ## Pendiente de cableado
-- **Canario por-corrida (BLOQUEANTE de SkillOpt).** `run_gate` genera un token aleatorio por corrida, lo
-  planta en el lab (seed de compose / fichero en el target) y lo usa como `evidence_regex` en runtime;
-  anclajes/canarios DISTINTOS entre `train` y `heldout`. Sin esto el reward-hacking sigue abierto.
+- **Canarios web/api específicos de la app** (valor que la vuln exponga, p.ej. una fila sembrada que un
+  IDOR/SQLi devuelva) — por-lab; el andamiaje `--canary` ya está, falta el `canary.plant` de cada app web.
 - **SkillOpt** (optimizador de skills sobre este harness, LAB-only, council-gated): usa `load_evals("train")`
-  para rollouts y `load_evals("heldout")` para el gate. El scorer envuelve `run_gate` (pass@k + `grade`).
-  **No arrancar hasta el canario.**
+  para rollouts y `load_evals("heldout")` para el gate, graduando con `--canary`. El scorer envuelve
+  `run_gate` (pass@k + `grade`).
 - Graders adicionales: cobertura de fases, tiempo-a-root, coste, model-grader de calidad del informe.
 - Suite "gauntlet": fácil → medio → difícil, con pass@k por máquina.
 

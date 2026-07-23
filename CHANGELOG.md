@@ -4,6 +4,30 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.63.0] - 2026-07-23
+### Added
+- **Canario por-corrida (`run_gate --canary`) — cierra el reward-hacking del eval-harness en gates de un
+  host.** v2.62 ancló la prueba a `evidence/`, pero ese directorio lo escribe el agente (solo REUBICABA el
+  hack). El canario da la **procedencia no forjable**:
+  - `run_gate` genera un **token aleatorio por corrida** (`DA-CANARY-` + 128 bits, charset seguro), lo
+    **planta en el target** con pasos `argv` del bloque `canary` del eval (`plant`/`cleanup`, sin `shell`,
+    `{canary}` sustituido) y lo usa como `evidence_regex` **en runtime**. La prueba deja de ser una constante
+    que el modelo ya conoce (`uid=0(root)`/`flag{}`) y solo se obtiene **recuperándola del target**.
+  - Token nuevo por corrida ⇒ **`train` y `heldout` nunca comparten canario** (sin fuga entre particiones).
+  - `run_gate` **planta antes de lanzar** (aborta si el plant falla: no gradúa un gate vacío), gradúa contra
+    el canario y **limpia siempre** (`finally`). El token **nunca** llega al agente (scope/prompt/engagement
+    limpios; sin fuga a `results.jsonl`; diagnósticos redactados a `argv[0]`).
+  - Bloque `canary` de referencia en `dockerlabs-injection.json` (`/root/proof.txt`). La EJECUCIÓN del plant
+    (docker/ssh) es del operador en el lab (Kali).
+### Notes
+- **`type: multi_host` está fail-closed** (`--canary` lo rechaza): un token único no prueba N hosts (rootear
+  uno y replicar el token colaría el conteo por-ficheros); el **canario por-host** queda pendiente. Los
+  web/api necesitan un canario específico de la app (pendiente por-lab). Council de 3 lentes: seguridad =
+  **GO-con-observaciones** (cierre single-host verificado: sin fuga del token, sin `shell=True`,
+  abort/cleanup/restore correctos, retrocompat intacta); corrección/simplicidad = GO. Todos los hallazgos
+  aplicados (fail-closed multi_host, redacción de diagnósticos, aviso plant-sin-cleanup, doc-drift, tests).
+- **SkillOpt:** solo un PASS graduado **con `--canary`** cuenta como señal de recompensa anti-reward-hack.
+
 ## [2.62.1] - 2026-07-23
 ### Fixed
 - **Auditoría de incongruencias del README (doc-only, sin cambio de comportamiento).** Detectadas y corregidas
