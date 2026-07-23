@@ -85,6 +85,8 @@ def build_mermaid(agents):
     L.append('    BB[("🗒️ Blackboard<br/>contracts/engagement.json")]')
     L.append('    RAGDB[("📚 RAG vulnerabilidades<br/>rag/ · KEV+EPSS+recientes")]')
     L.append('    RAGKB[("🧠 RAG conocimiento<br/>rag/knowledge · técnicas (Capa 1+2)")]')
+    L.append('    RAGCTX[("🎯 RAG contexto<br/>rag/context · per-engagement · efímero")]')
+    L.append('    RAGTRI[("⚖️ RAG política de programa<br/>rag/triage · bug bounty · advisory")]')
     for z in ZONE_ORDER:
         zin = [a for a in agents if a["zone"] == z]
         if not zin:
@@ -103,9 +105,11 @@ def build_mermaid(agents):
     L.append("    BB -.->|reinyecta lecciones| ORQ")
     if any(a["name"] == "vuln-triage" for a in agents):
         L.append("    vuln_triage ==>|consulta CVE| RAGDB")
+        L.append("    vuln_triage ==>|política del programa| RAGTRI")
     for an, nidname in (("post-exploit", "post_exploit"), ("web-exploit", "web_exploit")):
         if any(a["name"] == an for a in agents):
             L.append(f"    {nidname} ==>|consulta técnica| RAGKB")
+            L.append(f"    {nidname} ==>|contexto del target| RAGCTX")
     L.append("    SG -.->|valida cada comando| E2")
     L.append("    ORQ -.->|lee alcance| SG")
     L.append("```")
@@ -117,6 +121,8 @@ def build_doc(agents):
     contracts = sorted(os.path.basename(p) for p in glob.glob(os.path.join(ROOT, "contracts", "*")))
     rag = sorted(os.path.basename(p) for p in glob.glob(os.path.join(ROOT, "rag", "*.py")))
     rag_kb = sorted(os.path.basename(p) for p in glob.glob(os.path.join(ROOT, "rag", "knowledge", "*.py")))
+    rag_ctx = sorted(os.path.basename(p) for p in glob.glob(os.path.join(ROOT, "rag", "context", "*.py")))
+    rag_tri = sorted(os.path.basename(p) for p in glob.glob(os.path.join(ROOT, "rag", "triage", "*.py")))
     hooks = sorted(os.path.basename(p) for p in glob.glob(os.path.join(ROOT, ".claude", "hooks", "*.py")))
     n_by_zone = {z: len([a for a in agents if a["zone"] == z]) for z in ZONE_ORDER}
 
@@ -137,12 +143,14 @@ def build_doc(agents):
                "mediado** (los agentes se dirigen mensajes entre sí dejándolos en el **blackboard**, "
                "`contracts/engagement.json`; no hay malla directa). Un **hook de alcance** "
                "(`scope_guard.py`) bloquea de forma determinista cualquier comando contra un target "
-               "fuera de `contracts/scope.json`. Tres RAG locales (SQLite) por propósito: el de "
+               "fuera de `contracts/scope.json`. Cuatro RAG locales (SQLite/JSON) por propósito: el de "
                "**vulnerabilidades** (`rag/`, KEV+EPSS+CVE recientes) que consulta `vuln-triage`; el de "
                "**conocimiento** (`rag/knowledge/`, técnicas — Capa 1 estructurada + Capa 2 semántica, con "
                "el canon OWASP API/Web/WSTG/MASVS/MASTG/FSTM/ISVS) que consultan los agentes de explotación; "
-               "y el de **contexto** per-engagement (`rag/context/`, efímero y AISLADO por engagement, "
-               "EN-ZONA — *qué se sabe YA de ESTE objetivo*).")
+               "el de **contexto** per-engagement (`rag/context/`, efímero y AISLADO por engagement, "
+               "EN-ZONA — *qué se sabe YA de ESTE objetivo*); y el de **política de programa** "
+               "(`rag/triage/`, bug bounty — do-not-report + aceptación H1/Bugcrowd/Intigriti/YWH, ADVISORY) "
+               "que consultan `vuln-triage` y `reporting`.")
     doc.append("")
     doc.append(f"**Estado actual:** {len(agents)} agentes especialistas "
                f"(E1={n_by_zone['E1']}, E2={n_by_zone['E2']}, E3={n_by_zone['E3']}) "
@@ -178,6 +186,11 @@ def build_doc(agents):
     doc.append(f"- **RAG de conocimiento (técnicas):** {', '.join(rag_kb) or '—'} (Capa 1 estructurada "
                f"GTFOBins/LOLBAS/Atomic/ATT&CK + Capa 2 semántica HackTricks/PaTT/PEASS/817 cyber-skills/feeds; lo "
                f"consultan los agentes de explotación vía la skill `rag-technique-lookup`).")
+    doc.append(f"- **RAG de contexto (per-engagement):** {', '.join(rag_ctx) or '—'} (efímero, AISLADO por "
+               f"engagement, EN-ZONA — *qué se sabe YA de ESTE objetivo*; reusa el embedder del RAG de conocimiento).")
+    doc.append(f"- **RAG de política de programa (bug bounty):** {', '.join(rag_tri) or '—'} (do-not-report + "
+               f"aceptación H1/Bugcrowd/Intigriti/YWH, dataset curado/versionado; ADVISORY — la política oficial "
+               f"prevalece; lo consultan `vuln-triage` y `reporting`).")
     doc.append(f"- **Gobierno / coherencia:** `CONSTITUTION.md` (principios innegociables) · "
                f"`tools/analyze_engagement.py` (auditoría de coherencia, `/analyze` adaptado).")
     doc.append("")

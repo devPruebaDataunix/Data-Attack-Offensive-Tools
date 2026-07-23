@@ -3,12 +3,12 @@
 
 # 🗺️ Mapa de Arquitectura — Cyberseg Agents
 
-> **Generado:** 2026-07-22 06:20:24 UTC · **Refleja el estado real** del proyecto en ese momento.
+> **Generado:** 2026-07-23 08:19:26 UTC · **Refleja el estado real** del proyecto en ese momento.
 > Regenerar a mano: `python tools/gen_arch_diagram.py`
 
 ## Qué es esto (para reconstruir contexto si se pierde)
 
-Suite de agentes para **pentesting / bug bounty autorizado**. Un **Orquestador** (sesión principal, `AGENTS.md`) coordina a los agentes especialistas mediante **hub-and-spoke**: él delega, recoge resultados y hace de **router de un bus A2A mediado** (los agentes se dirigen mensajes entre sí dejándolos en el **blackboard**, `contracts/engagement.json`; no hay malla directa). Un **hook de alcance** (`scope_guard.py`) bloquea de forma determinista cualquier comando contra un target fuera de `contracts/scope.json`. Tres RAG locales (SQLite) por propósito: el de **vulnerabilidades** (`rag/`, KEV+EPSS+CVE recientes) que consulta `vuln-triage`; el de **conocimiento** (`rag/knowledge/`, técnicas — Capa 1 estructurada + Capa 2 semántica, con el canon OWASP API/Web/WSTG/MASVS/MASTG/FSTM/ISVS) que consultan los agentes de explotación; y el de **contexto** per-engagement (`rag/context/`, efímero y AISLADO por engagement, EN-ZONA — *qué se sabe YA de ESTE objetivo*).
+Suite de agentes para **pentesting / bug bounty autorizado**. Un **Orquestador** (sesión principal, `AGENTS.md`) coordina a los agentes especialistas mediante **hub-and-spoke**: él delega, recoge resultados y hace de **router de un bus A2A mediado** (los agentes se dirigen mensajes entre sí dejándolos en el **blackboard**, `contracts/engagement.json`; no hay malla directa). Un **hook de alcance** (`scope_guard.py`) bloquea de forma determinista cualquier comando contra un target fuera de `contracts/scope.json`. Cuatro RAG locales (SQLite/JSON) por propósito: el de **vulnerabilidades** (`rag/`, KEV+EPSS+CVE recientes) que consulta `vuln-triage`; el de **conocimiento** (`rag/knowledge/`, técnicas — Capa 1 estructurada + Capa 2 semántica, con el canon OWASP API/Web/WSTG/MASVS/MASTG/FSTM/ISVS) que consultan los agentes de explotación; el de **contexto** per-engagement (`rag/context/`, efímero y AISLADO por engagement, EN-ZONA — *qué se sabe YA de ESTE objetivo*); y el de **política de programa** (`rag/triage/`, bug bounty — do-not-report + aceptación H1/Bugcrowd/Intigriti/YWH, ADVISORY) que consultan `vuln-triage` y `reporting`.
 
 **Estado actual:** 29 agentes especialistas (E1=8, E2=19, E3=2) + Orquestador + hook de alcance.
 
@@ -21,6 +21,8 @@ flowchart TB
     BB[("🗒️ Blackboard<br/>contracts/engagement.json")]
     RAGDB[("📚 RAG vulnerabilidades<br/>rag/ · KEV+EPSS+recientes")]
     RAGKB[("🧠 RAG conocimiento<br/>rag/knowledge · técnicas (Capa 1+2)")]
+    RAGCTX[("🎯 RAG contexto<br/>rag/context · per-engagement · efímero")]
+    RAGTRI[("⚖️ RAG política de programa<br/>rag/triage · bug bounty · advisory")]
     subgraph E1["🟦 Zona E1 · Recon (perfil de red abierto, sin datos de cliente)"]
         active_recon["active-recon<br/><i>claude-haiku-4-5</i>"]
         api_recon["api-recon<br/><i>claude-haiku-4-5</i>"]
@@ -64,8 +66,11 @@ flowchart TB
     E3 -.->|escribe lecciones/informe| BB
     BB -.->|reinyecta lecciones| ORQ
     vuln_triage ==>|consulta CVE| RAGDB
+    vuln_triage ==>|política del programa| RAGTRI
     post_exploit ==>|consulta técnica| RAGKB
+    post_exploit ==>|contexto del target| RAGCTX
     web_exploit ==>|consulta técnica| RAGKB
+    web_exploit ==>|contexto del target| RAGCTX
     SG -.->|valida cada comando| E2
     ORQ -.->|lee alcance| SG
 ```
@@ -115,10 +120,12 @@ flowchart TB
 ## Componentes de soporte (estado real)
 
 - **Orquestador (hub):** `AGENTS.md` — sesión principal, no es un subagente.
-- **Hook de alcance:** a2a_guard.py, a2a_router_nudge.py, approval_gate.py, budget_guard.py, fs_guard.py, header_guard.py, loop_guard.py, memory_guard.py, noise_guard.py, scope_guard.py, secret_scan.py, subagent_stop.py, validate_blackboard.py (PreToolUse, bloquea fuera de scope).
-- **Blackboard / contratos:** a2a-message.schema.json, agent-card.schema.json, agent-cards.json, engagement.json, engagement.schema.json, examples, finding.schema.json, scope.example.json, scope.json, target.schema.json.
+- **Hook de alcance:** a2a_guard.py, a2a_router_nudge.py, approval_gate.py, blackboard_guard.py, budget_guard.py, circuit_breaker.py, fs_guard.py, header_guard.py, loop_guard.py, memory_guard.py, noise_guard.py, scope_guard.py, secret_scan.py, steering_nudge.py, subagent_stop.py, validate_blackboard.py (PreToolUse, bloquea fuera de scope).
+- **Blackboard / contratos:** a2a-message.schema.json, agent-card.schema.json, agent-cards.json, engagement.json, engagement.schema.json, examples, finding.schema.json, scope.example.json, scope.json, steering-directive.schema.json, target.schema.json.
 - **RAG de vulnerabilidades:** db.py, enrich_cve5.py, enrich_epss.py, enrich_exploits.py, enrich_msf.py, enrich_nuclei.py, ingest_kev.py, ingest_recent.py, query_vulns.py, refresh.py (KEV+EPSS+CVE recientes, alimenta a vuln-triage).
 - **RAG de conocimiento (técnicas):** _venv.py, embed.py, ingest_atomics.py, ingest_attack.py, ingest_corpus.py, ingest_feeds.py, ingest_gtfobins.py, ingest_lolbas.py, kb.py, kb_vec.py, query_kb.py, refresh_kb.py (Capa 1 estructurada GTFOBins/LOLBAS/Atomic/ATT&CK + Capa 2 semántica HackTricks/PaTT/PEASS/817 cyber-skills/feeds; lo consultan los agentes de explotación vía la skill `rag-technique-lookup`).
+- **RAG de contexto (per-engagement):** context_paths.py, ingest_context.py, query_context.py (efímero, AISLADO por engagement, EN-ZONA — *qué se sabe YA de ESTE objetivo*; reusa el embedder del RAG de conocimiento).
+- **RAG de política de programa (bug bounty):** policy.py, query_triage.py (do-not-report + aceptación H1/Bugcrowd/Intigriti/YWH, dataset curado/versionado; ADVISORY — la política oficial prevalece; lo consultan `vuln-triage` y `reporting`).
 - **Gobierno / coherencia:** `CONSTITUTION.md` (principios innegociables) · `tools/analyze_engagement.py` (auditoría de coherencia, `/analyze` adaptado).
 
 ## Flujo de un engagement (resumen)

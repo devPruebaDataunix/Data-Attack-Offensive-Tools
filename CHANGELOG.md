@@ -4,6 +4,22 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.61.1] - 2026-07-23
+### Fixed
+- **Sincronización de documentación (auditoría de incongruencias, doc-only, sin cambio de comportamiento).**
+  Corregidas afirmaciones desactualizadas frente a la capacidad real del motor:
+  - **"tres RAG" → "cuatro RAG"** en README (subtítulo, ToC, "Qué es", diagrama de arquitectura, sección
+    dedicada con nueva subsección "4) RAG de política de programa", árbol de estructura) y en el generador
+    `tools/gen_arch_diagram.py` (+ `ARCHITECTURE_MAP.md` regenerado con los nodos de contexto y triage, que
+    faltaban). El 4º RAG (`rag/triage/`, política de programa de bug bounty; el propio código lo llama "RAG de
+    política de programa") existe desde v2.56 pero no figuraba en la documentación de alto nivel.
+  - **Árbol de estructura del README: "27 subagentes" → "29"** (contradecía el resto del README).
+  - **Sección Seguridad del README: "anti-inyección en 25 agentes" → "27"** (coherente con GUARDRAILS.md C11:
+    los 29 menos `reporting`/`knowledge-postmortem`); además se añaden a la enumeración el **aislamiento de FS**
+    (`fs_guard`, C20) y el **circuit-breaker por host** (C22), que faltaban.
+- Verificado que todos los ficheros/scripts referenciados por el README existen. Revisión inline de exactitud
+  (una corrección de conteos doc-only no amerita council de 3 subagentes); `validate_suite` 730/0/0.
+
 ## [2.61.0] - 2026-07-23
 ### Added
 - **Pilotaje interactivo del engagement en marcha (steering) (track de integración; idea de strix,
