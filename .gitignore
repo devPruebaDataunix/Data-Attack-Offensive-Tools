@@ -20,6 +20,12 @@ engagements/
 
 # ─── Generado en runtime ───────────────────────────────────────
 .claude/audit/
+# Parche TEMPORAL de permisos que benchmark/run_gate.py aplica a .claude/settings.json (RASTREADO) para el
+# eval headless: su backup y su fichero atómico intermedio NUNCA se versionan (si un crash dejara el backup
+# huérfano, que `git add` no lo arrastre al repo público). El propio settings.json parcheado tampoco debe
+# commitearse: si `git status` lo marca tras un crash, descártalo (`git checkout .claude/settings.json`).
+.claude/settings.json.pre-gate.bak
+.claude/settings.json.tmp
 # Memoria de aprendizaje por agente. La `local` es per-operador y NUNCA se versiona (datos que
 # podrían filtrar entre clientes). La `project` (.claude/agent-memory/) SÍ se comparte por git a
 # propósito, pero el hook memory_guard.py la sanea para que solo contenga técnica generalizada.

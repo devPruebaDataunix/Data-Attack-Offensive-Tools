@@ -4,6 +4,38 @@ Todas las novedades reseñables de **Data Attack — Offensive Tools** se docume
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 se versiona con [SemVer](https://semver.org/lang/es/).
 
+## [2.66.0] - 2026-07-24
+### Added
+- **Gate del canario EJECUTABLE de forma autónoma y headless (`benchmark/run_gate.py`).** Cierra los dos
+  bloqueos que impedían correr el eval-harness/SkillOpt sin un humano delante:
+  - **Autorización del tooling para el eval headless (`set_eval_perms`/`restore_eval_perms`).** El producto
+    pone el tooling ofensivo (nmap/sqlmap/…) en `permissions.ask` (humano-en-el-bucle, correcto para
+    engagements reales), pero un eval headless no tiene quién apruebe y los subagentes se atascan. `run_gate`
+    parchea **temporalmente** `.claude/settings.json` moviendo `ask`→`allow` (`ask` vacío) durante la corrida
+    y lo restaura al terminar. Un overlay `settings.local.json` NO sirve: los permisos se fusionan por unión y
+    `ask` (base) se evalúa antes que `allow`. **No relaja la contención de ALCANCE:** `deny` se conserva y el
+    hook `scope_guard` (PreToolUse) es ortogonal a los permisos y sigue bloqueando fuera de scope. Retira los
+    ojos humanos por-acción (lo que un eval headless necesita) → corre SOLO en lab aislado.
+  - **Bucle de reanudación (`drive_engagement`).** Un solo `claude -p` muere en recon y no cierra un
+    engagement multifase; el motor es resumible por diseño, así que el gate lo conduce en sesiones frescas que
+    retoman del blackboard hasta PASS / timeout total / estancamiento. La firma de progreso (`_progress_sig`)
+    cubre TODAS las fases —recon (`#targets`), triage (`#findings`), explotación (acceso/confirmados),
+    multi-host (`#pivots`/`#credentials`/hosts tras pivote)— para no leer como estancado un avance real.
+### Security
+- **El parche de permisos nunca puede filtrarse al repo público.** `.claude/settings.json` está RASTREADO:
+  su backup (`.pre-gate.bak`) y el `.tmp` intermedio se añaden a `.gitignore`, y la restauración se blinda con
+  `finally` + `atexit` + handlers SIGINT/SIGTERM + crash-recovery al arranque (un SIGKILL/reboot sigue sin
+  poder capturarse: la docstring avisa de descartar `settings.json` si `git status` lo marca tras un crash).
+  Documentación corregida: el código parchea `settings.json`, no `settings.local.json` (el comentario previo
+  lo describía mal). `--yolo` queda DESACONSEJADO (su efecto sobre los hooks no está verificado con test).
+- **Runner de SkillOpt con holgura sobre el gate (`skilltrain/scorer.py`).** `shell_runner` fijaba
+  `timeout=3600`, idéntico al `--timeout` del gate → el kill del runner podía caer en mitad de la limpieza
+  (settings.json parcheado, tokens de canario en el lab). Ahora pasa `--timeout=<gate_timeout>` y mata en
+  `gate_timeout + headroom` para que run_gate SIEMPRE gradúe/restaure/limpie antes.
+- Revisión **council** (4 lentes: devil/simplicity/security/scalability) sobre el diff antes del release;
+  los bloqueantes que reportó (fichero rastreado, ceguera a recon del detector de estancamiento, fast-fail
+  redundante con off-by-one) están corregidos.
+
 ## [2.65.1] - 2026-07-23
 ### Fixed
 - **README principal actualizado con el eval-harness/canario y `skilltrain` (doc-only).** Verificada la

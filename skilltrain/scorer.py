@@ -60,16 +60,22 @@ def score_skill(skill_name, candidate_text, evals, k, runner,
     return {"skill": skill_name, "reward": reward, "results": results}
 
 
-def shell_runner(ev, target=None, timeout=3600):
+def shell_runner(ev, target=None, gate_timeout=3600, headroom=600):
     """Runner de PRODUCCIÓN (Kali): lanza `run_gate.py --eval <id> --canary --record` y devuelve True si el
     veredicto es PASS. Requiere el lab vivo y el provider configurado. No se usa en los tests (que inyectan
-    un runner falso). Fail-safe: cualquier error → False (no cuenta como PASS)."""
+    un runner falso). Fail-safe: cualquier error → False (no cuenta como PASS).
+
+    El `--timeout` del ENGAGEMENT (bucle de reanudación) es `gate_timeout`; el kill duro del subprocess se pone
+    en `gate_timeout + headroom` para que run_gate SIEMPRE alcance a graduar + restaurar `settings.json`/
+    `scope.json` + limpiar el canario en su `finally` ANTES de que el runner lo mate. Si fueran iguales (el bug
+    previo: ambos 3600), el SIGKILL del runner podía caer en mitad de la limpieza y dejar el settings.json
+    parcheado o tokens de canario en el lab. `headroom` cubre la limpieza del canario (hasta ~120s/host)."""
     cmd = [sys.executable, os.path.join(ROOT, "benchmark", "run_gate.py"),
-           "--eval", ev["id"], "--canary", "--record"]
+           "--eval", ev["id"], "--canary", "--record", "--timeout", str(gate_timeout)]
     if target or ev.get("target", "").startswith("RELLENAR"):
         cmd += ["--target", target or ""]
     try:
-        r = subprocess.run(cmd, cwd=ROOT, timeout=timeout, check=False)
+        r = subprocess.run(cmd, cwd=ROOT, timeout=gate_timeout + headroom, check=False)
         return r.returncode == 0   # run_gate: exit 0 = PASS
     except (OSError, subprocess.SubprocessError):
         return False
